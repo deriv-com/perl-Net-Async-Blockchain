@@ -7,14 +7,15 @@ use Test::More;
 use Test::Fatal;
 use Net::Async::Blockchain::Client;
 
-# my $args = { subscription_url => "tcp://127.0.0.1:28332", rpc_url => 'http://test:test@127.0.0.1:8332' };
+my $btc_args = { subscription_url => "tcp://127.0.0.1:28332", rpc_url => 'http://test:test@127.0.0.1:8332' };
+my $eth_args = { subscription_url => "wss://mainnet.infura.io/ws/v3/c56fba38337b4e2ea552e42529641896" };
 
-# my $client = Net::Async::Blockchain::Client->new('BTC', $args);
-# $client->subscribe("rawtx")->each(sub { diag explain shift })->get;
+my $btc_client = Net::Async::Blockchain::Client->new('BTC', $btc_args);
+my $eth_client = Net::Async::Blockchain::Client->new('ETH', $eth_args);
 
-my $args = { subscription_url => "wss://mainnet.infura.io/ws/v3/" };
+# $eth_client->subscribe("newHeads")->each(sub {diag explain shift})->get;
+# $btc_client->subscribe("rawtx")->each(sub { diag explain shift })->get;
 
-my $client = Net::Async::Blockchain::Client->new('ETH', $args);
-$client->subscribe("newHeads")->each(sub { diag explain shift })->get;
+$eth_client->subscribe("newHeads")->each(sub {diag explain shift})->get;
 
 done_testing;
