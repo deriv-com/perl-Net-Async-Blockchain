@@ -4,8 +4,6 @@ use strict;
 use warnings;
 no indirect;
 
-our $VERSION = '0.001';
-
 use Moo;
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD);
