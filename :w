@@ -20,7 +20,7 @@ use Net::Async::Blockchain::Client;
 #     $client->subscribe("rawtx")->each(sub { diag explain shift })->get;
 # }
 
-my $args = { subscription_url => "wss://mainnet.infura.io/ws/v3/" };
+my $args = { subscription_url => "wss://mainnet.infura.io/ws/v3/c56fba38337b4e2ea552e42529641896" };
 
 my $client = Net::Async::Blockchain::Client->new('ETH', $args);
 $client->subscribe("newHeads")->each(sub { diag explain shift })->get;
