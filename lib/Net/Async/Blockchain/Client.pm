@@ -37,7 +37,7 @@ sub new {
     if($currency){
         my $loop = IO::Async::Loop->new;
         $loop->add(my $ryu = Ryu::Async->new);
-        return $currency->new(source => $ryu->source, config => $args);
+        return $currency->new(loop => $loop, source => $ryu->source, config => $args);
     }
     return undef;
 }

@@ -6,6 +6,7 @@ no indirect;
 
 our $VERSION = '0.001';
 
+use Moo;
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD);
 
@@ -14,51 +15,53 @@ use IO::Async::Notifier;
 use IO::Async::Handle;
 use Ryu::Async;
 
-my $loop = IO::Async::Loop->new;
-# $loop->add(my $ryu = Ryu::Async->new);
+extends 'IO::Async::Notifier';
 
-use constant SUBSCRIPTIONS => [qw(hashblock hashtx rawblock rawtx)];
+has source => (
+    is => 'ro',
+);
+
+has endpoint => (
+    is => 'ro',
+);
+
+sub configure {
+    my ($self, %args) = @_;
+    for my $k (qw(endpoint source)) {
+        $self->{$k} = delete $args{$k} if exists $args{$k};
+    }
+    $self->next::method(%args);
+}
 
 sub subscribe {
-    my ($endpoint, $subscription, $callback) = @_;
-
-    return unless is_valid_subscription($subscription);
+    my ($self, $subscription) = @_;
 
     my $ctxt = zmq_init(1);
     my $socket = zmq_socket($ctxt, ZMQ_SUB);
 
     zmq_setsockopt($socket, ZMQ_RCVHWM, 0);
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
-    zmq_connect($socket, $endpoint);
+    zmq_connect($socket, $self->endpoint);
 
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
     open(my $io, "<&", $fd);
 
-    my $notifier = IO::Async::Notifier->new;
-    $notifier->add_child(
+    $self->add_child(
         my $handle = IO::Async::Handle->new(
-        read_handle => $io,
-        on_read_ready  => sub {
-            while (my @msg = _recv_multipart($socket)) {
-                my $hex = unpack('H*', zmq_msg_data($msg[1]));
-                $callback->($hex);
-                # $ryu->source->emit($hex);
-            }
-        },)
-    );
+            read_handle   => $io,
+            on_read_ready => sub {
+                while (my @msg = $self->_recv_multipart($socket)) {
+                    my $hex = unpack('H*', zmq_msg_data($msg[1]));
+                    $self->source->emit($hex);
+                }
+            },
+        ));
 
-    $loop->add($notifier);
-    # return $ryu->source;
-    return 1;
-}
-
-sub is_valid_subscription {
-    my ($subscription) = @_;
-    return grep {$subscription && $_ eq $subscription} @{+SUBSCRIPTIONS};
+    return $self->source;
 }
 
 sub _recv_multipart {
-    my ($socket) = @_;
+    my ($self, $socket) = @_;
 
     my @multipart;
     push @multipart, zmq_recvmsg($socket);
