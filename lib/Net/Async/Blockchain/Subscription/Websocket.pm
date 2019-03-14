@@ -29,6 +29,14 @@ sub configure {
     $self->next::method(%args);
 }
 
+sub _init
+{
+   my $self = shift;
+      $self->SUPER::_init;
+
+     $self->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
+ }
+
 sub send_text_frame {
     my $self = shift;
     my ($text, %params) = @_;
@@ -38,8 +46,8 @@ sub send_text_frame {
         type   => "text",
         buffer => $text,
         masked => $self->{masked},
+        max_payload_size => 0,
     );
-    $frame->max_payload_size(0);
     $self->write($frame->to_bytes, %params);
 }
 

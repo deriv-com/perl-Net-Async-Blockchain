@@ -38,14 +38,17 @@ sub subscribe {
     my ($self, $subscription) = @_;
 
     return undef unless $self->can($subscription);
-    use Data::Dumper;
     $self->client->eth_subscribe(1, $subscription)
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
                 return 0 if $self->subscription_id($response->{result});
             })
-        ->filter(subscription => $self->subscription_id)
+        ->filter(sub {
+                my $response = shift;
+                return undef unless $response->{params} && $response->{params}->{subscription};
+                return $response->{params}->{subscription} eq $self->subscription_id;
+            })
         ->each(sub{$self->$subscription(shift)});
 
     return $self->source;
@@ -53,28 +56,13 @@ sub subscribe {
 
 sub newHeads {
     my ($self, $response) = @_;
+
+    return undef unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
-    $self->client->eth_getBlockByHash(2, $block->{hash}, JSON->true)
+
+    $self->client->eth_getBlockByHash(2, $block->{hash}, JSON->false)
         ->filter(id => 2)
-        ->each(sub{$self->normalize_transactions(shift->{transactions})});
-}
-
-sub normalize_transactions{
-    my ($self, @transactions) = @_;
-    for my $blk_transaction (@transactions) {
-        my $transaction = {
-            currency => $self->currency_code,
-            hash => $blk_transaction->{hash},
-            from => $blk_transaction->{from},
-            to => $blk_transaction->{to},
-            amount => $blk_transaction->{value},
-            # fee =>
-            # fee_currency => $self->currency_code,
-            # type =>
-        };
-
-        $self->source->emit(encode_json_utf8($transaction));
-    }
+        ->each(sub{$self->source->emit(shift)});
 }
 
 1;
