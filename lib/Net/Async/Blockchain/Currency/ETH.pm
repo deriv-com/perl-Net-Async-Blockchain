@@ -7,7 +7,7 @@ no indirect;
 use Moo;
 use Net::Async::Blockchain::Subscription::Websocket;
 use Ryu::Async;
-use JSON::MaybeUTF8 qw(decode_json_utf8);
+use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
 
 extends 'Net::Async::Blockchain::Config';
@@ -28,10 +28,6 @@ sub _build_client {
     my ($self) = @_;
     $self->loop->add(my $ws_source = Ryu::Async->new());
     $self->loop->add(my $client = Net::Async::Blockchain::Subscription::Websocket->new(
-        on_text_frame => sub {
-            my ($s, $frame) = @_;
-            $s->source->emit(decode_json_utf8($frame));
-        },
         endpoint => $self->config->{subscription_url},
         source => $ws_source->source,
     ));
@@ -43,7 +39,7 @@ sub subscribe {
 
     return undef unless $self->can($subscription);
     use Data::Dumper;
-    $self->client->eth_subscribe($subscription)
+    $self->client->eth_subscribe(1, $subscription)
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
@@ -58,12 +54,27 @@ sub subscribe {
 sub newHeads {
     my ($self, $response) = @_;
     my $block = $response->{params}->{result};
-    $self->client->eth_getBlockByHash($block->{hash}, JSON->true)->take(1)->each(sub{$self->source->emit(shift)});
+    $self->client->eth_getBlockByHash(2, $block->{hash}, JSON->true)
+        ->filter(id => 2)
+        ->each(sub{$self->normalize_transactions(shift->{transactions})});
 }
 
-sub newPendingTransactions {
-    my ($self, $response) = @_;
-    $self->source->emit($response);
+sub normalize_transactions{
+    my ($self, @transactions) = @_;
+    for my $blk_transaction (@transactions) {
+        my $transaction = {
+            currency => $self->currency_code,
+            hash => $blk_transaction->{hash},
+            from => $blk_transaction->{from},
+            to => $blk_transaction->{to},
+            amount => $blk_transaction->{value},
+            # fee =>
+            # fee_currency => $self->currency_code,
+            # type =>
+        };
+
+        $self->source->emit(encode_json_utf8($transaction));
+    }
 }
 
 1;
