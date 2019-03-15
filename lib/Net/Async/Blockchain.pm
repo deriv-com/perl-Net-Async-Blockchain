@@ -1,4 +1,4 @@
-package Net::Async::Blockchain::Client;
+package Net::Async::Blockchain;
 
 use strict;
 use warnings;

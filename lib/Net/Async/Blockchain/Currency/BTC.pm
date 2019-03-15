@@ -7,10 +7,12 @@ no indirect;
 our $VERSION = '0.001';
 
 use Moo;
-use List::Util qw(first);
+use List::Util qw(first sum0);
 use JSON;
+use Future::AsyncAwait;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::ZMQ;
+use Data::Dumper;
 extends 'Net::Async::Blockchain::Config';
 
 sub currency_code {
@@ -33,10 +35,11 @@ has zmq_client => (
 sub _build_zmq_client {
     my ($self) = @_;
     $self->loop->add(my $zmq_source = Ryu::Async->new());
-    $self->loop->add(my $zmq_client = Net::Async::Blockchain::Subscription::ZMQ->new(
-        source   => $zmq_source->source,
-        endpoint => $self->config->{subscription_url},
-    ));
+    $self->loop->add(
+        my $zmq_client = Net::Async::Blockchain::Subscription::ZMQ->new(
+            source   => $zmq_source->source,
+            endpoint => $self->config->{subscription_url},
+        ));
     return $zmq_client;
 }
 
@@ -48,39 +51,40 @@ sub subscribe {
     return undef unless $self->can($subscription);
     my $zmq_source = $self->zmq_client->subscribe($subscription);
     return undef unless $zmq_source;
-    $zmq_source->each(sub { $self->$subscription(shift) });
+    $zmq_source->each(sub { $self->$subscription(shift)->get });
 
     return $self->source;
 }
 
-sub rawtx {
+async sub rawtx {
     my ($self, $raw_transaction) = @_;
-    $self->rpc_client->decoderawtransaction($raw_transaction)->then(
-        sub {
-            my ($decoded_transaction) = @_;
-            my @addresses = map { $_->{scriptPubKey}->{addresses}->@* } $decoded_transaction->{vout}->@*;
-            return $self->_find_address(@addresses)->then(
-                sub {
-                    my $response = shift;
-                    $self->source->emit($decoded_transaction) if $response;
-                    Future->done();
-                });
-        })->get;
 
+    my $decoded_raw_transaction = await $self->rpc_client->decoderawtransaction($raw_transaction);
+    my $transaction = await $self->transform_transaction($decoded_raw_transaction);
+
+    $self->source->emit($transaction) if $transaction;
 }
 
-sub _find_address {
-    my ($self, @addresses) = @_;
+async sub transform_transaction {
+    my ($self, $decoded_raw_transaction) = @_;
 
-    return $self->rpc_client->listreceivedbyaddress(0, JSON->true)->then(
-        sub {
-            for my $address (@addresses) {
-                if (first { $_->[0]->{address} eq $address } @_) {
-                    return Future->done(1);
-                }
-            }
-            Future->done(0);
-        });
+    my $received_transaction = first { $_->{txid} eq $decoded_raw_transaction->{txid} } @{await $self->rpc_client->listtransactions("*", 10)};
+    # my $output_value = sum0(map { $_->{value} } $decoded_raw_transaction->{vout}->@*);
+
+    return undef unless $received_transaction;
+
+    my $transaction = {
+        currency => $self->currency_code,
+        hash => $decoded_raw_transaction->{txid},
+        from => '',
+        to => $received_transaction->{address},
+        amount => $received_transaction->{amount},
+        fee => $received_transaction->{fee},
+        fee_currency => $self->currency_code,
+        type => $received_transaction->{category},
+    };
+
+    return $transaction;
 }
 
 1;
