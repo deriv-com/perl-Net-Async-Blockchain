@@ -7,12 +7,13 @@ no indirect;
 our $VERSION = '0.001';
 
 use Moo;
-use List::Util qw(first sum0);
 use JSON;
 use Future::AsyncAwait;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::ZMQ;
+use List::Util qw(first);
 use Data::Dumper;
+use Math::BigFloat;
 extends 'Net::Async::Blockchain::Config';
 
 sub currency_code {
@@ -68,20 +69,33 @@ async sub rawtx {
 async sub transform_transaction {
     my ($self, $decoded_raw_transaction) = @_;
 
-    my $received_transaction = first { $_->{txid} eq $decoded_raw_transaction->{txid} } @{await $self->rpc_client->listtransactions("*", 10)};
-    # my $output_value = sum0(map { $_->{value} } $decoded_raw_transaction->{vout}->@*);
+    my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} } @{await $self->rpc_client->listtransactions("*", 10)};
 
-    return undef unless $received_transaction;
+    return undef unless @received_transactions;
+
+    my $amount = Math::BigFloat->bzero();
+    my %addresses;
+    my %category;
+    my $fee = Math::BigFloat->bzero();
+    for my $tx (@received_transactions) {
+        $amount->badd($tx->{amount});
+        $addresses{$tx->{address}} = 1;
+        $category{$tx->{category}} = 1;
+        $fee->new($tx->{fee}) if $tx->{fee};
+    }
+    my @addresses = keys %addresses;
+    my @categories = keys %category;
+    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = {
         currency => $self->currency_code,
         hash => $decoded_raw_transaction->{txid},
         from => '',
-        to => $received_transaction->{address},
-        amount => $received_transaction->{amount},
-        fee => $received_transaction->{fee},
+        to => \@addresses,
+        amount => $amount,
+        fee => $fee,
         fee_currency => $self->currency_code,
-        type => $received_transaction->{category},
+        type => $transaction_type,
     };
 
     return $transaction;
