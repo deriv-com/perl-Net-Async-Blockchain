@@ -16,15 +16,11 @@ sub currency_code {
     return 'ETH';
 }
 
-has client => (
-    is => 'lazy',
-);
-
 has subscription_id => (
     is => 'rw',
 );
 
-sub _build_client {
+sub _get_new_client {
     my ($self) = @_;
     $self->loop->add(my $ws_source = Ryu::Async->new());
     $self->loop->add(my $client = Net::Async::Blockchain::Subscription::Websocket->new(
@@ -38,7 +34,7 @@ sub subscribe {
     my ($self, $subscription) = @_;
 
     return undef unless $self->can($subscription);
-    $self->client->eth_subscribe(1, $subscription)
+    $self->_get_new_client->eth_subscribe(1, $subscription)
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
@@ -60,8 +56,9 @@ sub newHeads {
     return undef unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->client->eth_getBlockByHash(2, $block->{hash}, JSON->false)
+    $self->_get_new_client->eth_getBlockByHash(2, $block->{hash}, JSON->false)
         ->filter(id => 2)
+        ->take(1)
         ->each(sub{$self->source->emit(shift)});
 }
 
