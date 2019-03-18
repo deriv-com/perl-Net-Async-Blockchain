@@ -56,10 +56,37 @@ sub newHeads {
     return undef unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->_get_new_client->eth_getBlockByHash(2, $block->{hash}, JSON->false)
+    $self->_get_new_client->eth_getBlockByHash(2, $block->{hash}, JSON->true)
         ->filter(id => 2)
         ->take(1)
-        ->each(sub{$self->source->emit(shift)});
+        ->each(sub{
+                my ($block_response) = @_;
+                my @transactions = $block_response->{result}->{transactions}->@*;
+                for my $transaction (@transactions) {
+                    my $default_transaction = $self->transform_transaction($transaction);
+                    $self->source->emit($default_transaction);
+                }
+            });
+}
+
+sub transform_transaction {
+    my ($self, $decoded_transaction) = @_;
+
+    my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+    my $amount = Math::BigFloat->from_hex($decoded_transaction->{value});
+
+    my $transaction = {
+        currency => $self->currency_code,
+        hash => $decoded_transaction->{hash},
+        from => $decoded_transaction->{from},
+        to => $decoded_transaction->{to},
+        amount => $amount,
+        fee => $fee,
+        fee_currency => $self->currency_code,
+        type => "",
+    };
+
+    return $transaction;
 }
 
 1;
