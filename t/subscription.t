@@ -13,8 +13,8 @@ my $eth_args = { subscription_url => "wss://rinkeby.infura.io/ws/v3/c56fba38337b
 my $btc_client = Net::Async::Blockchain->new('BTC', $btc_args);
 my $eth_client = Net::Async::Blockchain->new('ETH', $eth_args);
 
-# $eth_client->subscribe("newHeads")->each(sub {diag explain shift})->get;
-$btc_client->subscribe("rawtx")->each(sub { diag explain shift })->get;
+$eth_client->subscribe("newHeads")->each(sub {diag explain shift})->get;
+# $btc_client->subscribe("rawtx")->each(sub { diag explain shift })->get;
 
 # $eth_client->subscribe("newHeads")->merge($btc_client->subscribe("rawtx"))->each(sub {diag explain shift})->get;
 

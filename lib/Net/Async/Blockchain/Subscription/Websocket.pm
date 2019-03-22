@@ -6,20 +6,15 @@ no indirect;
 
 our $VERSION = '0.001';
 
-use Moo;
 use IO::Async::Loop;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
-extends 'Net::Async::WebSocket::Client';
+use parent qw(Net::Async::WebSocket::Client);
 
-has source => (
-    is => 'ro',
-);
+sub source : method { shift->{source} }
 
-has endpoint => (
-    is => 'ro',
-);
+sub endpoint : method { shift->{endpoint} }
 
 sub configure {
     my ($self, %args) = @_;
@@ -29,26 +24,11 @@ sub configure {
     $self->next::method(%args);
 }
 
-sub _init
-{
-   my $self = shift;
-      $self->SUPER::_init;
-
-     $self->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
- }
-
-sub send_text_frame {
+sub _init {
     my $self = shift;
-    my ($text, %params) = @_;
+    $self->SUPER::_init;
 
-    # Protocol::WebSocket::Frame will UTF-8 encode this for us
-    my $frame = Protocol::WebSocket::Frame->new(
-        type   => "text",
-        buffer => $text,
-        masked => $self->{masked},
-        max_payload_size => 0,
-    );
-    $self->write($frame->to_bytes, %params);
+    $self->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
 }
 
 sub AUTOLOAD {
@@ -74,7 +54,8 @@ sub AUTOLOAD {
         },
     );
 
-    $self->connect(url => $self->endpoint)->then(sub {
+    $self->connect(url => $self->endpoint)->then(
+        sub {
             $self->send_text_frame(encode_json_utf8($obj));
         })->get;
 
