@@ -4,24 +4,18 @@ use strict;
 use warnings;
 no indirect;
 
-use Moo;
 use ZMQ::LibZMQ3;
-use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD);
+use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT);
 
 use IO::Async::Loop;
 use IO::Async::Notifier;
 use IO::Async::Handle;
-use Ryu::Async;
 
-extends 'IO::Async::Notifier';
+use parent qw(IO::Async::Notifier);
 
-has source => (
-    is => 'ro',
-);
+sub source : method { shift->{source} }
 
-has endpoint => (
-    is => 'ro',
-);
+sub endpoint : method { shift->{endpoint} }
 
 sub configure {
     my ($self, %args) = @_;
@@ -62,10 +56,10 @@ sub _recv_multipart {
     my ($self, $socket) = @_;
 
     my @multipart;
-    push @multipart, zmq_recvmsg($socket);
 
+    push @multipart, zmq_recvmsg($socket, ZMQ_DONTWAIT);
     while (zmq_getsockopt($socket, ZMQ_RCVMORE)) {
-        push @multipart, zmq_recvmsg($socket);
+        push @multipart, zmq_recvmsg($socket, ZMQ_DONTWAIT);
     }
 
     return @multipart;

@@ -4,11 +4,6 @@ use strict;
 use warnings;
 no indirect;
 
-our $VERSION = '0.001';
-
-use base qw( Exporter );
-our @EXPORT_OK = qw(filter);
-
 use IO::Async::Loop;
 use Ryu::Async;
 use Module::PluginFinder;
