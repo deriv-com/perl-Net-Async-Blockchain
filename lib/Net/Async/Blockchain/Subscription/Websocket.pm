@@ -4,10 +4,6 @@ use strict;
 use warnings;
 no indirect;
 
-our $VERSION = '0.001';
-
-use IO::Async::Loop;
-use Ryu::Async;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
 use parent qw(Net::Async::WebSocket::Client);

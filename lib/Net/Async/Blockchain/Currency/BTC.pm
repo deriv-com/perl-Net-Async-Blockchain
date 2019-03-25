@@ -26,7 +26,10 @@ has rpc_client => (
 
 sub _build_rpc_client {
     my ($self) = @_;
-    return Net::Async::Blockchain::Client::RPC->new(url => $self->config->{rpc_url});
+    $self->loop->add(
+        my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->config->{rpc_url})
+    );
+    return $http_client;
 }
 
 has zmq_client => (
