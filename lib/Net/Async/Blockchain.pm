@@ -26,7 +26,7 @@ sub _filter {
 
 sub new {
     my ($self, $currency_code, $args) = @_;
-    return undef unless $currency_code;
+    die 'Invalid currency code' unless $currency_code;
 
     my $currency = $self->_filter->construct($currency_code);
     if($currency){
@@ -34,7 +34,8 @@ sub new {
         $loop->add(my $ryu = Ryu::Async->new);
         return $currency->new(loop => $loop, source => $ryu->source, config => $args);
     }
-    return undef;
+
+    die 'Unable to find a suitable class';
 }
 
 1;

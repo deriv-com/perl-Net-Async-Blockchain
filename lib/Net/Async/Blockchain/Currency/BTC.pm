@@ -12,8 +12,8 @@ use Future::AsyncAwait;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::ZMQ;
 use List::Util qw(first);
-use Data::Dumper;
 use Math::BigFloat;
+
 extends 'Net::Async::Blockchain::Config';
 
 sub currency_code {
@@ -52,9 +52,9 @@ sub subscribe {
 
     my $url = $self->config->{subscription_url};
 
-    return undef unless $self->can($subscription);
+    die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
     my $zmq_source = $self->zmq_client->subscribe($subscription);
-    return undef unless $zmq_source;
+    die "Can't connect to ZMQ" unless $zmq_source;
     $zmq_source->each(sub { $self->$subscription(shift)->get });
 
     return $self->source;
@@ -74,17 +74,20 @@ async sub transform_transaction {
 
     my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} } @{await $self->rpc_client->listtransactions("*", 10)};
 
+    # transaction not found, just ignore.
     return undef unless @received_transactions;
 
     my $amount = Math::BigFloat->bzero();
     my %addresses;
     my %category;
     my $fee = Math::BigFloat->bzero();
+
     for my $tx (@received_transactions) {
         $amount->badd($tx->{amount});
         $addresses{$tx->{address}} = 1;
         $category{$tx->{category}} = 1;
-        $fee->new($tx->{fee}) if $tx->{fee};
+        # for received transactions the fee will not be available.
+        $fee->badd($tx->{fee}) if $tx->{fee};
     }
     my @addresses = keys %addresses;
     my @categories = keys %category;

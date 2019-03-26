@@ -49,9 +49,7 @@ sub AUTOLOAD {
     return $http_client->POST($self->endpoint, encode_json_utf8($obj), content_type => 'application/json')->transform(
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
-        }
-        )->else(
-        sub {
+        })->else(sub {
             Future->fail(@_);
         });
 }
