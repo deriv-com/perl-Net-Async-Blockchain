@@ -7,7 +7,6 @@ no indirect;
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT);
 
-use IO::Async::Loop;
 use IO::Async::Notifier;
 use IO::Async::Handle;
 
@@ -17,12 +16,13 @@ sub source : method { shift->{source} }
 
 sub endpoint : method { shift->{endpoint} }
 
-sub configure {
-    my ($self, %args) = @_;
+sub _init {
+    my ($self, $paramref) = @_;
+    $self->SUPER::_init;
+
     for my $k (qw(endpoint source)) {
-        $self->{$k} = delete $args{$k} if exists $args{$k};
+        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
     }
-    $self->next::method(%args);
 }
 
 sub subscribe {

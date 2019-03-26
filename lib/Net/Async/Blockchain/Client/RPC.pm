@@ -6,7 +6,6 @@ no indirect;
 
 use Net::Async::HTTP;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
-use IO::Async::Loop;
 use IO::Async::Notifier;
 
 use parent qw(IO::Async::Notifier);
@@ -17,12 +16,13 @@ sub endpoint : method { shift->{endpoint} }
 
 sub timeout : method {shift->{timeout}}
 
-sub configure {
-    my ($self, %args) = @_;
+sub _init {
+    my ($self, $paramref) = @_;
+    $self->SUPER::_init;
+
     for my $k (qw(endpoint timeout)) {
-        $self->{$k} = delete $args{$k} if exists $args{$k};
+        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
     }
-    $self->next::method(%args);
 }
 
 sub AUTOLOAD {
@@ -33,7 +33,7 @@ sub AUTOLOAD {
 
     return if ($method eq 'DESTROY');
 
-    $self->loop->add(
+    $self->add_child(
         my $http_client = Net::Async::HTTP->new(
             decode_content => 1,
             stall_timeout => $self->timeout // DEFAULT_TIMEOUT,

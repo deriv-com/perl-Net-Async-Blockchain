@@ -1,10 +1,9 @@
-package Net::Async::Blockchain::Currency::ETH;
+package Net::Async::Blockchain::ETH;
 
 use strict;
 use warnings;
 no indirect;
 
-use Moo;
 use Future::AsyncAwait;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
@@ -12,20 +11,16 @@ use JSON;
 
 use Net::Async::Blockchain::Subscription::Websocket;
 
-extends 'Net::Async::Blockchain::Config';
+use base qw(Net::Async::Blockchain);
 
-sub currency_code {
-    return 'ETH';
-}
+sub currency_code { 'ETH' }
 
-has subscription_id => (
-    is => 'rw',
-);
+sub subscription_id { shift->{subscription_id} }
 
-sub _get_new_client {
+sub new_websocket_client {
     my ($self) = @_;
-    $self->loop->add(my $ws_source = Ryu::Async->new());
-    $self->loop->add(my $client = Net::Async::Blockchain::Subscription::Websocket->new(
+    $self->add_child(my $ws_source = Ryu::Async->new());
+    $self->add_child(my $client = Net::Async::Blockchain::Subscription::Websocket->new(
         endpoint => $self->config->{subscription_url},
         source => $ws_source->source,
     ));
@@ -37,11 +32,12 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
-    $self->_get_new_client->eth_subscribe(1, $subscription)
+    $self->new_websocket_client()->eth_subscribe(1, $subscription)
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
-                return 0 if $self->subscription_id($response->{result});
+                $self->{subscription_id} = $response->{result};
+                return 0;
             })
         ->filter(sub {
                 my $response = shift;
@@ -59,7 +55,7 @@ sub newHeads {
     die "Invalid node response for newHeads subscription" unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->_get_new_client->eth_getBlockByHash(2, $block->{hash}, JSON->true)
+    $self->new_websocket_client()->eth_getBlockByHash(2, $block->{hash}, JSON->true)
         ->filter(id => 2)
         ->take(1)
         ->each(async sub{
@@ -95,7 +91,7 @@ async sub transform_transaction {
     };
 
     # my @receipts =
-    #     await $self->_get_new_client->eth_getTransactionReceipt(2, $decoded_transaction->{hash})
+    #     await $self->new_websocket_client->eth_getTransactionReceipt(2, $decoded_transaction->{hash})
     #         ->filter(id => 2)
     #         ->take(1)
     #         ->as_list;
@@ -135,7 +131,7 @@ async sub transform_transaction {
 
 #     my $hex = sprintf("0x%s", unpack("H*", $method));
 
-#     my @sha3_hex = await $self->_get_new_client->web3_sha3(2, $hex)->take(1)->as_list;
+#     my @sha3_hex = await $self->new_websocket_client->web3_sha3(2, $hex)->take(1)->as_list;
 
 #     return $sha3_hex[0]->{result};
 # }

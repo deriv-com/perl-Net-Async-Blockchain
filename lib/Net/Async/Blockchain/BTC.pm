@@ -1,45 +1,37 @@
-package Net::Async::Blockchain::Currency::BTC;
+package Net::Async::Blockchain::BTC;
 
 use strict;
 use warnings;
 no indirect;
 
-our $VERSION = '0.001';
-
-use Moo;
 use JSON;
+use Ryu::Async;
 use Future::AsyncAwait;
-use Net::Async::Blockchain::Client::RPC;
-use Net::Async::Blockchain::Subscription::ZMQ;
+use IO::Async::Loop;
 use List::Util qw(first);
 use Math::BigFloat;
 
-extends 'Net::Async::Blockchain::Config';
+use Net::Async::Blockchain::Client::RPC;
+use Net::Async::Blockchain::Subscription::ZMQ;
 
-sub currency_code {
-    return 'BTC';
-}
+use base qw(Net::Async::Blockchain);
 
-has rpc_client => (
-    is => 'lazy',
-);
+sub currency_code { 'BTC' }
 
-sub _build_rpc_client {
+sub rpc_client : method {
     my ($self) = @_;
-    $self->loop->add(
+    return $self->{rpc_client} if $self->{rpc_client};
+
+    $self->add_child(
         my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->config->{rpc_url})
     );
     return $http_client;
 }
 
-has zmq_client => (
-    is => 'lazy',
-);
-
-sub _build_zmq_client {
+sub new_zmq_client {
     my ($self) = @_;
-    $self->loop->add(my $zmq_source = Ryu::Async->new());
-    $self->loop->add(
+    $self->add_child(my $zmq_source = Ryu::Async->new);
+    $self->add_child(
         my $zmq_client = Net::Async::Blockchain::Subscription::ZMQ->new(
             source   => $zmq_source->source,
             endpoint => $self->config->{subscription_url},
@@ -53,9 +45,9 @@ sub subscribe {
     my $url = $self->config->{subscription_url};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    my $zmq_source = $self->zmq_client->subscribe($subscription);
+    my $zmq_source = $self->new_zmq_client->subscribe($subscription);
     die "Can't connect to ZMQ" unless $zmq_source;
-    $zmq_source->each(sub { $self->$subscription(shift)->get });
+    $zmq_source->each(async sub { await $self->$subscription(shift) });
 
     return $self->source;
 }

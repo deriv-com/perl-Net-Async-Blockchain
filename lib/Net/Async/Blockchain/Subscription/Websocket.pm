@@ -12,17 +12,13 @@ sub source : method { shift->{source} }
 
 sub endpoint : method { shift->{endpoint} }
 
-sub configure {
-    my ($self, %args) = @_;
-    for my $k (qw(endpoint source)) {
-        $self->{$k} = delete $args{$k} if exists $args{$k};
-    }
-    $self->next::method(%args);
-}
-
 sub _init {
-    my $self = shift;
+    my ($self, $paramref) = @_;
     $self->SUPER::_init;
+
+    for my $k (qw(endpoint source)) {
+        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
+    }
 
     $self->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
 }

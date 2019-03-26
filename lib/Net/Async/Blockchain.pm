@@ -8,34 +8,23 @@ use IO::Async::Loop;
 use Ryu::Async;
 use Module::PluginFinder;
 
-sub _filter {
-    my ($self, $path) = @_;
+use base qw(IO::Async::Notifier);
 
-    return Module::PluginFinder->new(
-        search_path => 'Net::Async::Blockchain::Currency',
-        filter      => sub {
-            my ($module, $currency_code) = @_;
-            return 0
-                unless $currency_code
-                && $module->can('currency_code')
-                && $currency_code eq $module->currency_code();
-            return 1;
-        },
-    );
+sub config : method { shift->{config} }
+
+sub _init {
+    my ($self, $paramref) = @_;
+    $self->SUPER::_init;
+
+    $self->{config} = delete $paramref->{config} if exists $paramref->{config};
 }
 
-sub new {
-    my ($self, $currency_code, $args) = @_;
-    die 'Invalid currency code' unless $currency_code;
-
-    my $currency = $self->_filter->construct($currency_code);
-    if($currency){
-        my $loop = IO::Async::Loop->new;
-        $loop->add(my $ryu = Ryu::Async->new);
-        return $currency->new(loop => $loop, source => $ryu->source, config => $args);
-    }
-
-    die 'Unable to find a suitable class';
+sub source : method {
+    my ($self) = @_;
+    return $self->{source} if $self->{source};
+    $self->loop->add(my $source = Ryu::Async->new);
+    $self->{source} = $source->source;
+    return $self->{source};
 }
 
 1;
