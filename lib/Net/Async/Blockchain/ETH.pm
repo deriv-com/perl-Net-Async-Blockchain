@@ -9,6 +9,7 @@ use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
 use Math::BigFloat;
+use Net::Async::WebSocket::Client;
 
 use Net::Async::Blockchain::Subscription::Websocket;
 
@@ -33,7 +34,7 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
-    $self->new_websocket_client()->eth_subscribe(1, $subscription)
+    $self->new_websocket_client()->eth_subscribe($subscription)
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
@@ -56,8 +57,7 @@ sub newHeads {
     die "Invalid node response for newHeads subscription" unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->new_websocket_client()->eth_getBlockByHash(1, $block->{hash}, JSON->true)
-        ->filter(id => 1)
+    $self->new_websocket_client()->eth_getBlockByHash($block->{hash}, JSON->true)
         ->take(1)
         ->each(sub{
                 my ($block_response) = @_;
@@ -93,8 +93,7 @@ async sub transform_transaction {
     };
 
     # my @receipts =
-    #     await $self->new_websocket_client->eth_getTransactionReceipt(2, $decoded_transaction->{hash})
-    #         ->filter(id => 2)
+    #     await $self->new_websocket_client->eth_getTransactionReceipt($decoded_transaction->{hash})
     #         ->take(1)
     #         ->as_list;
 
@@ -112,15 +111,14 @@ async sub transform_transaction {
     #     # The first topic is the hash of the signature of the event.
     #     my @transfer_logs = grep { $_->{topics} and $_->{topics}[0] eq $event } @$logs;
 
-    #     # Only ERC20 support for now.
+    #     # Only Transfer support for now.
     #     return undef unless @transfer_logs;
-
-    #     my $log = $transfer_log[0];
 
     #     for my $log (@transfer_logs) {
     #         my @topics = $log->{topics};
-    #         push $transaction->{to}, $log->_remove_zeros($topics[2]);
-    #         $transaction->{contract_amount}->badd(Math::BigFloat->from_hex($log->{data}));
+    #         $transaction->{to} = $self->_remove_zeros($topics[2]);
+    #         $transaction->{contract_amount} = Math::BigFloat->from_hex($log->{data});
+    #         last;
     #     }
 
     # }
@@ -128,25 +126,25 @@ async sub transform_transaction {
     return $transaction;
 }
 
-# async sub _get_event_signature {
-#     my ($self, $method) = @_;
+async sub _get_event_signature {
+    my ($self, $method) = @_;
 
-#     my $hex = sprintf("0x%s", unpack("H*", $method));
+    my $hex = sprintf("0x%s", unpack("H*", $method));
 
-#     my @sha3_hex = await $self->new_websocket_client->web3_sha3(2, $hex)->take(1)->as_list;
+    my @sha3_hex = await $self->new_websocket_client->web3_sha3(1, $hex)->take(1)->as_list;
 
-#     return $sha3_hex[0]->{result};
-# }
+    return $sha3_hex[0]->{result};
+}
 
-# sub _remove_zeros {
-#     my ($self, $trxn_topic) = @_;
+sub _remove_zeros {
+    my ($self, $trxn_topic) = @_;
 
-#     # remove 0x
-#     my $address = substr($trxn_topic, 2);
-#     # remove all left 0
-#     $address =~ s/^0+(?=.)//s;
-#     return "0x$address";
-# }
+    # remove 0x
+    my $address = substr($trxn_topic, 2);
+    # remove all left 0
+    $address =~ s/^0+(?=.)//s;
+    return "0x$address";
+}
 
 
 1;
