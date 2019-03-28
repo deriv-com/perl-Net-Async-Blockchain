@@ -86,44 +86,58 @@ async sub transform_transaction {
         hash => $decoded_transaction->{hash},
         from => $decoded_transaction->{from},
         to => $decoded_transaction->{to},
+        contract => '',
         amount => $amount,
         fee => $fee,
         fee_currency => $self->currency_code,
         type => '',
     };
 
-    # my @receipts =
-    #     await $self->new_websocket_client->eth_getTransactionReceipt($decoded_transaction->{hash})
-    #         ->take(1)
-    #         ->as_list;
-
-    # my $receipt = $receipts[0];
-    # my $logs = $receipt->{result}->{logs};
-
-    # # Contract
-    # if ($logs->@* > 0) {
-    #     # Ignore unsuccessful transactions.
-    #     return undef unless $receipt->{result}->{status} && hex($receipt->{result}->{status}) == 1;
-
-    #     # ERC20 transfer event.
-    #     my $event = await $self->_get_event_signature('Transfer(address,address,uint256)');
-
-    #     # The first topic is the hash of the signature of the event.
-    #     my @transfer_logs = grep { $_->{topics} and $_->{topics}[0] eq $event } @$logs;
-
-    #     # Only Transfer support for now.
-    #     return undef unless @transfer_logs;
-
-    #     for my $log (@transfer_logs) {
-    #         my @topics = $log->{topics};
-    #         $transaction->{to} = $self->_remove_zeros($topics[2]);
-    #         $transaction->{contract_amount} = Math::BigFloat->from_hex($log->{data});
-    #         last;
-    #     }
-
-    # }
+    $transaction = await $self->_check_contract_transaction($transaction);
 
     return $transaction;
+}
+
+async sub _check_contract_transaction {
+    my ($self, $transaction) = @_;
+
+    my @receipts =
+        await $self->new_websocket_client->eth_getTransactionReceipt($transaction->{hash})
+            ->take(1)
+            ->as_list;
+
+    my $receipt = $receipts[0];
+    my $logs = $receipt->{result}->{logs};
+
+    # Contract
+    if ($logs->@* > 0) {
+        # Ignore unsuccessful transactions.
+        return undef unless $receipt->{result}->{status} && hex($receipt->{result}->{status}) == 1;
+
+        # ERC20 transfer event.
+        my $event = await $self->_get_event_signature('Transfer(address,address,uint256)');
+
+        # The first topic is the hash of the signature of the event.
+        my @transfer_logs = grep { $_->{topics} and $_->{topics}[0] eq $event } @$logs;
+
+        # Only Transfer support for now.
+        return undef unless @transfer_logs;
+
+        my @currency_code = await $self->new_websocket_client->eth_call([{data => await $self->_get_event_signature('symbol()'), to => $transaction->{to}}, "latest"])->take(1)->as_list;
+        $transaction->{currency} = $self->_to_string($currency_code[0]->{result});
+        $transaction->{contract} = $transaction->{to};
+
+        for my $log (@transfer_logs) {
+            my @topics = $log->{topics}->@*;
+            $transaction->{to} = $self->_remove_zeros($topics[2]);
+            $transaction->{contract_amount} = Math::BigFloat->from_hex($log->{data});
+            last;
+        }
+
+    }
+
+    return $transaction;
+
 }
 
 async sub _get_event_signature {
@@ -131,7 +145,7 @@ async sub _get_event_signature {
 
     my $hex = sprintf("0x%s", unpack("H*", $method));
 
-    my @sha3_hex = await $self->new_websocket_client->web3_sha3(1, $hex)->take(1)->as_list;
+    my @sha3_hex = await $self->new_websocket_client->web3_sha3($hex)->take(1)->as_list;
 
     return $sha3_hex[0]->{result};
 }
@@ -146,6 +160,16 @@ sub _remove_zeros {
     return "0x$address";
 }
 
+sub _to_string {
+    my ($self, $response) = @_;
+
+    return undef unless $response;
+
+    my $packed_response = pack('H*', substr($response, -64));
+    $packed_response =~ s/\0+$//;
+
+    return $packed_response;
+}
 
 1;
 
