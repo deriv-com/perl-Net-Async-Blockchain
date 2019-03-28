@@ -8,6 +8,7 @@ use Future::AsyncAwait;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
+use Math::BigFloat;
 
 use Net::Async::Blockchain::Subscription::Websocket;
 
@@ -55,15 +56,18 @@ sub newHeads {
     die "Invalid node response for newHeads subscription" unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->new_websocket_client()->eth_getBlockByHash(2, $block->{hash}, JSON->true)
-        ->filter(id => 2)
+    $self->new_websocket_client()->eth_getBlockByHash(1, $block->{hash}, JSON->true)
+        ->filter(id => 1)
         ->take(1)
-        ->each(async sub{
+        ->each(sub{
                 my ($block_response) = @_;
+
                 my @transactions = $block_response->{result}->{transactions}->@*;
                 for my $transaction (@transactions) {
-                    my $default_transaction = await $self->transform_transaction($transaction);
-                    $self->source->emit($default_transaction) if $default_transaction;
+                    $self->transform_transaction($transaction)->on_done(sub {
+                        my $default_transaction = shift;
+                        $self->source->emit($default_transaction) if $default_transaction;
+                    });
                 }
             });
 }
@@ -83,8 +87,6 @@ async sub transform_transaction {
         from => $decoded_transaction->{from},
         to => $decoded_transaction->{to},
         amount => $amount,
-        contract_amount => Math::BigFloat->bzero(),
-        contract_currency => undef,
         fee => $fee,
         fee_currency => $self->currency_code,
         type => '',
