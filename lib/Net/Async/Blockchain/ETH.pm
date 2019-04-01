@@ -72,6 +72,25 @@ sub newHeads {
             });
 }
 
+
+sub newPendingTransactions {
+    my ($self, $response) = @_;
+
+    die "Invalid node response for newPendingTransactions subscription" unless $response->{params} && $response->{params}->{result};
+
+    my $transaction = $response->{params}->{result};
+
+    $self->new_websocket_client()->eth_getTransactionByHash($transaction)
+        ->take(1)
+        ->each(sub {
+                $self->transform_transaction(shift)->on_done(sub{
+                        my $default_transaction = shift;
+                        $self->source->emit($default_transaction) if $default_transaction;
+                    })
+            })
+
+}
+
 async sub transform_transaction {
     my ($self, $decoded_transaction) = @_;
 

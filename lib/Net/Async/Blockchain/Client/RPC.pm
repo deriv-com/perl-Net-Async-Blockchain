@@ -10,17 +10,17 @@ use IO::Async::Notifier;
 
 use parent qw(IO::Async::Notifier);
 
-use constant DEFAULT_TIMEOUT => 100;
+use constant DEFAULT_RPC_TIMEOUT => 100;
 
 sub endpoint : method { shift->{endpoint} }
 
-sub timeout : method {shift->{timeout}}
+sub rpc_timeout : method {shift->{rpc_timeout}}
 
 sub _init {
     my ($self, $paramref) = @_;
     $self->SUPER::_init;
 
-    for my $k (qw(endpoint timeout)) {
+    for my $k (qw(endpoint rpc_timeout)) {
         $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
     }
 }
@@ -36,7 +36,7 @@ sub AUTOLOAD {
     $self->add_child(
         my $http_client = Net::Async::HTTP->new(
             decode_content => 1,
-            stall_timeout => $self->timeout // DEFAULT_TIMEOUT,
+            stall_timeout => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
             fail_on_error => 1,
     ));
 

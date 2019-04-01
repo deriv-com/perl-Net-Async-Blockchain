@@ -16,6 +16,8 @@ use Net::Async::Blockchain::Subscription::ZMQ;
 
 use base qw(Net::Async::Blockchain);
 
+use constant DEFAULT_LOOKUP_TRANSACTIONS => 100;
+
 sub currency_code { 'BTC' }
 
 sub rpc_client : method {
@@ -65,7 +67,8 @@ async sub rawtx {
 async sub transform_transaction {
     my ($self, $decoded_raw_transaction) = @_;
 
-    my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} } @{await $self->rpc_client->listtransactions("*", 10)};
+    my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} }
+        @{await $self->rpc_client->listtransactions("*", $self->config->lookup_transactions // DEFAULT_LOOKUP_TRANSACTIONS)};
 
     # transaction not found, just ignore.
     return undef unless @received_transactions;

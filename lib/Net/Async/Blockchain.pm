@@ -6,7 +6,6 @@ no indirect;
 
 use IO::Async::Loop;
 use Ryu::Async;
-use Module::PluginFinder;
 
 use base qw(IO::Async::Notifier);
 
