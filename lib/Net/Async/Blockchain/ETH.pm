@@ -15,6 +15,13 @@ use Net::Async::Blockchain::Subscription::Websocket;
 
 use base qw(Net::Async::Blockchain);
 
+use constant {
+    # Transfer(address,address,uint256)
+    TRANSFER_SIGNATURE => '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    # symbol()
+    SYMBOL_SIGNATURE => '0xbe16b05c387bab9ac31918a3e61672f4618601f3c598a2f3f2710f37053e1ea4',
+};
+
 sub currency_code { 'ETH' }
 
 sub subscription_id { shift->{subscription_id} }
@@ -63,32 +70,9 @@ sub newHeads {
                 my ($block_response) = @_;
 
                 my @transactions = $block_response->{result}->{transactions}->@*;
-                for my $transaction (@transactions) {
-                    $self->transform_transaction($transaction)->on_done(sub {
-                        my $default_transaction = shift;
-                        $self->source->emit($default_transaction) if $default_transaction;
-                    });
-                }
+                my @futures = map {$self->transform_transaction($_)} @transactions;
+                Future->needs_all(@futures);
             });
-}
-
-
-sub newPendingTransactions {
-    my ($self, $response) = @_;
-
-    die "Invalid node response for newPendingTransactions subscription" unless $response->{params} && $response->{params}->{result};
-
-    my $transaction = $response->{params}->{result};
-
-    $self->new_websocket_client()->eth_getTransactionByHash($transaction)
-        ->take(1)
-        ->each(sub {
-                $self->transform_transaction(shift)->on_done(sub{
-                        my $default_transaction = shift;
-                        $self->source->emit($default_transaction) if $default_transaction;
-                    })
-            })
-
 }
 
 async sub transform_transaction {
@@ -112,13 +96,60 @@ async sub transform_transaction {
         type => '',
     };
 
-    $transaction = await $self->_check_contract_transaction($transaction);
+    # check if the transaction is from an ERC20 contract
+    # this can return more than one transaction since we can have
+    # logs for different contracts in the same transaction.
+    my $transactions = await $self->_check_contract_transaction($transaction);
 
-    return $transaction;
+    # set the type for each transaction
+    # from and to => internal
+    # to => received
+    # from => sent
+    $transactions = await $self->_set_transaction_type($transactions) if $transactions;
+
+    if($transactions){
+        $self->source->emit($_) for $transactions->@*;
+    }
+
+    return 1;
+}
+
+
+async sub _set_transaction_type {
+    my ($self, $transactions) = @_;
+
+    return undef unless $transactions;
+
+    my @accounts_response = await $self->new_websocket_client->eth_accounts()->take(1)->as_list;
+    return undef unless $accounts_response[0] and $accounts_response[0]->{result};
+
+    my %accounts = map {$_ => 1} $accounts_response[0]->{result}->@*;
+
+    my @node_transactions;
+    for my $transaction ($transactions->@*) {
+        my $from = $accounts{$transaction->{from}};
+        my $to = $accounts{$transaction->{to}};
+
+        if ($from && $to) {
+            $transaction->{type} = 'internal';
+        } elsif ($from) {
+            $transaction->{type} = 'sent';
+        } elsif ($to) {
+            $transaction->{type} = 'received';
+        } else {
+            next;
+        }
+        push (@node_transactions, $transaction) if $transaction->{type};
+    }
+
+
+    return \@node_transactions;
 }
 
 async sub _check_contract_transaction {
     my ($self, $transaction) = @_;
+
+    my @transactions;
 
     my @receipts =
         await $self->new_websocket_client->eth_getTransactionReceipt($transaction->{hash})
@@ -133,40 +164,38 @@ async sub _check_contract_transaction {
         # Ignore unsuccessful transactions.
         return undef unless $receipt->{result}->{status} && hex($receipt->{result}->{status}) == 1;
 
-        # ERC20 transfer event.
-        my $event = await $self->_get_event_signature('Transfer(address,address,uint256)');
-
         # The first topic is the hash of the signature of the event.
-        my @transfer_logs = grep { $_->{topics} and $_->{topics}[0] eq $event } @$logs;
+        my @transfer_logs = grep { $_->{topics} && $_->{topics}[0] eq TRANSFER_SIGNATURE } @$logs;
 
         # Only Transfer support for now.
         return undef unless @transfer_logs;
 
-        my @currency_code = await $self->new_websocket_client->eth_call([{data => await $self->_get_event_signature('symbol()'), to => $transaction->{to}}, "latest"])->take(1)->as_list;
-        $transaction->{currency} = $self->_to_string($currency_code[0]->{result});
-        $transaction->{contract} = $transaction->{to};
-
         for my $log (@transfer_logs) {
+            my $transaction_cp = {};
+            @{$transaction_cp}{keys %$transaction} = values %$transaction;
+
+            my @currency_code = await $self->new_websocket_client->eth_call([{data => SYMBOL_SIGNATURE, to => $log->{address}}, "latest"])->take(1)->as_list;
+            my $currency_code_str = $self->_to_string($currency_code[0]->{result});
+
+            $transaction_cp->{currency} = $currency_code_str;
+            $transaction_cp->{contract} = $log->{address};
+
             my @topics = $log->{topics}->@*;
-            $transaction->{to} = $self->_remove_zeros($topics[2]);
-            $transaction->{contract_amount} = Math::BigFloat->from_hex($log->{data});
-            last;
+            if($topics[2]) {
+                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
+                $transaction_cp->{contract_amount} = Math::BigFloat->from_hex($log->{data});
+                push(@transactions, $transaction_cp);
+                last;
+            } else {
+                return undef;
+            }
         }
 
+    } else {
+        push(@transactions, $transaction);
     }
 
-    return $transaction;
-
-}
-
-async sub _get_event_signature {
-    my ($self, $method) = @_;
-
-    my $hex = sprintf("0x%s", unpack("H*", $method));
-
-    my @sha3_hex = await $self->new_websocket_client->web3_sha3($hex)->take(1)->as_list;
-
-    return $sha3_hex[0]->{result};
+    return \@transactions;
 }
 
 sub _remove_zeros {
