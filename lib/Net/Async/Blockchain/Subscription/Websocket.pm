@@ -6,6 +6,8 @@ no indirect;
 
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
+use Net::Async::WebSocket::Client;
+
 use base qw(IO::Async::Notifier);
 
 sub source : method { shift->{source} }
@@ -49,7 +51,7 @@ sub AUTOLOAD {
     $client->connect(url => $self->endpoint)->on_done(sub {
         $client->send_text_frame(encode_json_utf8($obj));
     })->on_fail(sub{
-        die "Can't not connect to the websocket endpoint: @{[$self->endpoint]}";
+        die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
     })->get;
 
     return $self->source;

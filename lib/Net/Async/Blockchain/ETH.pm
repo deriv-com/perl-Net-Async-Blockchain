@@ -9,8 +9,8 @@ use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
 use Math::BigFloat;
-use Net::Async::WebSocket::Client;
 
+use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::Websocket;
 
 use base qw(Net::Async::Blockchain);
@@ -19,7 +19,7 @@ use constant {
     # Transfer(address,address,uint256)
     TRANSFER_SIGNATURE => '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
     # symbol()
-    SYMBOL_SIGNATURE => '0xbe16b05c387bab9ac31918a3e61672f4618601f3c598a2f3f2710f37053e1ea4',
+    SYMBOL_SIGNATURE => '0x95d89b41e2f5f391a79ec54e9d87c79d6e777c63e32c28da95b4e9e4a79250ec',
 };
 
 sub currency_code { 'ETH' }
@@ -34,6 +34,17 @@ sub new_websocket_client {
         source => $ws_source->source,
     ));
     return $client;
+}
+
+sub rpc_client : method {
+    my ($self) = @_;
+    return $self->{rpc_client} if $self->{rpc_client};
+
+    $self->add_child(
+        my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->config->{rpc_url})
+    );
+
+    return $http_client;
 }
 
 sub subscribe {
@@ -53,26 +64,20 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             })
-        ->each(sub{$self->$subscription(shift)});
+        ->each(async sub{ await $self->$subscription(shift) });
 
     return $self->source;
 }
 
-sub newHeads {
+async sub newHeads {
     my ($self, $response) = @_;
 
     die "Invalid node response for newHeads subscription" unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
-    $self->new_websocket_client()->eth_getBlockByHash($block->{hash}, JSON->true)
-        ->take(1)
-        ->each(sub{
-                my ($block_response) = @_;
-
-                my @transactions = $block_response->{result}->{transactions}->@*;
-                my @futures = map {$self->transform_transaction($_)} @transactions;
-                Future->needs_all(@futures);
-            });
+    my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON->true);
+    my @transactions = $block_response->{transactions}->@*;
+    await Future->needs_all(map {$self->transform_transaction($_)} @transactions);
 }
 
 async sub transform_transaction {
@@ -120,10 +125,10 @@ async sub _set_transaction_type {
 
     return undef unless $transactions;
 
-    my @accounts_response = await $self->new_websocket_client->eth_accounts()->take(1)->as_list;
-    return undef unless $accounts_response[0] and $accounts_response[0]->{result};
+    my $accounts_response = await $self->rpc_client->eth_accounts();
+    return undef unless $accounts_response;
 
-    my %accounts = map {$_ => 1} $accounts_response[0]->{result}->@*;
+    my %accounts = map {$_ => 1} $accounts_response->@*;
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
@@ -151,18 +156,13 @@ async sub _check_contract_transaction {
 
     my @transactions;
 
-    my @receipts =
-        await $self->new_websocket_client->eth_getTransactionReceipt($transaction->{hash})
-            ->take(1)
-            ->as_list;
-
-    my $receipt = $receipts[0];
-    my $logs = $receipt->{result}->{logs};
+    my $receipt = await $self->rpc_client->eth_getTransactionReceipt($transaction->{hash});
+    my $logs = $receipt->{logs};
 
     # Contract
     if ($logs->@* > 0) {
         # Ignore unsuccessful transactions.
-        return undef unless $receipt->{result}->{status} && hex($receipt->{result}->{status}) == 1;
+        return undef unless $receipt->{status} && hex($receipt->{status}) == 1;
 
         # The first topic is the hash of the signature of the event.
         my @transfer_logs = grep { $_->{topics} && $_->{topics}[0] eq TRANSFER_SIGNATURE } @$logs;
@@ -174,10 +174,11 @@ async sub _check_contract_transaction {
             my $transaction_cp = {};
             @{$transaction_cp}{keys %$transaction} = values %$transaction;
 
-            my @currency_code = await $self->new_websocket_client->eth_call([{data => SYMBOL_SIGNATURE, to => $log->{address}}, "latest"])->take(1)->as_list;
-            my $currency_code_str = $self->_to_string($currency_code[0]->{result});
+            my $hex_symbol = await $self->rpc_client->eth_call([{data => SYMBOL_SIGNATURE, to => $log->{address}}, "latest"]);
+            my $symbol = $self->_to_string($hex_symbol);
+            next unless $symbol;
 
-            $transaction_cp->{currency} = $currency_code_str;
+            $transaction_cp->{currency} = $symbol;
             $transaction_cp->{contract} = $log->{address};
 
             my @topics = $log->{topics}->@*;
@@ -185,9 +186,6 @@ async sub _check_contract_transaction {
                 $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
                 $transaction_cp->{contract_amount} = Math::BigFloat->from_hex($log->{data});
                 push(@transactions, $transaction_cp);
-                last;
-            } else {
-                return undef;
             }
         }
 

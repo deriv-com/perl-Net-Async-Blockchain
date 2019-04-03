@@ -10,7 +10,7 @@ use Data::Dumper;
 use Net::Async::Blockchain::ETH;
 
 # my $eth_args = { subscription_url => "wss://rinkeby.infura.io/ws/v3/c56fba38337b4e2ea552e42529641896" };
-my $eth_args = { subscription_url => "ws://127.0.0.1:8546" };
+my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
 
 my $loop = IO::Async::Loop->new;
 
