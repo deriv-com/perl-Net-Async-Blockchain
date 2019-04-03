@@ -36,17 +36,6 @@ sub new_websocket_client {
     return $client;
 }
 
-sub rpc_client : method {
-    my ($self) = @_;
-    return $self->{rpc_client} if $self->{rpc_client};
-
-    $self->add_child(
-        my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->config->{rpc_url})
-    );
-
-    return $http_client;
-}
-
 sub subscribe {
     my ($self, $subscription) = @_;
 
