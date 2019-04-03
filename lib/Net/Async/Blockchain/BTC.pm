@@ -2,13 +2,49 @@ package Net::Async::Blockchain::BTC;
 
 use strict;
 use warnings;
+
+our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::BTC - Bitcoin based subscription.
+
+=head1 SYNOPSIS
+
+    my $btc_args = {
+        subscription_url => "tcp://127.0.0.1:28332",
+        rpc_url => 'http://test:test@127.0.0.1:8332',
+        rpc_timeout => 100,
+        lookup_transactions => 10,
+    };
+
+    my $loop = IO::Async::Loop->new;
+
+    $loop->add(
+        my $btc_client = Net::Async::Blockchain::BTC->new(
+            config => $btc_args
+        )
+    );
+
+    $btc_client->subscribe("rawtx")->each(sub { print shift->{hash} });
+
+    $loop->run();
+
+
+=head1 DESCRIPTION
+
+Bitcoin subscription using ZMQ from the bitcoin based blockchain nodes
+
+=over 4
+
+=cut
+
 no indirect;
 
 use JSON;
 use Ryu::Async;
 use Future::AsyncAwait;
 use IO::Async::Loop;
-use List::Util qw(first);
 use Math::BigFloat;
 
 use Net::Async::Blockchain::Client::RPC;
@@ -31,6 +67,21 @@ sub new_zmq_client {
     return $zmq_client;
 }
 
+=head2 subscribe
+
+Connect to the ZMQ port and subscribe to the implemented subscription:
+- https://github.com/bitcoin/bitcoin/blob/master/doc/zmq.md#usage
+
+=item *
+
+C<subscription> string subscription name
+
+=back
+
+L<Ryu::Async>
+
+=cut
+
 sub subscribe {
     my ($self, $subscription) = @_;
 
@@ -44,6 +95,21 @@ sub subscribe {
     return $self->source;
 }
 
+=head2 rawtx
+
+rawtx subscription
+
+Convert and emit for the client source every new raw transaction received that
+is owned by the node.
+
+=item *
+
+C<raw_transaction> bitcoin raw transaction
+
+=back
+
+=cut
+
 async sub rawtx {
     my ($self, $raw_transaction) = @_;
 
@@ -53,9 +119,25 @@ async sub rawtx {
     $self->source->emit($transaction) if $transaction;
 }
 
+=head2 transform_transaction
+
+Receive a decoded raw transaction and convert it to a L<Net::Async::Blockchain::Transaction> object
+
+=item *
+
+C<decoded_raw_transaction> the response from the RPC command `decoderawtransaction`
+
+=back
+
+L<Net::Async::Blockchain::Transaction>
+
+=cut
+
 async sub transform_transaction {
     my ($self, $decoded_raw_transaction) = @_;
 
+    # the command listtransactions will guarantee that this transactions is from or to one
+    # of the node addresses.
     my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} }
         @{await $self->rpc_client->listtransactions("*", $self->config->lookup_transactions // DEFAULT_LOOKUP_TRANSACTIONS)};
 
@@ -67,6 +149,9 @@ async sub transform_transaction {
     my %category;
     my $fee = Math::BigFloat->bzero();
 
+    # we can have more than one transaction when:
+    # - multiple `to` addresses transactions
+    # - sent and received by the same node
     for my $tx (@received_transactions) {
         $amount->badd($tx->{amount});
         $addresses{$tx->{address}} = 1;
@@ -76,6 +161,8 @@ async sub transform_transaction {
     }
     my @addresses = keys %addresses;
     my @categories = keys %category;
+    # it can be receive, sent, internal, if we have a send and a receive transaction
+    # this means that the node sent a transaction to an address that it is the owner too.
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = {
