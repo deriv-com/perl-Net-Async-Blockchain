@@ -78,7 +78,6 @@ L<Ryu::Source>
 
 =cut
 
-
 sub source : method {
     my ($self) = @_;
     return $self->{source} if $self->{source};

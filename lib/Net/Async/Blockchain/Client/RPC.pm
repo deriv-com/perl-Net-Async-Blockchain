@@ -11,16 +11,6 @@ Net::Async::Blockchain::Client::RPC - Async RPC Client.
 
 =head1 SYNOPSIS
 
-Objects of this type would not normally be constructed directly.
-
-For blockchain clients see:
-- Net::Async::Blockchain::BTC
-- Net::Async::BLockchain::ETH
-
-Which will use this class as base.
-
-If you still needs to call this directly:
-
     my $loop = IO::Async::Loop->new();
 
     $loop->add(
@@ -38,7 +28,6 @@ Auto load the commands as the method parameters for the RPC calls returning them
 =over 4
 
 =cut
-
 
 no indirect;
 
