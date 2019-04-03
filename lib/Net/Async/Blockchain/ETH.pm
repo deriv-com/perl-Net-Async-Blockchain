@@ -129,7 +129,7 @@ async sub _set_transaction_type {
         } elsif ($from) {
             $transaction->{type} = 'sent';
         } elsif ($to) {
-            $transaction->{type} = 'received';
+            $transaction->{type} = 'receive';
         } else {
             next;
         }
