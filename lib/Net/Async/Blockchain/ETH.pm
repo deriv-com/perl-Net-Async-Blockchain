@@ -41,12 +41,16 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     $self->new_websocket_client()->eth_subscribe($subscription)
+        # the first response from the node is the subscription id
+        # once we received it we can start to listening the subscription.
         ->skip_until(sub{
                 my $response = shift;
                 return 1 unless $response->{result};
                 $self->{subscription_id} = $response->{result};
                 return 0;
             })
+        # we use the subscription id received as the first response to filter
+        # all incoming subscription responses.
         ->filter(sub {
                 my $response = shift;
                 return undef unless $response->{params} && $response->{params}->{subscription};
@@ -60,7 +64,6 @@ sub subscribe {
 async sub newHeads {
     my ($self, $response) = @_;
 
-    die "Invalid node response for newHeads subscription" unless $response->{params} && $response->{params}->{result};
     my $block = $response->{params}->{result};
 
     my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON->true);
@@ -74,10 +77,11 @@ async sub transform_transaction {
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
 
+    # fee = gas * gasPrice
     my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
     my $amount = Math::BigFloat->from_hex($decoded_transaction->{value});
 
-    my $transaction = {
+    my $transaction = Net::Async::Blockchain::Transaction->new(
         currency => $self->currency_code,
         hash => $decoded_transaction->{hash},
         from => $decoded_transaction->{from},
@@ -87,7 +91,7 @@ async sub transform_transaction {
         fee => $fee,
         fee_currency => $self->currency_code,
         type => '',
-    };
+    );
 
     # check if the transaction is from an ERC20 contract
     # this can return more than one transaction since we can have
@@ -120,19 +124,19 @@ async sub _set_transaction_type {
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
-        my $from = $accounts{$transaction->{from}};
-        my $to = $accounts{$transaction->{to}};
+        my $from = $accounts{$transaction->from};
+        my $to = $accounts{$transaction->to};
 
         if ($from && $to) {
-            $transaction->{type} = 'internal';
+            $transaction->type('internal');
         } elsif ($from) {
-            $transaction->{type} = 'sent';
+            $transaction->type('sent');
         } elsif ($to) {
-            $transaction->{type} = 'receive';
+            $transaction->type('receive');
         } else {
             next;
         }
-        push (@node_transactions, $transaction) if $transaction->{type};
+        push (@node_transactions, $transaction) if $transaction->type;
     }
 
 
@@ -144,7 +148,7 @@ async sub _check_contract_transaction {
 
     my @transactions;
 
-    my $receipt = await $self->rpc_client->eth_getTransactionReceipt($transaction->{hash});
+    my $receipt = await $self->rpc_client->eth_getTransactionReceipt($transaction->hash);
     my $logs = $receipt->{logs};
 
     # Contract
@@ -159,20 +163,24 @@ async sub _check_contract_transaction {
         return undef unless @transfer_logs;
 
         for my $log (@transfer_logs) {
-            my $transaction_cp = {};
-            @{$transaction_cp}{keys %$transaction} = values %$transaction;
+            my $transaction_cp = $transaction->clone();
 
             my $hex_symbol = await $self->rpc_client->eth_call([{data => SYMBOL_SIGNATURE, to => $log->{address}}, "latest"]);
             my $symbol = $self->_to_string($hex_symbol);
             next unless $symbol;
 
-            $transaction_cp->{currency} = $symbol;
-            $transaction_cp->{contract} = $log->{address};
+            $transaction_cp->currency($symbol);
+            $transaction_cp->contract($log->{address});
 
             my @topics = $log->{topics}->@*;
+            # the topics for the transfer transaction are:
+            # - method signature
+            # - sender address
+            # - to address
+            # - tokens
             if($topics[2]) {
-                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
-                $transaction_cp->{contract_amount} = Math::BigFloat->from_hex($log->{data});
+                $transaction_cp->to($self->_remove_zeros($topics[2]));
+                $transaction_cp->amount(Math::BigFloat->from_hex($log->{data}));
                 push(@transactions, $transaction_cp);
             }
         }

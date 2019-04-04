@@ -165,7 +165,7 @@ async sub transform_transaction {
     # this means that the node sent a transaction to an address that it is the owner too.
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
-    my $transaction = {
+    my $transaction = Net::Async::Blockchain::Transaction->new(
         currency => $self->currency_code,
         hash => $decoded_raw_transaction->{txid},
         from => '',
@@ -174,7 +174,7 @@ async sub transform_transaction {
         fee => $fee,
         fee_currency => $self->currency_code,
         type => $transaction_type,
-    };
+    );
 
     return $transaction;
 }
