@@ -11,14 +11,15 @@ use JSON;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 
+use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::Websocket;
 
 use base qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE => keccak_256_hex('Transfer(address,address,uint256)'),
-    SYMBOL_SIGNATURE => keccak_256_hex('symbol()'),
+    TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
+    SYMBOL_SIGNATURE => '0x' . keccak_256_hex('symbol()'),
 };
 
 sub currency_code { 'ETH' }
@@ -128,11 +129,11 @@ async sub _set_transaction_type {
         my $to = $accounts{$transaction->to};
 
         if ($from && $to) {
-            $transaction->type('internal');
+            $transaction->{type} = 'internal';
         } elsif ($from) {
-            $transaction->type('sent');
+            $transaction->{type} = 'sent';
         } elsif ($to) {
-            $transaction->type('receive');
+            $transaction->{type} = 'receive';
         } else {
             next;
         }
@@ -169,18 +170,14 @@ async sub _check_contract_transaction {
             my $symbol = $self->_to_string($hex_symbol);
             next unless $symbol;
 
-            $transaction_cp->currency($symbol);
-            $transaction_cp->contract($log->{address});
+            $transaction_cp->{currency} = $symbol;
+            $transaction_cp->{contract} = $log->{address};
 
             my @topics = $log->{topics}->@*;
-            # the topics for the transfer transaction are:
-            # - method signature
-            # - sender address
-            # - to address
-            # - tokens
+
             if($topics[2]) {
-                $transaction_cp->to($self->_remove_zeros($topics[2]));
-                $transaction_cp->amount(Math::BigFloat->from_hex($log->{data}));
+                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
+                $transaction_cp->{amount} = Math::BigFloat->from_hex($log->{data});
                 push(@transactions, $transaction_cp);
             }
         }

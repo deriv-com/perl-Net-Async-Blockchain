@@ -6,56 +6,35 @@ no indirect;
 
 our $VERSION = '0.001';
 
-use Moo;
-use Type::Tiny;
+sub currency : method { shift->{currency} }
+sub hash : method { shift->{hash} }
+sub from : method { shift->{from} }
+sub to : method { shift->{to} }
+sub contract : method { shift->{contract} }
+sub amount : method { shift->{amount} }
+sub fee : method { shift->{fee} }
+sub fee_currency : method { shift->{fee_currency} }
+sub type : method { shift->{type} }
 
-my $TXN_TYPE = "Type::Tiny"->new(
-    name       => "TransactionType",
-    constraint => sub { $_ && $_ =~ /^(?:receive|sent|internal)$/ },
-    message    => sub { "Invalid transaction type (" . ($_ // 'undefined') . ")." },
-);
+sub new {
+   my $class = shift;
+   my %params = @_;
 
-my $VALID_BIG_FLOAT = "Type::Tiny"->new(
-    name => "ValidBigFloatType",
-    constraint => sub { $_ && ref $_ eq 'Math::BigFloat' && !$_->is_nan() },
-    message    => sub { "Invalid Math::BigFloat type (" . ($_ // 'undefined') . ")." },
-);
+   my $self = bless {}, $class;
 
-has 'currency' => (
-    required => 1,
-);
+   foreach (qw(currency hash from to contract amount fee fee_currency type)) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
 
-has 'hash' => (
-    required => 1,
-);
+   die "Invalid transaction parameters" if keys %params;
+   return $self;
+}
 
-has 'from' => ();
-
-has 'to' => (
-    required => 1,
-);
-
-has 'contract' => ();
-
-has 'amount' => (
-    required => 1,
-    isa => $VALID_BIG_FLOAT.
-);
-
-has 'fee' => (
-    required => 1,
-    isa => $VALID_BIG_FLOAT,
-);
-
-has 'fee_currency' => (
-    required => 1,
-);
-
-has 'type' => (
-    isa => $TXN_TYPE,
-);
-
-sub clone { $self->meta->clone_object($self) }
+sub clone {
+    my ($self) = @_;
+    my $clone = Net::Async::Blockchain::Transaction->new();
+    @{$clone}{keys %$self} = values %$self;
+    return $clone;
+}
 
 1;
-
