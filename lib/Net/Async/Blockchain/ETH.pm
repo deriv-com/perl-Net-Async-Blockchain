@@ -9,6 +9,7 @@ use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
 use Math::BigFloat;
+use Digest::Keccak qw(keccak_256_hex);
 
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::Websocket;
@@ -16,10 +17,8 @@ use Net::Async::Blockchain::Subscription::Websocket;
 use base qw(Net::Async::Blockchain);
 
 use constant {
-    # Transfer(address,address,uint256)
-    TRANSFER_SIGNATURE => '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-    # symbol()
-    SYMBOL_SIGNATURE => '0x95d89b41e2f5f391a79ec54e9d87c79d6e777c63e32c28da95b4e9e4a79250ec',
+    TRANSFER_SIGNATURE => keccak_256_hex('Transfer(address,address,uint256)'),
+    SYMBOL_SIGNATURE => keccak_256_hex('symbol()'),
 };
 
 sub currency_code { 'ETH' }
