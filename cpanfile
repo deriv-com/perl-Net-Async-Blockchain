@@ -1,3 +1,4 @@
+requires 'indirect',    '>= 0.37';
 requires 'Future::AsyncAwait', '>= 0.21';
 requires 'IO::Async::SSL', 0;
 requires 'JSON', 0;
@@ -8,3 +9,12 @@ requires 'Net::Async::HTTP', '>= 0.43';
 requires 'Ryu::Async', '>= 0.011';
 requires 'ZMQ::LibZMQ3', '>= 1.19';
 
+
+on test => sub {
+    requires 'Test::More', '>= 0.98';
+};
+
+on develop => sub {
+    requires 'Devel::Cover', '>= 1.23';
+    requires 'Devel::Cover::Report::Codecov', '>= 0.14';
+};
