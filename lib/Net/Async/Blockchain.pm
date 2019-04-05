@@ -44,13 +44,7 @@ removed here.
 
 =over 4
 
-=item *
-
-C<config> Expected to be a hash containing:
-
-rpc_url (required, ex.: http://127.0.0.1:8332)
-rpc_timeout (optional, ex.: 100)
-subscription_url (required, ex.: ws://127.0.0.1:28332)
+=item * C<config> expected to be a hash containing (rpc_url, rpc_timeout, subscription_url, lookup_transactions)
 
 =back
 
@@ -90,7 +84,7 @@ sub source : method {
 
 =head2 rpc_client
 
-Returns a new async RPC client.
+Create a new async RPC client.
 
 Created only the first time, if it's required again use the same client.
 

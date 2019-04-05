@@ -2,6 +2,38 @@ package Net::Async::Blockchain::ETH;
 
 use strict;
 use warnings;
+
+our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::ETH - Ethereum based subscription.
+
+=head1 SYNOPSIS
+
+    my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
+
+    my $loop = IO::Async::Loop->new;
+
+    $loop->add(
+        my $eth_client = Net::Async::Blockchain::ETH->new(
+            config => $eth_args
+        )
+    );
+
+    $eth_client->subscribe("newHeads")->each(sub { print Dumper shift });
+
+    $loop->run();
+
+=head1 DESCRIPTION
+
+Ethereum subscription using websocket node client
+
+=over 4
+
+=cut
+
+
 no indirect;
 
 use Future::AsyncAwait;
@@ -26,6 +58,16 @@ sub currency_code { 'ETH' }
 
 sub subscription_id { shift->{subscription_id} }
 
+=head2 new_websocket_client
+
+Create a new async websocket client.
+
+=back
+
+L<Net::Async::Blockchain::Subscription::Websocket>
+
+=cut
+
 sub new_websocket_client {
     my ($self) = @_;
     $self->add_child(my $ws_source = Ryu::Async->new());
@@ -35,6 +77,21 @@ sub new_websocket_client {
     ));
     return $client;
 }
+
+=head2 subscribe
+
+Connect to the websocket port and subscribe to the implemented subscription:
+- https://github.com/ethereum/go-ethereum/wiki/RPC-PUB-SUB#create-subscription
+
+=over 4
+
+=item * C<subscription> string subscription name
+
+=back
+
+L<Ryu::Async>
+
+=cut
 
 sub subscribe {
     my ($self, $subscription) = @_;
@@ -62,6 +119,21 @@ sub subscribe {
     return $self->source;
 }
 
+=head2 newHeads
+
+newHeads subscription
+
+Convert and emit one or more L<Net::Async::Blockchain::Transaction> for the client
+source every new block received that contains transactions owned by the node.
+
+=over 4
+
+=item * C<block> new block received with the transactions
+
+=back
+
+=cut
+
 async sub newHeads {
     my ($self, $response) = @_;
 
@@ -71,6 +143,19 @@ async sub newHeads {
     my @transactions = $block_response->{transactions}->@*;
     await Future->needs_all(map {$self->transform_transaction($_)} @transactions);
 }
+
+=head2 transform_transaction
+
+Receive a decoded transaction and convert it to a list of L<Net::Async::Blockchain::Transaction>
+once converted it emits all transactions to the client source.
+
+=over 4
+
+=item * C<decoded_transaction> the format here will be the same as the response from the command `getTransactionByHash`
+
+=back
+
+=cut
 
 async sub transform_transaction {
     my ($self, $decoded_transaction) = @_;
@@ -114,6 +199,26 @@ async sub transform_transaction {
 }
 
 
+=head2 _set_transaction_type
+
+To identify what are the transactions that are owned by the node
+we need to check our list of addresses and compare it with each transaction
+the result will be:
+
+if to and from found: internal
+if to found: receive
+if from found: sent
+
+=over 4
+
+=item * array of L<Net::Async::Blockchain::Transaction>
+
+=back
+
+hashref from an array of L<Net::Async::Blockchain::Transaction>
+
+=cut
+
 async sub _set_transaction_type {
     my ($self, $transactions) = @_;
 
@@ -144,6 +249,29 @@ async sub _set_transaction_type {
 
     return \@node_transactions;
 }
+
+=head2 _check_contract_transaction
+
+We need to identify what are the transactions that have a contract as
+destination, once we found we change:
+
+currency => the contract symbol
+amount => tokens
+to => address that will receive the tokens
+contract => the contract address
+
+One contract transaction can have multiple contract transfer so here we can
+return one or more transactions.
+
+=over 4
+
+=item * L<Net::Async::Blockchain::Transaction>
+
+=back
+
+hashref from an array of L<Net::Async::Blockchain::Transaction>
+
+=cut
 
 async sub _check_contract_transaction {
     my ($self, $transaction) = @_;
@@ -176,6 +304,7 @@ async sub _check_contract_transaction {
 
             my @topics = $log->{topics}->@*;
 
+            # the third item of the transfer log array is always the `to` address
             if($topics[2]) {
                 $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
                 $transaction_cp->{amount} = Math::BigFloat->from_hex($log->{data});
@@ -190,6 +319,23 @@ async sub _check_contract_transaction {
     return \@transactions;
 }
 
+=head2 _remove_zeros
+
+The address on the topic logs is always a 32 bytes string so we will
+have addresses like: `000000000000000000000000c636d4c672b3d3760b2e759b8ad72546e3156ce9`
+
+We need to remove all the extra zeros and add the `0x`
+
+=over 4
+
+=item * C<trxn_topic> The log string
+
+=back
+
+string
+
+=cut
+
 sub _remove_zeros {
     my ($self, $trxn_topic) = @_;
 
@@ -200,15 +346,48 @@ sub _remove_zeros {
     return "0x$address";
 }
 
+=head2 _to_string
+
+The response from the contract will be in the dynamic type format when we call the symbol, so we will
+have a response like: `0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003414c480000000000000000000000000000000000000000000000000000000000`
+
+This is basically:
+
+First 32 bytes: 0000000000000000000000000000000000000000000000000000000000000020 = 32 (offset to start of data part of second parameter)
+Second 32 bytes: 0000000000000000000000000000000000000000000000000000000000000003 = 3 (value size)
+Third 32 bytes: 414c480000000000000000000000000000000000000000000000000000000000 = ALH (padded left value)
+
+=over 4
+
+=item * C<trxn_topic> The log string
+
+=back
+
+string
+
+=cut
+
 sub _to_string {
     my ($self, $response) = @_;
 
     return undef unless $response;
 
-    my $packed_response = pack('H*', substr($response, -64));
-    $packed_response =~ s/\0+$//;
+    $response = substr($response, 2) if $response =~ /^0x/;
 
-    return $packed_response;
+    # split every 32 bytes
+    my @chunks = $response =~ /(.{1,64})/g;
+
+    # position starting from the second item
+    my $position = Math::BigFloat->from_hex($chunks[0])->bdiv(32)->badd(1)->bint();
+
+    # size
+    my $size = Math::BigFloat->from_hex($chunks[1])->bint();
+
+    # hex string to string
+    my $packed_response = pack('H*', $chunks[$position]);
+
+    # substring by the data size
+    return substr($packed_response, 0, $size);
 }
 
 1;

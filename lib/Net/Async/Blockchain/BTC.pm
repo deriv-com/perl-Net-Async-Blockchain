@@ -73,9 +73,9 @@ sub new_zmq_client {
 Connect to the ZMQ port and subscribe to the implemented subscription:
 - https://github.com/bitcoin/bitcoin/blob/master/doc/zmq.md#usage
 
-=item *
+=over 4
 
-C<subscription> string subscription name
+=item * C<subscription> string subscription name
 
 =back
 
@@ -100,12 +100,12 @@ sub subscribe {
 
 rawtx subscription
 
-Convert and emit for the client source every new raw transaction received that
+Convert and emit a L<Net::Async::Blockchain::Transaction> for the client source every new raw transaction received that
 is owned by the node.
 
-=item *
+=over 4
 
-C<raw_transaction> bitcoin raw transaction
+=item * C<raw_transaction> bitcoin raw transaction
 
 =back
 
@@ -124,9 +124,9 @@ async sub rawtx {
 
 Receive a decoded raw transaction and convert it to a L<Net::Async::Blockchain::Transaction> object
 
-=item *
+=over 4
 
-C<decoded_raw_transaction> the response from the RPC command `decoderawtransaction`
+=item * C<decoded_raw_transaction> the response from the command `decoderawtransaction`
 
 =back
 
