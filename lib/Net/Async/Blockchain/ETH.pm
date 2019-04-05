@@ -85,6 +85,7 @@ async sub transform_transaction {
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency => $self->currency_code,
         hash => $decoded_transaction->{hash},
+        block => $decoded_transaction->{blockNumber},
         from => $decoded_transaction->{from},
         to => $decoded_transaction->{to},
         contract => '',

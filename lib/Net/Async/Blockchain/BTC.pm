@@ -47,6 +47,7 @@ use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
 
+use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Subscription::ZMQ;
 
@@ -139,7 +140,7 @@ async sub transform_transaction {
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
     my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} }
-        @{await $self->rpc_client->listtransactions("*", $self->config->lookup_transactions // DEFAULT_LOOKUP_TRANSACTIONS)};
+        @{await $self->rpc_client->listtransactions("*", $self->config->{lookup_transactions} // DEFAULT_LOOKUP_TRANSACTIONS)};
 
     # transaction not found, just ignore.
     return undef unless @received_transactions;
@@ -168,6 +169,7 @@ async sub transform_transaction {
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency => $self->currency_code,
         hash => $decoded_raw_transaction->{txid},
+        block => $decoded_raw_transaction->{locktime},
         from => '',
         to => \@addresses,
         amount => $amount,

@@ -8,6 +8,7 @@ our $VERSION = '0.001';
 
 sub currency : method { shift->{currency} }
 sub hash : method { shift->{hash} }
+sub block : method { shift->{block} }
 sub from : method { shift->{from} }
 sub to : method { shift->{to} }
 sub contract : method { shift->{contract} }
@@ -22,7 +23,7 @@ sub new {
 
    my $self = bless {}, $class;
 
-   foreach (qw(currency hash from to contract amount fee fee_currency type)) {
+   foreach (qw(currency hash block from to contract amount fee fee_currency type)) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
