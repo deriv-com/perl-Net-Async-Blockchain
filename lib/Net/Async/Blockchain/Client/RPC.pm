@@ -54,13 +54,9 @@ removed here.
 
 =over 4
 
-=item *
+=item * C<rpc_url>
 
-rpc_url
-
-=item *
-
-rpc_timeout
+=item * C<rpc_timeout>
 
 =back
 
@@ -81,13 +77,9 @@ Use any argument as the method parameter for the client RPC call
 
 =over 4
 
-=item *
+=item * C<method>
 
-method
-
-=item *
-
-@params (any parameter required by the RPC call)
+=item * C<params> (any parameter required by the RPC call)
 
 =back
 
