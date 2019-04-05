@@ -1,4 +1,4 @@
-package Net::Async::Blockchain::Subscription::Websocket;
+package Net::Async::Blockchain::Client::Websocket;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ our $VERSION = '0.001';
 
 =head1 NAME
 
-Net::Async::Blockchain::Client::RPC - Async RPC Client.
+Net::Async::Blockchain::Client::Websocket - Async websocket Client.
 
 =head1 SYNOPSIS
 
@@ -16,21 +16,19 @@ Net::Async::Blockchain::Client::RPC - Async RPC Client.
     $loop->add(my $ws_source = Ryu::Async->new());
 
     $loop->add(
-        my $client = Net::Async::Blockchain::Subscription::Websocket->new(
-            endpoint => $self->config->{subscription_url},
+        my $client = Net::Async::Blockchain::Client::Websocket->new(
+            endpoint => "ws://127.0.0.1:8546",
             source => $ws_source->source,
         );
     );
 
-    my $response = $client->getblockchaininfo()->take(1)->as_list;
-
-    print $response[0]->{blocks};
+    my $response = $client->eth_subscribe('newHeads')->each(...);
 
     $loop->run();
 
 =head1 DESCRIPTION
 
-Auto load the commands as the method parameters for the RPC calls returning them asynchronously.
+Auto load the commands as the method parameters for the websocket calls returning them asynchronously.
 
 =over 4
 
@@ -56,9 +54,9 @@ removed here.
 
 =over 4
 
-=item * C<rpc_url>
+=item * C<endpoint>
 
-=item * C<rpc_timeout>
+=item * C<source> L<Ryu::Source>
 
 =back
 
@@ -82,7 +80,7 @@ Use any argument as the method parameter for the websocket client call
 
 =item * C<method>
 
-=item * C<params> (any parameter required by the RPC call)
+=item * C<@_> - any parameter required by the RPC call
 
 =back
 
@@ -91,7 +89,7 @@ Use any argument as the method parameter for the websocket client call
 sub AUTOLOAD {
     my $self = shift;
 
-    my $method = $Net::Async::Blockchain::Subscription::Websocket::AUTOLOAD;
+    my $method = $Net::Async::Blockchain::Client::Websocket::AUTOLOAD;
     $method =~ s/.*:://;
 
     return if ($method eq 'DESTROY');

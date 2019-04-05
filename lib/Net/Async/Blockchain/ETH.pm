@@ -21,7 +21,7 @@ Net::Async::Blockchain::ETH - Ethereum based subscription.
         )
     );
 
-    $eth_client->subscribe("newHeads")->each(sub { print Dumper shift });
+    $eth_client->subscribe("newHeads")->each(sub { print shift->{hash} });
 
     $loop->run();
 
@@ -40,12 +40,13 @@ use Future::AsyncAwait;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON;
+use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
-use Net::Async::Blockchain::Subscription::Websocket;
+use Net::Async::Blockchain::Client::Websocket;
 
 use base qw(Net::Async::Blockchain);
 
@@ -64,14 +65,14 @@ Create a new async websocket client.
 
 =back
 
-L<Net::Async::Blockchain::Subscription::Websocket>
+L<Net::Async::Blockchain::Client::Websocket>
 
 =cut
 
 sub new_websocket_client {
     my ($self) = @_;
     $self->add_child(my $ws_source = Ryu::Async->new());
-    $self->add_child(my $client = Net::Async::Blockchain::Subscription::Websocket->new(
+    $self->add_child(my $client = Net::Async::Blockchain::Client::Websocket->new(
         endpoint => $self->config->{subscription_url},
         source => $ws_source->source,
     ));
@@ -166,11 +167,12 @@ async sub transform_transaction {
     # fee = gas * gasPrice
     my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
     my $amount = Math::BigFloat->from_hex($decoded_transaction->{value});
+    my $block = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency => $self->currency_code,
         hash => $decoded_transaction->{hash},
-        block => $decoded_transaction->{blockNumber},
+        block => $block,
         from => $decoded_transaction->{from},
         to => $decoded_transaction->{to},
         contract => '',
@@ -376,6 +378,8 @@ sub _to_string {
 
     # split every 32 bytes
     my @chunks = $response =~ /(.{1,64})/g;
+
+    return undef unless scalar @chunks >= 3;
 
     # position starting from the second item
     my $position = Math::BigFloat->from_hex($chunks[0])->bdiv(32)->badd(1)->bint();

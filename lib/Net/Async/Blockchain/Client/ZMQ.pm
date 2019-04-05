@@ -1,7 +1,38 @@
-package Net::Async::Blockchain::Subscription::ZMQ;
+package Net::Async::Blockchain::Client::ZMQ;
 
 use strict;
 use warnings;
+
+our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::Client::ZMQ - Async ZMQ Client.
+
+=head1 SYNOPSIS
+
+    my $loop = IO::Async::Loop->new();
+
+    $loop->add(my $zmq_source = Ryu::Async->new);
+
+    $loop->add(
+        my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
+            source   => $zmq_source->source,
+            endpoint => 'tpc://127.0.0.1:28332',
+        ));
+
+    my $response = $zmq_client->subscribe('rawtx')->each(...);
+
+    $loop->run();
+
+=head1 DESCRIPTION
+
+client for the bitcoin ZMQ server
+
+=over 4
+
+=cut
+
 no indirect;
 
 use ZMQ::LibZMQ3;
@@ -16,6 +47,25 @@ use parent qw(IO::Async::Notifier);
 sub source : method { shift->{source} }
 
 sub endpoint : method { shift->{endpoint} }
+
+=head2 _init
+
+Called by `new` before `configure`, any additional configuration
+that is not described on IO::ASYNC::Notifier must be included and
+removed here.
+
+If this class receive a DNS as endpoint this will be resolved on this method
+to an IP address.
+
+=over 4
+
+=item * C<endpoint>
+
+=item * C<source> L<Ryu::Source>
+
+=back
+
+=cut
 
 sub _init {
     my ($self, $paramref) = @_;
@@ -39,6 +89,20 @@ sub _init {
     }
 }
 
+=head2 subscribe
+
+Connect to the ZMQ server and start the subscription
+
+=over 4
+
+=item * C<subscription> subscription string name
+
+=back
+
+L<Ryu::Source>
+
+=cut
+
 sub subscribe {
     my ($self, $subscription) = @_;
 
@@ -47,12 +111,13 @@ sub subscribe {
 
     my $socket = zmq_socket($ctxt, ZMQ_SUB);
 
-    zmq_setsockopt($socket, ZMQ_RCVHWM, 0);
+    # zmq_setsockopt_string is not exported
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
 
     my $connect_response = zmq_connect($socket, $self->endpoint);
     die "zmq_connect failed with $!" if $connect_response;
 
+    # create a reader for IO::Async::Handle
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
     open(my $io, "<&", $fd);
 
@@ -69,6 +134,20 @@ sub subscribe {
 
     return $self->source;
 }
+
+=head2 _recv_multipart
+
+Since each response is partial we need to join them
+
+=over 4
+
+=item * C<subscription> subscription string name
+
+=back
+
+Multipart response array
+
+=cut
 
 sub _recv_multipart {
     my ($self, $socket) = @_;

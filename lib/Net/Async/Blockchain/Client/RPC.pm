@@ -14,7 +14,7 @@ Net::Async::Blockchain::Client::RPC - Async RPC Client.
     my $loop = IO::Async::Loop->new();
 
     $loop->add(
-        my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => ..., rpc_timeout => ...)
+        my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => 'http://127.0.0.1:8332', rpc_timeout => 100)
     );
 
     my $response = $http_client->getblockchaininfo()->get;
