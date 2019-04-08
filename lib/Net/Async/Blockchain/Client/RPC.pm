@@ -46,6 +46,22 @@ sub rpc_url : method { shift->{rpc_url} }
 # DEFAULT_RPC_TIMEOUT constant.
 sub rpc_timeout : method {shift->{rpc_timeout}}
 
+sub http_client : method {
+    my ($self) = @_;
+
+    return $self->{http_client} if $self->{http_client};
+
+    $self->add_child(
+        my $http_client = Net::Async::HTTP->new(
+            decode_content => 1,
+            stall_timeout => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
+            fail_on_error => 1,
+    ));
+
+    $self->{http_client} = $http_client;
+    return $self->{http_client};
+}
+
 =head2 _init
 
 Called by `new` before `configure`, any additional configuration
@@ -93,20 +109,13 @@ sub AUTOLOAD {
 
     return if ($method eq 'DESTROY');
 
-    $self->add_child(
-        my $http_client = Net::Async::HTTP->new(
-            decode_content => 1,
-            stall_timeout => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
-            fail_on_error => 1,
-    ));
-
     my $obj = {
         id     => 1,
         method => $method,
         params => (ref $_[0] ? $_[0] : [@_]),
     };
 
-    return $http_client->POST($self->rpc_url, encode_json_utf8($obj), content_type => 'application/json')->transform(
+    return $self->http_client->POST($self->rpc_url, encode_json_utf8($obj), content_type => 'application/json')->transform(
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
         })->else(sub {

@@ -6,14 +6,14 @@ use warnings;
 use Test::More;
 use Test::Fatal;
 use Test::Requires qw( Test::TCP );
-
+use IO::Async::Test;
 use IO::Async::Loop;
 use Ryu::Async;
-use Net::Async::Blockchain::Client::ZMQ;
 
 BEGIN {
     use_ok "ZMQ::LibZMQ3";
     use_ok "ZMQ::Constants", ":v3.1.1", ":all";
+    use_ok "Net::Async::Blockchain::Client::ZMQ";
 }
 
 subtest 'receive msg' => sub {
@@ -40,6 +40,7 @@ subtest 'receive msg' => sub {
     my $sock = zmq_socket($ctxt, ZMQ_SUB);
 
     my $loop = IO::Async::Loop->new();
+    testing_loop( $loop );
 
     $loop->add(my $zmq_source = Ryu::Async->new);
     $loop->add(
