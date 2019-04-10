@@ -33,7 +33,6 @@ Ethereum subscription using websocket node client
 
 =cut
 
-
 no indirect;
 
 use Future::AsyncAwait;
@@ -52,7 +51,7 @@ use base qw(Net::Async::Blockchain);
 
 use constant {
     TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
-    SYMBOL_SIGNATURE => '0x' . keccak_256_hex('symbol()'),
+    SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
 };
 
 sub currency_code { 'ETH' }
@@ -72,10 +71,11 @@ L<Net::Async::Blockchain::Client::Websocket>
 sub new_websocket_client {
     my ($self) = @_;
     $self->add_child(my $ws_source = Ryu::Async->new());
-    $self->add_child(my $client = Net::Async::Blockchain::Client::Websocket->new(
-        endpoint => $self->config->{subscription_url},
-        source => $ws_source->source,
-    ));
+    $self->add_child(
+        my $client = Net::Async::Blockchain::Client::Websocket->new(
+            endpoint => $self->subscription_url,
+            source   => $ws_source->source,
+        ));
     return $client;
 }
 
@@ -102,20 +102,21 @@ sub subscribe {
     $self->new_websocket_client()->eth_subscribe($subscription)
         # the first response from the node is the subscription id
         # once we received it we can start to listening the subscription.
-        ->skip_until(sub{
-                my $response = shift;
-                return 1 unless $response->{result};
-                $self->{subscription_id} = $response->{result};
-                return 0;
-            })
+        ->skip_until(
+        sub {
+            my $response = shift;
+            return 1 unless $response->{result};
+            $self->{subscription_id} = $response->{result};
+            return 0;
+        })
         # we use the subscription id received as the first response to filter
         # all incoming subscription responses.
-        ->filter(sub {
-                my $response = shift;
-                return undef unless $response->{params} && $response->{params}->{subscription};
-                return $response->{params}->{subscription} eq $self->subscription_id;
-            })
-        ->each(async sub{ await $self->$subscription(shift) });
+        ->filter(
+        sub {
+            my $response = shift;
+            return undef unless $response->{params} && $response->{params}->{subscription};
+            return $response->{params}->{subscription} eq $self->subscription_id;
+        })->each(async sub { await $self->$subscription(shift) });
 
     return $self->source;
 }
@@ -141,8 +142,8 @@ async sub newHeads {
     my $block = $response->{params}->{result};
 
     my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON->true);
-    my @transactions = $block_response->{transactions}->@*;
-    await Future->needs_all(map {$self->transform_transaction($_)} @transactions);
+    my @transactions   = $block_response->{transactions}->@*;
+    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }
 
 =head2 transform_transaction
@@ -165,21 +166,21 @@ async sub transform_transaction {
     return undef unless $decoded_transaction->{to};
 
     # fee = gas * gasPrice
-    my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+    my $fee    = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
     my $amount = Math::BigFloat->from_hex($decoded_transaction->{value});
-    my $block = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
+    my $block  = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency => $self->currency_code,
-        hash => $decoded_transaction->{hash},
-        block => $block,
-        from => $decoded_transaction->{from},
-        to => $decoded_transaction->{to},
-        contract => '',
-        amount => $amount,
-        fee => $fee,
+        currency     => $self->currency_code,
+        hash         => $decoded_transaction->{hash},
+        block        => $block,
+        from         => $decoded_transaction->{from},
+        to           => $decoded_transaction->{to},
+        contract     => '',
+        amount       => $amount,
+        fee          => $fee,
         fee_currency => $self->currency_code,
-        type => '',
+        type         => '',
     );
 
     # check if the transaction is from an ERC20 contract
@@ -193,13 +194,12 @@ async sub transform_transaction {
     # from => sent
     $transactions = await $self->_set_transaction_type($transactions) if $transactions;
 
-    if($transactions){
+    if ($transactions) {
         $self->source->emit($_) for $transactions->@*;
     }
 
     return 1;
 }
-
 
 =head2 _set_transaction_type
 
@@ -229,12 +229,12 @@ async sub _set_transaction_type {
     my $accounts_response = await $self->rpc_client->eth_accounts();
     return undef unless $accounts_response;
 
-    my %accounts = map {$_ => 1} $accounts_response->@*;
+    my %accounts = map { $_ => 1 } $accounts_response->@*;
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
         my $from = $accounts{$transaction->from};
-        my $to = $accounts{$transaction->to};
+        my $to   = $accounts{$transaction->to};
 
         if ($from && $to) {
             $transaction->{type} = 'internal';
@@ -245,9 +245,8 @@ async sub _set_transaction_type {
         } else {
             next;
         }
-        push (@node_transactions, $transaction) if $transaction->type;
+        push(@node_transactions, $transaction) if $transaction->type;
     }
-
 
     return \@node_transactions;
 }
@@ -281,7 +280,7 @@ async sub _check_contract_transaction {
     my @transactions;
 
     my $receipt = await $self->rpc_client->eth_getTransactionReceipt($transaction->hash);
-    my $logs = $receipt->{logs};
+    my $logs    = $receipt->{logs};
 
     # Contract
     if ($logs->@* > 0) {
@@ -297,7 +296,12 @@ async sub _check_contract_transaction {
         for my $log (@transfer_logs) {
             my $transaction_cp = $transaction->clone();
 
-            my $hex_symbol = await $self->rpc_client->eth_call([{data => SYMBOL_SIGNATURE, to => $log->{address}}, "latest"]);
+            my $hex_symbol = await $self->rpc_client->eth_call([{
+                        data => SYMBOL_SIGNATURE,
+                        to   => $log->{address}
+                    },
+                    "latest"
+                ]);
             my $symbol = $self->_to_string($hex_symbol);
             next unless $symbol;
 
@@ -307,8 +311,8 @@ async sub _check_contract_transaction {
             my @topics = $log->{topics}->@*;
 
             # the third item of the transfer log array is always the `to` address
-            if($topics[2]) {
-                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
+            if ($topics[2]) {
+                $transaction_cp->{to}     = $self->_remove_zeros($topics[2]);
                 $transaction_cp->{amount} = Math::BigFloat->from_hex($log->{data});
                 push(@transactions, $transaction_cp);
             }

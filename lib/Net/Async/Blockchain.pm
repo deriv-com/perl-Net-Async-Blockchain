@@ -29,32 +29,39 @@ This module contains methods that are shared by the subscription clients.
 
 no indirect;
 
-use IO::Async::Loop;
 use Ryu::Async;
 
-use base qw(IO::Async::Notifier);
+use parent qw(IO::Async::Notifier);
 
-sub config : method { shift->{config} }
+sub rpc_url : method             { shift->{rpc_url} }
+sub rpc_timeout : method         { shift->{rpc_timeout} }
+sub subscription_url : method    { shift->{subscription_url} }
+sub lookup_transactions : method { shift->{lookup_transactions} }
 
-=head2 _init
+=head2 configure
 
-Called by `new` before `configure`, any additional configuration
-that is not described on IO::ASYNC::Notifier must be included and
-removed here.
+Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+must be included and removed here.
 
 =over 4
 
-=item * C<config> expected to be a hash containing (rpc_url, rpc_timeout, subscription_url, lookup_transactions)
+=item * C<rpc_url> RPC complete URL
+=item * C<rpc_timeout> RPC timeout
+=item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
+=item * C<lookup_transactions> How many transactions will be included in the search to check if the subscription transactions is owned by the node
 
 =back
 
 =cut
 
-sub _init {
-    my ($self, $paramref) = @_;
-    $self->SUPER::_init;
+sub configure {
+    my ($self, %params) = @_;
 
-    $self->{config} = delete $paramref->{config} if exists $paramref->{config};
+    for my $k (qw(rpc_url rpc_timeout subscription_url lookup_transactions)) {
+        $self->{$k} = delete $params{$k} if exists $params{$k};
+    }
+
+    $self->SUPER::configure(%params);
 }
 
 =pod
@@ -75,7 +82,7 @@ L<Ryu::Source>
 sub source : method {
     my ($self) = @_;
     return $self->{source} if $self->{source};
-    $self->loop->add(my $source = Ryu::Async->new);
+    $self->add_child(my $source = Ryu::Async->new);
     $self->{source} = $source->source;
     return $self->{source};
 }
@@ -98,9 +105,7 @@ sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} if $self->{rpc_client};
 
-    $self->add_child(
-        my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => $self->config->{rpc_url})
-    );
+    $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => $self->rpc_url));
 
     return $http_client;
 }

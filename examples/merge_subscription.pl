@@ -10,21 +10,18 @@ use Data::Dumper;
 use Net::Async::Blockchain::BTC;
 use Net::Async::Blockchain::ETH;
 
-my $btc_args = { subscription_url => "tcp://127.0.0.1:28332", rpc_url => 'http://test:test@127.0.0.1:8332' };
-my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
-
 my $loop = IO::Async::Loop->new;
 
 $loop->add(
     my $eth_client = Net::Async::Blockchain::ETH->new(
-        config => $eth_args
-    )
-);
+        subscription_url => "ws://127.0.0.1:8546",
+        rpc_url          => "http://127.0.0.1:8545",
+    ));
 $loop->add(
     my $btc_client = Net::Async::Blockchain::BTC->new(
-        config => $btc_args
-    )
-);
+        subscription_url => "tcp://127.0.0.1:28332",
+        rpc_url          => 'http://test:test@127.0.0.1:8332',
+    ));
 
 $btc_client->subscribe("rawtx")->merge($eth_client->subscribe("newHeads"))->each(sub { print Dumper shift });
 

@@ -17,13 +17,12 @@ BEGIN {
 }
 
 my $loop = IO::Async::Loop->new();
-testing_loop( $loop );
+testing_loop($loop);
 
 my $rpc = Net::Async::Blockchain::Client::RPC->new(
-    rpc_url => "http://127.0.0.1:8332",
+    rpc_url     => "http://127.0.0.1:8332",
     rpc_timeout => 10,
 );
-
 
 my $mock_http = Test::MockModule->new('Net::Async::HTTP');
 $mock_http->mock(
@@ -31,7 +30,7 @@ $mock_http->mock(
         my ($s, $host, $content) = @_;
         my $decoded = decode_json_utf8($content);
         ok $decoded, "valid json request";
-        my $response = HTTP::Message->new(undef, encode_json_utf8({result=>$decoded}));
+        my $response = HTTP::Message->new(undef, encode_json_utf8({result => $decoded}));
         return Future->done($response);
     });
 

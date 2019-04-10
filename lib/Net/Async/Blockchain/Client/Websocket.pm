@@ -46,11 +46,10 @@ sub source : method { shift->{source} }
 
 sub endpoint : method { shift->{endpoint} }
 
-=head2 _init
+=head2 configure
 
-Called by `new` before `configure`, any additional configuration
-that is not described on IO::ASYNC::Notifier must be included and
-removed here.
+Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+must be included and removed here.
 
 =over 4
 
@@ -62,14 +61,14 @@ removed here.
 
 =cut
 
-sub _init {
-    my ($self, $paramref) = @_;
-    $self->SUPER::_init;
+sub configure {
+    my ($self, %params) = @_;
 
     for my $k (qw(endpoint source)) {
-        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
+        $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
+    $self->SUPER::configure(%params);
 }
 
 =head2 AUTOLOAD
@@ -110,11 +109,14 @@ sub AUTOLOAD {
         },
     );
 
-    $client->connect(url => $self->endpoint)->on_done(sub {
-        $client->send_text_frame(encode_json_utf8($obj));
-    })->on_fail(sub{
-        die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
-    })->get;
+    $client->connect(url => $self->endpoint)->on_done(
+        sub {
+            $client->send_text_frame(encode_json_utf8($obj));
+        }
+    )->on_fail(
+        sub {
+            die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
+        })->get;
 
     return $self->source;
 }

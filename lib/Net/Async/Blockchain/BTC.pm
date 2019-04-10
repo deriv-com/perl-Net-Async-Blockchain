@@ -11,18 +11,14 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
 
 =head1 SYNOPSIS
 
-    my $btc_args = {
-        subscription_url => "tcp://127.0.0.1:28332",
-        rpc_url => 'http://test:test@127.0.0.1:8332',
-        rpc_timeout => 100,
-        lookup_transactions => 10,
-    };
-
     my $loop = IO::Async::Loop->new;
 
     $loop->add(
         my $btc_client = Net::Async::Blockchain::BTC->new(
-            config => $btc_args
+            subscription_url => "tcp://127.0.0.1:28332",
+            rpc_url => 'http://test:test@127.0.0.1:8332',
+            rpc_timeout => 100,
+            lookup_transactions => 10
         )
     );
 
@@ -63,7 +59,7 @@ sub new_zmq_client {
     $self->add_child(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
             source   => $zmq_source->source,
-            endpoint => $self->config->{subscription_url},
+            endpoint => $self->subscription_url,
         ));
     return $zmq_client;
 }
@@ -85,8 +81,6 @@ L<Ryu::Async>
 
 sub subscribe {
     my ($self, $subscription) = @_;
-
-    my $url = $self->config->{subscription_url};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
     my $zmq_source = $self->new_zmq_client->subscribe($subscription);
@@ -115,7 +109,7 @@ async sub rawtx {
     my ($self, $raw_transaction) = @_;
 
     my $decoded_raw_transaction = await $self->rpc_client->decoderawtransaction($raw_transaction);
-    my $transaction = await $self->transform_transaction($decoded_raw_transaction);
+    my $transaction             = await $self->transform_transaction($decoded_raw_transaction);
 
     $self->source->emit($transaction) if $transaction;
 }
@@ -140,7 +134,7 @@ async sub transform_transaction {
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
     my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} }
-        @{await $self->rpc_client->listtransactions("*", $self->config->{lookup_transactions} // DEFAULT_LOOKUP_TRANSACTIONS)};
+        @{await $self->rpc_client->listtransactions("*", $self->lookup_transactions // DEFAULT_LOOKUP_TRANSACTIONS)};
 
     # transaction not found, just ignore.
     return undef unless @received_transactions;
@@ -160,22 +154,22 @@ async sub transform_transaction {
         # for received transactions the fee will not be available.
         $fee->badd($tx->{fee}) if $tx->{fee};
     }
-    my @addresses = keys %addresses;
+    my @addresses  = keys %addresses;
     my @categories = keys %category;
     # it can be receive, sent, internal, if we have a send and a receive transaction
     # this means that the node sent a transaction to an address that it is the owner too.
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency => $self->currency_code,
-        hash => $decoded_raw_transaction->{txid},
-        block => $decoded_raw_transaction->{locktime},
-        from => '',
-        to => \@addresses,
-        amount => $amount,
-        fee => $fee,
+        currency     => $self->currency_code,
+        hash         => $decoded_raw_transaction->{txid},
+        block        => $decoded_raw_transaction->{locktime},
+        from         => '',
+        to           => \@addresses,
+        amount       => $amount,
+        fee          => $fee,
         fee_currency => $self->currency_code,
-        type => $transaction_type,
+        type         => $transaction_type,
     );
 
     return $transaction;

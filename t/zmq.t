@@ -40,7 +40,7 @@ subtest 'receive msg' => sub {
     my $sock = zmq_socket($ctxt, ZMQ_SUB);
 
     my $loop = IO::Async::Loop->new();
-    testing_loop( $loop );
+    testing_loop($loop);
 
     $loop->add(my $zmq_source = Ryu::Async->new);
     $loop->add(

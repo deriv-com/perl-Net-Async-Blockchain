@@ -48,11 +48,10 @@ sub source : method { shift->{source} }
 
 sub endpoint : method { shift->{endpoint} }
 
-=head2 _init
+=head2 configure
 
-Called by `new` before `configure`, any additional configuration
-that is not described on IO::ASYNC::Notifier must be included and
-removed here.
+Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+must be included and removed here.
 
 If this class receive a DNS as endpoint this will be resolved on this method
 to an IP address.
@@ -67,19 +66,18 @@ to an IP address.
 
 =cut
 
-sub _init {
-    my ($self, $paramref) = @_;
-    $self->SUPER::_init;
+sub configure {
+    my ($self, %params) = @_;
 
     for my $k (qw(endpoint source)) {
-        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
+        $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
-    my $uri = URI->new($self->endpoint);
+    my $uri  = URI->new($self->endpoint);
     my $host = $uri->host;
 
     # Resolve DNS if needed
-    if($host !~ /(\d+(\.|$)){4}/){
+    if ($host !~ /(\d+(\.|$)){4}/) {
         my @addresses = gethostbyname($host) or die "Can't resolve @{[$host]}: $!";
         @addresses = map { inet_ntoa($_) } @addresses[4 .. $#addresses];
 
@@ -87,6 +85,8 @@ sub _init {
 
         $self->{endpoint} = $self->{endpoint} =~ s/$host/$address/r;
     }
+
+    $self->SUPER::configure(%params);
 }
 
 =head2 subscribe

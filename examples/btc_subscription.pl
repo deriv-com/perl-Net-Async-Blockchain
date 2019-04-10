@@ -9,20 +9,17 @@ use Data::Dumper;
 
 use Net::Async::Blockchain::BTC;
 
-my $btc_args = {
-    subscription_url => "tcp://127.0.0.1:28332",
-    rpc_url => 'http://test:test@127.0.0.1:8332',
-    rpc_timeout => 100,
-    lookup_transactions => 10,
-};
+my $btc_args = {};
 
 my $loop = IO::Async::Loop->new;
 
 $loop->add(
     my $btc_client = Net::Async::Blockchain::BTC->new(
-        config => $btc_args
-    )
-);
+        subscription_url    => "tcp://127.0.0.1:28332",
+        rpc_url             => 'http://test:test@127.0.0.1:8332',
+        rpc_timeout         => 100,
+        lookup_transactions => 10,
+    ));
 
 $btc_client->subscribe("rawtx")->each(sub { print Dumper shift });
 

@@ -44,7 +44,7 @@ sub rpc_url : method { shift->{rpc_url} }
 
 # this value will be set on the _init method, if not set will use the
 # DEFAULT_RPC_TIMEOUT constant.
-sub rpc_timeout : method {shift->{rpc_timeout}}
+sub rpc_timeout : method { shift->{rpc_timeout} }
 
 sub http_client : method {
     my ($self) = @_;
@@ -54,19 +54,18 @@ sub http_client : method {
     $self->add_child(
         my $http_client = Net::Async::HTTP->new(
             decode_content => 1,
-            stall_timeout => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
-            fail_on_error => 1,
-    ));
+            stall_timeout  => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
+            fail_on_error  => 1,
+        ));
 
     $self->{http_client} = $http_client;
     return $self->{http_client};
 }
 
-=head2 _init
+=head2 configure
 
-Called by `new` before `configure`, any additional configuration
-that is not described on IO::ASYNC::Notifier must be included and
-removed here.
+Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+must be included and removed here.
 
 =over 4
 
@@ -78,13 +77,14 @@ removed here.
 
 =cut
 
-sub _init {
-    my ($self, $paramref) = @_;
-    $self->SUPER::_init;
+sub configure {
+    my ($self, %params) = @_;
 
     for my $k (qw(rpc_url rpc_timeout)) {
-        $self->{$k} = delete $paramref->{$k} if exists $paramref->{$k};
+        $self->{$k} = delete $params{$k} if exists $params{$k};
     }
+
+    $self->SUPER::configure(%params);
 }
 
 =head2 AUTOLOAD
@@ -118,7 +118,9 @@ sub AUTOLOAD {
     return $self->http_client->POST($self->rpc_url, encode_json_utf8($obj), content_type => 'application/json')->transform(
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
-        })->else(sub {
+        }
+    )->else(
+        sub {
             Future->fail(@_);
         });
 }
