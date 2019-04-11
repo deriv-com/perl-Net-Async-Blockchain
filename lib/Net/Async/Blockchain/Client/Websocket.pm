@@ -98,8 +98,7 @@ sub AUTOLOAD {
     my $obj = {
         id     => 1,
         method => $method,
-        params => [@params]
-    };
+        params => [@params]};
 
     $self->add_child(my $client = Net::Async::WebSocket::Client->new());
 

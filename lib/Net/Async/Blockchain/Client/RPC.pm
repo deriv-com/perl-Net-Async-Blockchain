@@ -60,6 +60,7 @@ the object
 L<Net::Async::HTTP>
 
 =cut
+
 sub http_client : method {
     my ($self) = @_;
 

@@ -132,11 +132,7 @@ sub subscribe {
                     my $hex = unpack('H*', zmq_msg_data($msg[1]));
                     $self->source->emit($hex);
                 }
-            },
-            on_closed => sub {
-                close($io);
-            }
-        ));
+            }));
 
     return $self->source;
 }

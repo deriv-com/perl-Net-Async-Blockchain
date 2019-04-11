@@ -49,6 +49,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 L<Net::Async::Blockchain::Transaction>
 
 =cut
+
 sub new {
     my ($class, %params) = @_;
 
