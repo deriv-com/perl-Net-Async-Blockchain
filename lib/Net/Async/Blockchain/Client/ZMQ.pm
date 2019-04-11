@@ -21,7 +21,7 @@ Net::Async::Blockchain::Client::ZMQ - Async ZMQ Client.
             endpoint => 'tpc://127.0.0.1:28332',
         ));
 
-    my $response = $zmq_client->subscribe('rawtx')->each(...);
+    $zmq_client->subscribe('rawtx')->each(sub{print shift->{hash}});
 
     $loop->run();
 
@@ -31,9 +31,12 @@ client for the bitcoin ZMQ server
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
+use autodie qw(open close);
 
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT);
@@ -117,7 +120,7 @@ sub subscribe {
     my $connect_response = zmq_connect($socket, $self->endpoint);
     die "zmq_connect failed with $!" if $connect_response;
 
-    # create a reader for IO::Async::Handle
+    # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
     open(my $io, "<&", $fd);
 
@@ -130,6 +133,9 @@ sub subscribe {
                     $self->source->emit($hex);
                 }
             },
+            on_closed => sub {
+                close($io);
+            }
         ));
 
     return $self->source;

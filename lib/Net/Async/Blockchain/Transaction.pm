@@ -21,6 +21,8 @@ Transaction abstraction
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
@@ -36,9 +38,19 @@ sub fee : method          { shift->{fee} }
 sub fee_currency : method { shift->{fee_currency} }
 sub type : method         { shift->{type} }
 
+=head2 new
+
+Create a new L<Net::Async::Blockchain::Transaction> instance
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::Transaction>
+
+=cut
 sub new {
-    my $class  = shift;
-    my %params = @_;
+    my ($class, %params) = @_;
 
     my $self = bless {}, $class;
 

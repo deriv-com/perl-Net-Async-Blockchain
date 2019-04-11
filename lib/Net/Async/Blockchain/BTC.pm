@@ -33,6 +33,8 @@ Bitcoin subscription using ZMQ from the bitcoin based blockchain nodes
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
@@ -176,4 +178,3 @@ async sub transform_transaction {
 }
 
 1;
-

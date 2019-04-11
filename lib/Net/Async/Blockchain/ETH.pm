@@ -31,6 +31,8 @@ Ethereum subscription using websocket node client
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
@@ -61,6 +63,8 @@ sub subscription_id { shift->{subscription_id} }
 =head2 new_websocket_client
 
 Create a new async websocket client.
+
+=over 4
 
 =back
 

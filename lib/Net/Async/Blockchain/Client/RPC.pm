@@ -27,6 +27,8 @@ Auto load the commands as the method parameters for the RPC calls returning them
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
@@ -46,6 +48,18 @@ sub rpc_url : method { shift->{rpc_url} }
 # DEFAULT_RPC_TIMEOUT constant.
 sub rpc_timeout : method { shift->{rpc_timeout} }
 
+=head2 http_client
+
+Create an L<Net::Async::HTTP> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::HTTP>
+
+=cut
 sub http_client : method {
     my ($self) = @_;
 
@@ -102,7 +116,7 @@ Use any argument as the method parameter for the client RPC call
 =cut
 
 sub AUTOLOAD {
-    my $self = shift;
+    my ($self, @params) = @_;
 
     my $method = $Net::Async::Blockchain::Client::RPC::AUTOLOAD;
     $method =~ s/.*:://;
@@ -112,7 +126,7 @@ sub AUTOLOAD {
     my $obj = {
         id     => 1,
         method => $method,
-        params => (ref $_[0] ? $_[0] : [@_]),
+        params => [@params],
     };
 
     return $self->http_client->POST($self->rpc_url, encode_json_utf8($obj), content_type => 'application/json')->transform(

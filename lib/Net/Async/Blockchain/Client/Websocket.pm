@@ -19,10 +19,10 @@ Net::Async::Blockchain::Client::Websocket - Async websocket Client.
         my $client = Net::Async::Blockchain::Client::Websocket->new(
             endpoint => "ws://127.0.0.1:8546",
             source => $ws_source->source,
-        );
+        )
     );
 
-    my $response = $client->eth_subscribe('newHeads')->each(...);
+    $client->eth_subscribe('newHeads')->each(sub {print shift->{hash}});
 
     $loop->run();
 
@@ -31,6 +31,8 @@ Net::Async::Blockchain::Client::Websocket - Async websocket Client.
 Auto load the commands as the method parameters for the websocket calls returning them asynchronously.
 
 =over 4
+
+=back
 
 =cut
 
@@ -86,7 +88,7 @@ Use any argument as the method parameter for the websocket client call
 =cut
 
 sub AUTOLOAD {
-    my $self = shift;
+    my ($self, @params) = @_;
 
     my $method = $Net::Async::Blockchain::Client::Websocket::AUTOLOAD;
     $method =~ s/.*:://;
@@ -96,7 +98,7 @@ sub AUTOLOAD {
     my $obj = {
         id     => 1,
         method => $method,
-        params => (ref $_[0] ? $_[0] : [@_]),
+        params => [@params]
     };
 
     $self->add_child(my $client = Net::Async::WebSocket::Client->new());

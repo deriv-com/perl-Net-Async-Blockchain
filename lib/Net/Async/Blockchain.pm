@@ -25,6 +25,8 @@ This module contains methods that are shared by the subscription clients.
 
 =over 4
 
+=back
+
 =cut
 
 no indirect;
@@ -64,14 +66,12 @@ sub configure {
     $self->SUPER::configure(%params);
 }
 
-=pod
-
 =head2 source
 
-The final client source, once a client have subscribed to any client
-this source will be returned.
+Create an L<Ryu::Source> instance, if it is already defined just return
+the object
 
-Created only the first time, if it's required again use the same source.
+=over 4
 
 =back
 
@@ -88,13 +88,12 @@ sub source : method {
     }
 }
 
-=pod
-
 =head2 rpc_client
 
-Create a new async RPC client.
+Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
+the object
 
-Created only the first time, if it's required again use the same client.
+=over 4
 
 =back
 
