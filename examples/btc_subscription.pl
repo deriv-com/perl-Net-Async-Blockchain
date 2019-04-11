@@ -9,8 +9,6 @@ use Data::Dumper;
 
 use Net::Async::Blockchain::BTC;
 
-my $btc_args = {};
-
 my $loop = IO::Async::Loop->new;
 
 $loop->add(

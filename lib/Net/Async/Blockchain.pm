@@ -81,10 +81,11 @@ L<Ryu::Source>
 
 sub source : method {
     my ($self) = @_;
-    return $self->{source} if $self->{source};
-    $self->add_child(my $source = Ryu::Async->new);
-    $self->{source} = $source->source;
-    return $self->{source};
+    return $self->{source} //= do {
+        $self->add_child(my $source = Ryu::Async->new);
+        $self->{source} = $source->source;
+        return $self->{source};
+    }
 }
 
 =pod
@@ -103,11 +104,10 @@ L<Net::Async::Blockchain::Client::RPC>
 
 sub rpc_client : method {
     my ($self) = @_;
-    return $self->{rpc_client} if $self->{rpc_client};
-
-    $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => $self->rpc_url));
-
-    return $http_client;
+    return $self->{rpc_client} //= do {
+        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => $self->rpc_url));
+        return $http_client;
+    }
 }
 
 1;

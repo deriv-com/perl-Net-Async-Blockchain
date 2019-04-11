@@ -49,17 +49,17 @@ sub rpc_timeout : method { shift->{rpc_timeout} }
 sub http_client : method {
     my ($self) = @_;
 
-    return $self->{http_client} if $self->{http_client};
+    return $self->{http_client} //= do {
+        $self->add_child(
+            my $http_client = Net::Async::HTTP->new(
+                decode_content => 1,
+                stall_timeout  => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
+                fail_on_error  => 1,
+            ));
 
-    $self->add_child(
-        my $http_client = Net::Async::HTTP->new(
-            decode_content => 1,
-            stall_timeout  => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
-            fail_on_error  => 1,
-        ));
-
-    $self->{http_client} = $http_client;
-    return $self->{http_client};
+        $self->{http_client} = $http_client;
+        return $self->{http_client};
+    }
 }
 
 =head2 configure
