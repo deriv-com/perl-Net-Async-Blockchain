@@ -49,18 +49,30 @@ use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Client::ZMQ;
 
-use base qw(Net::Async::Blockchain);
+use parent qw(Net::Async::Blockchain);
 
-use constant DEFAULT_LOOKUP_TRANSACTIONS => 100;
+use constant {
+    DEFAULT_LOOKUP_TRANSACTIONS => 100,
+    CURRENCY_SYMBOL => 'BTC',
+};
 
-sub currency_code { 'BTC' }
+=head2 new_zmq_client
+
+Create a new L<Net::Async::Blockchain::Client::ZMQ> instance.
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::Client::ZMQ>
+
+=cut
 
 sub new_zmq_client {
     my ($self) = @_;
     $self->add_child(my $zmq_source = Ryu::Async->new);
     $self->add_child(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
-            source   => $zmq_source->source,
             endpoint => $self->subscription_url,
         ));
     return $zmq_client;
@@ -163,14 +175,14 @@ async sub transform_transaction {
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_code,
+        currency     => CURRENCY_SYMBOL,
         hash         => $decoded_raw_transaction->{txid},
         block        => $decoded_raw_transaction->{locktime},
         from         => '',
         to           => \@addresses,
         amount       => $amount,
         fee          => $fee,
-        fee_currency => $self->currency_code,
+        fee_currency => CURRENCY_SYMBOL,
         type         => $transaction_type,
     );
 

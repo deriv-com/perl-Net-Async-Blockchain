@@ -2,7 +2,7 @@ severity        = 4
 criticism-fatal = 1
 color           = 1
 include = TestingAndDebugging::RequireUseWarnings Subroutines::RequireArgUnpacking TestingAndDebugging::ProhibitNoStrict CodeLayout::RequireTidyCode ErrorHandling::RequireCheckingReturnValueOfEval TestingAndDebugging::RequireUseStrict
-exclude = ValuesAndExpressions::ProhibitConstantPragma Subroutines::ProhibitExplicitReturnUndef Subroutines::RequireFinalReturn Modules::RequireEndWithOne InputOutput::RequireBriefOpen
+exclude = ValuesAndExpressions::ProhibitConstantPragma Subroutines::ProhibitExplicitReturnUndef Subroutines::RequireFinalReturn Modules::RequireEndWithOne
 
 [TestingAndDebugging::RequireUseWarnings]
 equivalent_modules=MooseX::Singleton Mojo::Base

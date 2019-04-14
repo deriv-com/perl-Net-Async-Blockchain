@@ -45,7 +45,6 @@ subtest 'receive msg' => sub {
     $loop->add(my $zmq_source = Ryu::Async->new);
     $loop->add(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
-            source   => $zmq_source->source,
             endpoint => "tcp://127.0.0.1:$port",
         ));
 

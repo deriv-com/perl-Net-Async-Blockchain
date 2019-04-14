@@ -42,9 +42,41 @@ use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
 use Net::Async::WebSocket::Client;
 
-use base qw(IO::Async::Notifier);
+use parent qw(IO::Async::Notifier);
 
-sub source : method { shift->{source} }
+=head2 source
+
+Create an L<Ryu::Source> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Ryu::Source>
+
+=cut
+
+sub source : method {
+    my ($self) = @_;
+    return $self->{source} //= do {
+        $self->add_child(my $source = Ryu::Async->new);
+        $self->{source} = $source->source;
+        return $self->{source};
+    }
+}
+
+=head2 endpoint
+
+Websocket endpoint
+
+=over 4
+
+=back
+
+URL containing the port if needed
+
+=cut
 
 sub endpoint : method { shift->{endpoint} }
 

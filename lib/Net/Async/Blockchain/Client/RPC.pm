@@ -14,7 +14,7 @@ Net::Async::Blockchain::Client::RPC - Async RPC Client.
     my $loop = IO::Async::Loop->new();
 
     $loop->add(
-        my $http_client = Net::Async::Blockchain::Client::RPC->new(rpc_url => 'http://127.0.0.1:8332', rpc_timeout => 100)
+        my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => 'http://127.0.0.1:8332', timeout => 100)
     );
 
     my $response = $http_client->getblockchaininfo()->get;
@@ -40,13 +40,13 @@ use IO::Async::Notifier;
 use parent qw(IO::Async::Notifier);
 
 # default value for the Net::Async::HTTP stall_timeout configuration.
-use constant DEFAULT_RPC_TIMEOUT => 100;
+use constant DEFAULT_TIMEOUT => 100;
 
-sub rpc_url : method { shift->{rpc_url} }
+sub endpoint : method { shift->{endpoint} }
 
 # this value will be set on the _init method, if not set will use the
-# DEFAULT_RPC_TIMEOUT constant.
-sub rpc_timeout : method { shift->{rpc_timeout} }
+# DEFAULT_TIMEOUT constant.
+sub timeout : method { shift->{timeout} // DEFAULT_TIMEOUT }
 
 =head2 http_client
 
@@ -68,7 +68,7 @@ sub http_client : method {
         $self->add_child(
             my $http_client = Net::Async::HTTP->new(
                 decode_content => 1,
-                stall_timeout  => $self->rpc_timeout // DEFAULT_RPC_TIMEOUT,
+                stall_timeout  => $self->timeout,
                 fail_on_error  => 1,
             ));
 
@@ -84,9 +84,9 @@ must be included and removed here.
 
 =over 4
 
-=item * C<rpc_url>
+=item * C<endpoint>
 
-=item * C<rpc_timeout>
+=item * C<timeout>
 
 =back
 
@@ -95,7 +95,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout)) {
+    for my $k (qw(endpoint timeout)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -130,7 +130,7 @@ sub AUTOLOAD {
         params => [@params],
     };
 
-    return $self->http_client->POST($self->rpc_url, encode_json_utf8($obj), content_type => 'application/json')->transform(
+    return $self->http_client->POST($self->endpoint, encode_json_utf8($obj), content_type => 'application/json')->transform(
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
         }

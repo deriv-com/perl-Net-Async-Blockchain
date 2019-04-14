@@ -36,10 +36,9 @@ client for the bitcoin ZMQ server
 =cut
 
 no indirect;
-use autodie qw(open close);
 
 use ZMQ::LibZMQ3;
-use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT);
+use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT ZMQ_RCVTIMEO);
 
 use IO::Async::Notifier;
 use IO::Async::Handle;
@@ -47,9 +46,82 @@ use Socket;
 
 use parent qw(IO::Async::Notifier);
 
-sub source : method { shift->{source} }
+use constant {
+    DEFAULT_TIMEOUT     => 100,
+    DEFAULT_MSG_TIMEOUT => 100,
+    # https://github.com/lestrrat-p5/ZMQ/blob/master/ZMQ-Constants/lib/ZMQ/Constants.pm#L128
+    ZMQ_CONNECT_TIMEOUT => 79,
+};
+
+# Since the connect timeout is not present in the LIbZMQ3 module
+# we need to add it manually
+ZMQ::Constants::set_sockopt_type("int" => ZMQ_CONNECT_TIMEOUT);
+
+=head2 source
+
+Create an L<Ryu::Source> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Ryu::Source>
+
+=cut
+
+sub source : method {
+    my ($self) = @_;
+    return $self->{source} //= do {
+        $self->add_child(my $source = Ryu::Async->new);
+        $self->{source} = $source->source;
+        return $self->{source};
+    }
+}
+
+=head2 endpoint
+
+TCP ZMQ endpoint
+
+=over 4
+
+=back
+
+URL containing the port if needed, in case of DNS this will
+be resolved to an IP.
+
+=cut
 
 sub endpoint : method { shift->{endpoint} }
+
+=head2 timeout
+
+Timeout time for connection
+
+=over 4
+
+=back
+
+Integer time in milliseconds
+
+=cut
+
+sub timeout : method { shift->{timeout} // DEFAULT_TIMEOUT }
+
+=head2 msg_timeout
+
+Timeout time for received messages, this is applied when we have a bigger
+duration interval between the messages.
+
+=over 4
+
+=back
+
+Integer time in milliseconds
+
+=cut
+
+sub msg_timeout : method { shift->{msg_timeout} // DEFAULT_MSG_TIMEOUT }
 
 =head2 configure
 
@@ -72,9 +144,11 @@ to an IP address.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint source)) {
+    for my $k (qw(endpoint source timeout)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
+
+    $self->SUPER::configure(%params);
 
     my $uri  = URI->new($self->endpoint);
     my $host = $uri->host;
@@ -89,7 +163,6 @@ sub configure {
         $self->{endpoint} = $self->{endpoint} =~ s/$host/$address/r;
     }
 
-    $self->SUPER::configure(%params);
 }
 
 =head2 subscribe
@@ -109,6 +182,7 @@ L<Ryu::Source>
 sub subscribe {
     my ($self, $subscription) = @_;
 
+    # one thread
     my $ctxt = zmq_ctx_new(1);
     die "zmq_ctc_new failed with $!" unless $ctxt;
 
@@ -118,15 +192,24 @@ sub subscribe {
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
 
     my $connect_response = zmq_connect($socket, $self->endpoint);
-    die "zmq_connect failed with $!" if $connect_response;
+    die "zmq_connect failed with $!" unless $connect_response == 0;
+
+    # set connection timeout
+    zmq_setsockopt($socket, ZMQ_CONNECT_TIMEOUT, $self->timeout);
+
+    # receive message timeout
+    zmq_setsockopt($socket, ZMQ_RCVTIMEO, $self->msg_timeout);
 
     # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
-    open(my $io, "<&", $fd);
+    open(my $io, '<&', $fd);
 
     $self->add_child(
         my $handle = IO::Async::Handle->new(
-            read_handle   => $io,
+            read_handle => $io,
+            on_closed   => sub {
+                close($io);
+            },
             on_read_ready => sub {
                 while (my @msg = $self->_recv_multipart($socket)) {
                     my $hex = unpack('H*', zmq_msg_data($msg[1]));

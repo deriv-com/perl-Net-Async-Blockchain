@@ -49,14 +49,28 @@ use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
 use Net::Async::Blockchain::Client::Websocket;
 
-use base qw(Net::Async::Blockchain);
+use parent qw(Net::Async::Blockchain);
 
 use constant {
     TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
     SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
+    CURRENCY_SYMBOL => 'ETH'
 };
 
-sub currency_code { 'ETH' }
+
+
+=head2 subscription_id
+
+Actual subscription ID, this ID is received every time when a subscription
+is created.
+
+=over 4
+
+=back
+
+An hexadecimal string
+
+=cut
 
 sub subscription_id { shift->{subscription_id} }
 
@@ -78,7 +92,6 @@ sub new_websocket_client {
     $self->add_child(
         my $client = Net::Async::Blockchain::Client::Websocket->new(
             endpoint => $self->subscription_url,
-            source   => $ws_source->source,
         ));
     return $client;
 }
@@ -175,7 +188,7 @@ async sub transform_transaction {
     my $block  = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_code,
+        currency     => CURRENCY_SYMBOL,
         hash         => $decoded_transaction->{hash},
         block        => $block,
         from         => $decoded_transaction->{from},
@@ -183,7 +196,7 @@ async sub transform_transaction {
         contract     => '',
         amount       => $amount,
         fee          => $fee,
-        fee_currency => $self->currency_code,
+        fee_currency => CURRENCY_SYMBOL,
         type         => '',
     );
 
