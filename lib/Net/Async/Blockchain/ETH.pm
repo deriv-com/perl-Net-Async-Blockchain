@@ -54,10 +54,8 @@ use parent qw(Net::Async::Blockchain);
 use constant {
     TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
     SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
-    CURRENCY_SYMBOL => 'ETH'
+    CURRENCY_SYMBOL    => 'ETH'
 };
-
-
 
 =head2 subscription_id
 

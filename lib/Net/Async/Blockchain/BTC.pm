@@ -53,7 +53,7 @@ use parent qw(Net::Async::Blockchain);
 
 use constant {
     DEFAULT_LOOKUP_TRANSACTIONS => 100,
-    CURRENCY_SYMBOL => 'BTC',
+    CURRENCY_SYMBOL             => 'BTC',
 };
 
 =head2 new_zmq_client

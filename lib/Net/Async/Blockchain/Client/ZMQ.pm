@@ -202,13 +202,13 @@ sub subscribe {
 
     # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
-    open(my $io, '<&', $fd);
+    open(my $io, '<&', $fd) or die "Unable to open file descriptor";
 
     $self->add_child(
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
             on_closed   => sub {
-                close($io);
+                close($io) or die "Unable to close file descriptor";
             },
             on_read_ready => sub {
                 while (my @msg = $self->_recv_multipart($socket)) {
