@@ -153,7 +153,7 @@ async sub transform_transaction {
 
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
-    my $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction);
+    my $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction->{txid});
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;
@@ -166,7 +166,7 @@ async sub transform_transaction {
     # we can have multiple details when:
     # - multiple `to` addresses transactions
     # - sent and received by the same node
-    for my $tx ($received_transactions->{details}->@*) {
+    for my $tx ($received_transaction->{details}->@*) {
         $addresses{$tx->{address}} = 1;
         $category{$tx->{category}} = 1;
     }
