@@ -17,7 +17,5 @@ $loop->add(
         rpc_url          => "http://127.0.0.1:8545",
     ));
 
-$eth_client->subscribe("newHeads")->each(sub { print Dumper shift });
-
-$loop->run();
+$eth_client->subscribe("transactions")->each(sub { print Dumper shift })->get();
 

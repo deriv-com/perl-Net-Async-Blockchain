@@ -23,7 +23,7 @@ $loop->add(
         rpc_url          => 'http://test:test@127.0.0.1:8332',
     ));
 
-$btc_client->subscribe("rawtx")->merge($eth_client->subscribe("newHeads"))->each(sub { print Dumper shift });
+$btc_client->subscribe("transactions")->merge($eth_client->subscribe("transactions"))->each(sub { print Dumper shift });
 
 $loop->run();
 

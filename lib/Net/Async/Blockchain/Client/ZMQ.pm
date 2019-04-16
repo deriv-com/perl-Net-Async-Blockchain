@@ -39,7 +39,6 @@ no indirect;
 
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT ZMQ_RCVTIMEO);
-
 use IO::Async::Notifier;
 use IO::Async::Handle;
 use Socket;
@@ -47,8 +46,9 @@ use Socket;
 use parent qw(IO::Async::Notifier);
 
 use constant {
-    DEFAULT_TIMEOUT     => 100,
-    DEFAULT_MSG_TIMEOUT => 100,
+    DEFAULT_TIMEOUT => 100,
+    # 1 hour (milliseconds)
+    DEFAULT_MSG_TIMEOUT => 3600000,
     # https://github.com/lestrrat-p5/ZMQ/blob/master/ZMQ-Constants/lib/ZMQ/Constants.pm#L128
     ZMQ_CONNECT_TIMEOUT => 79,
 };
@@ -144,7 +144,7 @@ to an IP address.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint source timeout)) {
+    for my $k (qw(endpoint source timeout msg_timeout)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 

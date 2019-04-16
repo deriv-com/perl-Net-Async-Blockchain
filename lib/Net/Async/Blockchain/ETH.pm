@@ -57,6 +57,8 @@ use constant {
     CURRENCY_SYMBOL    => 'ETH'
 };
 
+my %subscription_dictionary = ('transactions' => 'newHeads');
+
 =head2 subscription_id
 
 Actual subscription ID, this ID is received every time when a subscription
@@ -111,6 +113,9 @@ L<Ryu::Async>
 
 sub subscribe {
     my ($self, $subscription) = @_;
+
+    # rename the subscription to the correct blockchain node subscription
+    $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 

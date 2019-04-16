@@ -56,6 +56,8 @@ use constant {
     CURRENCY_SYMBOL             => 'BTC',
 };
 
+my %subscription_dictionary = ('transactions' => 'hashblock');
+
 =head2 new_zmq_client
 
 Create a new L<Net::Async::Blockchain::Client::ZMQ> instance.
@@ -73,7 +75,9 @@ sub new_zmq_client {
     $self->add_child(my $zmq_source = Ryu::Async->new);
     $self->add_child(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
-            endpoint => $self->subscription_url,
+            endpoint    => $self->subscription_url,
+            timeout     => $self->subscription_timeout,
+            msg_timeout => $self->subscription_msg_timeout,
         ));
     return $zmq_client;
 }
@@ -96,6 +100,9 @@ L<Ryu::Async>
 sub subscribe {
     my ($self, $subscription) = @_;
 
+    # rename the subscription to the correct blockchain node subscription
+    $subscription = $subscription_dictionary{$subscription};
+
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
     my $zmq_source = $self->new_zmq_client->subscribe($subscription);
     die "Can't connect to ZMQ" unless $zmq_source;
@@ -104,7 +111,7 @@ sub subscribe {
     return $self->source;
 }
 
-=head2 rawtx
+=head2 hashblock
 
 rawtx subscription
 
@@ -119,13 +126,14 @@ is owned by the node.
 
 =cut
 
-async sub rawtx {
-    my ($self, $raw_transaction) = @_;
+async sub hashblock {
+    my ($self, $block_hash) = @_;
 
-    my $decoded_raw_transaction = await $self->rpc_client->decoderawtransaction($raw_transaction);
-    my $transaction             = await $self->transform_transaction($decoded_raw_transaction);
+    # 2 here means the full verbosity since we want to get the raw transactions
+    my $block_response = await $self->rpc_client->getblock($block_hash, 2);
 
-    $self->source->emit($transaction) if $transaction;
+    my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
+    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }
 
 =head2 transform_transaction
@@ -177,7 +185,7 @@ async sub transform_transaction {
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency     => CURRENCY_SYMBOL,
         hash         => $decoded_raw_transaction->{txid},
-        block        => $decoded_raw_transaction->{locktime},
+        block        => $decoded_raw_transaction->{block},
         from         => '',
         to           => \@addresses,
         amount       => $amount,
@@ -186,7 +194,9 @@ async sub transform_transaction {
         type         => $transaction_type,
     );
 
-    return $transaction;
+    $self->source->emit($transaction) if $transaction;
+
+    return 1;
 }
 
 1;

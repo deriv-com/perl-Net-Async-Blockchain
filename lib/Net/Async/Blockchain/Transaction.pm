@@ -27,16 +27,16 @@ Transaction abstraction
 
 no indirect;
 
-sub currency : method { shift->{currency} }
-sub hash : method { shift->{hash} }
-sub block : method { shift->{block} }
-sub from : method { shift->{from} }
-sub to : method { shift->{to} }
-sub contract : method { shift->{contract} }
-sub amount : method { shift->{amount} }
-sub fee : method { shift->{fee} }
+sub currency : method     { shift->{currency} }
+sub hash : method         { shift->{hash} }
+sub block : method        { shift->{block} }
+sub from : method         { shift->{from} }
+sub to : method           { shift->{to} }
+sub contract : method     { shift->{contract} }
+sub amount : method       { shift->{amount} }
+sub fee : method          { shift->{fee} }
 sub fee_currency : method { shift->{fee_currency} }
-sub type : method { shift->{type} }
+sub type : method         { shift->{type} }
 
 =head2 new
 
