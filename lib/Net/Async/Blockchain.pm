@@ -40,7 +40,6 @@ sub rpc_timeout : method              { shift->{rpc_timeout} }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
-sub lookup_transactions : method      { shift->{lookup_transactions} }
 
 =head2 configure
 
@@ -54,7 +53,6 @@ must be included and removed here.
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
-=item * C<lookup_transactions> How many transactions will be included in the search to check if the subscription transactions is owned by the node
 
 =back
 
@@ -63,7 +61,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout lookup_transactions)) {
+    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 

@@ -18,7 +18,6 @@ $loop->add(
         subscription_timeout     => 100,
         subscription_msg_timeout => 3600000,
         rpc_timeout              => 100,
-        lookup_transactions      => 10,
     ));
 
 $btc_client->subscribe("transactions")->each(sub { print Dumper shift });

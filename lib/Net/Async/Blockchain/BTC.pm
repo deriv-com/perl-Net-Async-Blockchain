@@ -18,7 +18,6 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
             subscription_url => "tcp://127.0.0.1:28332",
             rpc_url => 'http://test:test@127.0.0.1:8332',
             rpc_timeout => 100,
-            lookup_transactions => 10
         )
     );
 
@@ -52,7 +51,6 @@ use Net::Async::Blockchain::Client::ZMQ;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    DEFAULT_LOOKUP_TRANSACTIONS => 100,
     CURRENCY_SYMBOL             => 'BTC',
 };
 
@@ -155,31 +153,28 @@ async sub transform_transaction {
 
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
-    my @received_transactions = grep { $_->{txid} eq $decoded_raw_transaction->{txid} }
-        @{await $self->rpc_client->listtransactions("*", $self->lookup_transactions // DEFAULT_LOOKUP_TRANSACTIONS)};
+    my $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction);
 
     # transaction not found, just ignore.
-    return undef unless @received_transactions;
+    return undef unless $received_transaction;
 
-    my $amount = Math::BigFloat->bzero();
     my %addresses;
     my %category;
-    my $fee = Math::BigFloat->bzero();
+    my $amount = Math::BigFloat->bzero($received_transaction->{amount});
+    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
-    # we can have more than one transaction when:
+    # we can have multiple details when:
     # - multiple `to` addresses transactions
     # - sent and received by the same node
-    for my $tx (@received_transactions) {
-        $amount->badd($tx->{amount});
+    for my $tx ($received_transactions->{details}->@*) {
         $addresses{$tx->{address}} = 1;
         $category{$tx->{category}} = 1;
-        # for received transactions the fee will not be available.
-        $fee->badd($tx->{fee}) if $tx->{fee};
     }
     my @addresses  = keys %addresses;
     my @categories = keys %category;
-    # it can be receive, sent, internal, if we have a send and a receive transaction
-    # this means that the node sent a transaction to an address that it is the owner too.
+
+    # it can be receive, sent, internal
+    # if categories has send and receive it means that is an internal transaction
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
