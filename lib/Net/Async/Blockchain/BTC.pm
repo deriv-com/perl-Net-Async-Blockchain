@@ -174,10 +174,10 @@ async sub transform_transaction {
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => CURRENCY_SYMBOL,
+        currency     => $self->currency_symbol,
         hash         => $decoded_raw_transaction->{txid},
         block        => $decoded_raw_transaction->{block},
-        from         => $self->currency_symbol,
+        from         => '',
         to           => \@addresses,
         amount       => $amount,
         fee          => $fee,
