@@ -198,7 +198,7 @@ async sub transform_transaction {
         hash         => $decoded_transaction->{hash},
         block        => $block,
         from         => $decoded_transaction->{from},
-        to           => $decoded_transaction->{to},
+        to           => [$decoded_transaction->{to}],
         contract     => '',
         amount       => $amount,
         fee          => $fee,
@@ -335,7 +335,7 @@ async sub _check_contract_transaction {
 
             # the third item of the transfer log array is always the `to` address
             if ($topics[2]) {
-                $transaction_cp->{to}     = $self->_remove_zeros($topics[2]);
+                $transaction_cp->{to}     = [$self->_remove_zeros($topics[2])];
                 $transaction_cp->{amount} = Math::BigFloat->from_hex($log->{data});
                 push(@transactions, $transaction_cp);
             }

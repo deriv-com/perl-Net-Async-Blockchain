@@ -156,7 +156,7 @@ async sub transform_transaction {
 
     my %addresses;
     my %category;
-    my $amount = Math::BigFloat->bzero($received_transaction->{amount});
+    my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
     # we can have multiple details when:
