@@ -21,7 +21,7 @@ Net::Async::Blockchain::Client::ZMQ - Async ZMQ Client.
             endpoint => 'tpc://127.0.0.1:28332',
         ));
 
-    $zmq_client->subscribe('rawtx')->each(sub{print shift->{hash}});
+    $zmq_client->subscribe('hashblock')->each(sub{print shift->{hash}});
 
     $loop->run();
 

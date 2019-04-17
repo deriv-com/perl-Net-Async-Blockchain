@@ -21,7 +21,7 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
         )
     );
 
-    $btc_client->subscribe("rawtx")->each(sub { print shift->{hash} });
+    $btc_client->subscribe("transactions")->each(sub { print shift->{hash} });
 
     $loop->run();
 
@@ -107,7 +107,7 @@ sub subscribe {
 
 =head2 hashblock
 
-rawtx subscription
+hashblock subscription
 
 Convert and emit a L<Net::Async::Blockchain::Transaction> for the client source every new raw transaction received that
 is owned by the node.
