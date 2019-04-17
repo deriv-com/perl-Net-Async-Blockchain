@@ -40,6 +40,7 @@ sub rpc_timeout : method              { shift->{rpc_timeout} }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
+sub currency_symbol : method          { shift->{currency_symbol} }
 
 =head2 configure
 
@@ -53,6 +54,7 @@ must be included and removed here.
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
+=item * C<currency_symbol> Currency symbol
 
 =back
 
@@ -61,7 +63,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout)) {
+    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -87,7 +89,7 @@ sub source : method {
         $self->add_child(my $source = Ryu::Async->new);
         $self->{source} = $source->source;
         return $self->{source};
-    }
+        }
 }
 
 =head2 rpc_client
@@ -108,7 +110,7 @@ sub rpc_client : method {
     return $self->{rpc_client} //= do {
         $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->rpc_url));
         return $http_client;
-    }
+        }
 }
 
 1;

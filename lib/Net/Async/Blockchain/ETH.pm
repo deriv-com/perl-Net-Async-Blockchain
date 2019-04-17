@@ -54,7 +54,6 @@ use parent qw(Net::Async::Blockchain);
 use constant {
     TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
     SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
-    CURRENCY_SYMBOL    => 'ETH'
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -136,7 +135,11 @@ sub subscribe {
             my $response = shift;
             return undef unless $response->{params} && $response->{params}->{subscription};
             return $response->{params}->{subscription} eq $self->subscription_id;
-        })->each(async sub { await $self->$subscription(shift) });
+        }
+        )->each(
+        async sub {
+            await $self->$subscription(shift);
+        });
 
     return $self->source;
 }
@@ -162,7 +165,7 @@ async sub newHeads {
     my $block = $response->{params}->{result};
 
     my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON->true);
-    my @transactions   = $block_response->{transactions}->@*;
+    my @transactions = $block_response->{transactions}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }
 
@@ -191,7 +194,7 @@ async sub transform_transaction {
     my $block  = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => CURRENCY_SYMBOL,
+        currency     => $self->currency_symbol,
         hash         => $decoded_transaction->{hash},
         block        => $block,
         from         => $decoded_transaction->{from},
@@ -199,7 +202,7 @@ async sub transform_transaction {
         contract     => '',
         amount       => $amount,
         fee          => $fee,
-        fee_currency => CURRENCY_SYMBOL,
+        fee_currency => $self->currency_symbol,
         type         => '',
     );
 

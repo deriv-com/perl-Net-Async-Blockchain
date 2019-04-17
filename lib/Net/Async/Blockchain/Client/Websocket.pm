@@ -63,7 +63,7 @@ sub source : method {
         $self->add_child(my $source = Ryu::Async->new);
         $self->{source} = $source->source;
         return $self->{source};
-    }
+        }
 }
 
 =head2 endpoint
@@ -146,7 +146,7 @@ sub AUTOLOAD {
         sub {
             $client->send_text_frame(encode_json_utf8($obj));
         }
-    )->on_fail(
+        )->on_fail(
         sub {
             die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
         })->get;

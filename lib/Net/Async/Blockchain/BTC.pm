@@ -50,10 +50,6 @@ use Net::Async::Blockchain::Client::ZMQ;
 
 use parent qw(Net::Async::Blockchain);
 
-use constant {
-    CURRENCY_SYMBOL             => 'BTC',
-};
-
 my %subscription_dictionary = ('transactions' => 'hashblock');
 
 =head2 new_zmq_client
@@ -181,11 +177,11 @@ async sub transform_transaction {
         currency     => CURRENCY_SYMBOL,
         hash         => $decoded_raw_transaction->{txid},
         block        => $decoded_raw_transaction->{block},
-        from         => '',
+        from         => $self->currency_symbol,
         to           => \@addresses,
         amount       => $amount,
         fee          => $fee,
-        fee_currency => CURRENCY_SYMBOL,
+        fee_currency => $self->currency_symbol,
         type         => $transaction_type,
     );
 

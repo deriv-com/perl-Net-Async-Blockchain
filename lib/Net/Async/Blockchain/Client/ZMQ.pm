@@ -76,7 +76,7 @@ sub source : method {
         $self->add_child(my $source = Ryu::Async->new);
         $self->{source} = $source->source;
         return $self->{source};
-    }
+        }
 }
 
 =head2 endpoint

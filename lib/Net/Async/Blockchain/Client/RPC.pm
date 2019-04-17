@@ -74,7 +74,7 @@ sub http_client : method {
 
         $self->{http_client} = $http_client;
         return $self->{http_client};
-    }
+        }
 }
 
 =head2 configure
@@ -134,7 +134,7 @@ sub AUTOLOAD {
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
         }
-    )->else(
+        )->else(
         sub {
             Future->fail(@_);
         });
