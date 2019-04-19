@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+no warnings 'redefine';
 
 use Test::More;
 use Test::Fatal;
@@ -16,26 +17,35 @@ BEGIN {
     use_ok "Net::Async::Blockchain::Client::RPC";
 }
 
+my $peersock;
+local *IO::Async::Handle::connect = sub {
+   my $self = shift;
+
+   ( my $selfsock, $peersock ) = IO::Async::OS->socketpair() or die "Cannot create socket pair - $!";
+   $self->set_handle( $selfsock );
+
+   return Future->new->done( $self );
+};
+
 my $loop = IO::Async::Loop->new();
 testing_loop($loop);
 
-$loop->add(
-    my $rpc = Net::Async::Blockchain::Client::RPC->new(
-        endpoint => "http://127.0.0.1:8332",
-        timeout  => 10,
-    ));
+subtest 'stall timeout' => sub {
+    $loop->add(
+        my $rpc = Net::Async::Blockchain::Client::RPC->new(
+            endpoint => "http://abcd.com",
+            timeout  => 0.1,
+        ));
 
-my $mock_http = Test::MockModule->new('Net::Async::HTTP');
-$mock_http->mock(
-    POST => sub {
-        my ($s, $host, $content) = @_;
-        my $decoded = decode_json_utf8($content);
-        ok $decoded, "valid json request";
-        my $response = HTTP::Message->new(undef, encode_json_utf8({result => $decoded}));
-        return Future->done($response);
-    });
+    like ( exception{$rpc->eth_blockNumber->get()}, qr(Stalled while waiting for response), 'Stall timeout' );
+};
 
-is $rpc->eth_blockNumber->get()->{method}, "eth_blockNumber", "valid request";
+subtest 'no endpoint' => sub {
+    $loop->add(
+        my $rpc = Net::Async::Blockchain::Client::RPC->new());
+
+    like ( exception{$rpc->eth_blockNumber->get()}, qr(Require either 'uri' or 'request'), 'No endpoint' );
+};
 
 done_testing;
 

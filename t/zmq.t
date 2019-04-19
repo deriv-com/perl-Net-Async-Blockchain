@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More;
 use Test::Fatal;
-use Test::Requires qw( Test::TCP );
+use Test::TCP;
 use IO::Async::Test;
 use IO::Async::Loop;
 use Ryu::Async;
