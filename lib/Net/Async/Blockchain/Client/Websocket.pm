@@ -18,7 +18,6 @@ Net::Async::Blockchain::Client::Websocket - Async websocket Client.
     $loop->add(
         my $client = Net::Async::Blockchain::Client::Websocket->new(
             endpoint => "ws://127.0.0.1:8546",
-            source => $ws_source->source,
         )
     );
 
@@ -60,8 +59,8 @@ L<Ryu::Source>
 sub source : method {
     my ($self) = @_;
     return $self->{source} //= do {
-        $self->add_child(my $source = Ryu::Async->new);
-        $self->{source} = $source->source;
+        $self->add_child(my $ryu = Ryu::Async->new);
+        $self->{source} = $ryu->source;
         return $self->{source};
         }
 }
@@ -89,8 +88,6 @@ must be included and removed here.
 
 =item * C<endpoint>
 
-=item * C<source> L<Ryu::Source>
-
 =back
 
 =cut
@@ -98,7 +95,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint source)) {
+    for my $k (qw(endpoint)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 

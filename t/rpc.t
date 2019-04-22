@@ -19,12 +19,12 @@ BEGIN {
 
 my $peersock;
 local *IO::Async::Handle::connect = sub {
-   my $self = shift;
+    my $self = shift;
 
-   ( my $selfsock, $peersock ) = IO::Async::OS->socketpair() or die "Cannot create socket pair - $!";
-   $self->set_handle( $selfsock );
+    (my $selfsock, $peersock) = IO::Async::OS->socketpair() or die "Cannot create socket pair - $!";
+    $self->set_handle($selfsock);
 
-   return Future->new->done( $self );
+    return Future->new->done($self);
 };
 
 my $loop = IO::Async::Loop->new();
@@ -37,14 +37,13 @@ subtest 'stall timeout' => sub {
             timeout  => 0.1,
         ));
 
-    like ( exception{$rpc->eth_blockNumber->get()}, qr(Stalled while waiting for response), 'Stall timeout' );
+    like(exception { $rpc->eth_blockNumber->get() }, qr(Stalled while waiting for response), 'Stall timeout');
 };
 
 subtest 'no endpoint' => sub {
-    $loop->add(
-        my $rpc = Net::Async::Blockchain::Client::RPC->new());
+    $loop->add(my $rpc = Net::Async::Blockchain::Client::RPC->new());
 
-    like ( exception{$rpc->eth_blockNumber->get()}, qr(Require either 'uri' or 'request'), 'No endpoint' );
+    like(exception { $rpc->eth_blockNumber->get() }, qr(Require either 'uri' or 'request'), 'No endpoint');
 };
 
 done_testing;

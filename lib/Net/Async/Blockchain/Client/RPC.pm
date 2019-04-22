@@ -86,7 +86,7 @@ must be included and removed here.
 
 =item * C<endpoint>
 
-=item * C<timeout>
+=item * C<timeout> connection timeout (milliseconds)
 
 =back
 
@@ -134,8 +134,8 @@ sub AUTOLOAD {
         $self->endpoint,
         encode_json_utf8($obj),
         content_type => 'application/json',
-        on_response => sub {
-            decode_json_utf8(shift->decoded_content)->{result}
+        on_response  => sub {
+            decode_json_utf8(shift->decoded_content)->{result};
         },
     );
 }

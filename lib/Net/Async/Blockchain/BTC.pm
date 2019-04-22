@@ -38,7 +38,6 @@ Bitcoin subscription using ZMQ from the bitcoin based blockchain nodes
 
 no indirect;
 
-use JSON;
 use Ryu::Async;
 use Future::AsyncAwait;
 use IO::Async::Loop;

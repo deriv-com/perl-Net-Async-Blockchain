@@ -17,7 +17,6 @@ Net::Async::Blockchain::Client::ZMQ - Async ZMQ Client.
 
     $loop->add(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
-            source   => $zmq_source->source,
             endpoint => 'tpc://127.0.0.1:28332',
         ));
 
@@ -73,8 +72,8 @@ L<Ryu::Source>
 sub source : method {
     my ($self) = @_;
     return $self->{source} //= do {
-        $self->add_child(my $source = Ryu::Async->new);
-        $self->{source} = $source->source;
+        $self->add_child(my $ryu = Ryu::Async->new);
+        $self->{source} = $ryu->source;
         return $self->{source};
         }
 }
@@ -135,7 +134,9 @@ to an IP address.
 
 =item * C<endpoint>
 
-=item * C<source> L<Ryu::Source>
+=item * C<timeout> connection timeout (milliseconds)
+
+=item * C<msg_timeout> msg interval timetout (milliseconds)
 
 =back
 
@@ -144,7 +145,7 @@ to an IP address.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint source timeout msg_timeout)) {
+    for my $k (qw(endpoint timeout msg_timeout)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 

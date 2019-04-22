@@ -86,8 +86,8 @@ L<Ryu::Source>
 sub source : method {
     my ($self) = @_;
     return $self->{source} //= do {
-        $self->add_child(my $source = Ryu::Async->new);
-        $self->{source} = $source->source;
+        $self->add_child(my $ryu = Ryu::Async->new);
+        $self->{source} = $ryu->source;
         return $self->{source};
         }
 }

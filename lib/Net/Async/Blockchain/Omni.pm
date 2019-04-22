@@ -83,16 +83,16 @@ async sub transform_transaction {
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
     my $from = $self->rpc_client->validateaddress($received_transaction->{sendingaddress});
-    my $to = $self->rpc_client->validateaddress($received_transaction->{referenceaddress});
+    my $to   = $self->rpc_client->validateaddress($received_transaction->{referenceaddress});
 
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction
     my $transaction_type;
-    if ($from->{is_mine} && $to->{is_mine}){
+    if ($from->{is_mine} && $to->{is_mine}) {
         $transaction_type = 'internal';
-    }elsif ($from->{is_mine}){
+    } elsif ($from->{is_mine}) {
         $transaction_type = 'sent';
-    }elsif ($to->{is_mine}){
+    } elsif ($to->{is_mine}) {
         $transaction_type = 'receive';
     }
 
