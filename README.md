@@ -43,7 +43,7 @@ REQUIREMENTS
 -   perl 5
 
 ## See also
-- [perl-Ethereum-RPC-Client]([https://github.com/binary-com/perl-Ethereum-RPC-Client](https://github.com/binary-com/perl-Ethereum-RPC-Client))
+- [perl-Ethereum-RPC-Client](https://github.com/binary-com/perl-Ethereum-RPC-Client)
 
 ## Author
 Binary.com
