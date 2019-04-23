@@ -44,6 +44,7 @@ use JSON::MaybeXS;
 use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
+use List::Util qw(any);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
@@ -256,7 +257,7 @@ async sub _set_transaction_type {
     my @node_transactions;
     for my $transaction ($transactions->@*) {
         my $from = $accounts{$transaction->from};
-        my $to   = $accounts{$transaction->to};
+        my $to   = any {$accounts{$_}} $transaction->to->@*;
 
         if ($from && $to) {
             $transaction->{type} = 'internal';
