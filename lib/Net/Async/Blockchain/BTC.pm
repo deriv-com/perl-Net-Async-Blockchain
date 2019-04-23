@@ -49,7 +49,11 @@ use Net::Async::Blockchain::Client::ZMQ;
 
 use parent qw(Net::Async::Blockchain);
 
+use constant DEFAULT_CURRENCY => 'BTC';
+
 my %subscription_dictionary = ('transactions' => 'hashblock');
+
+sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
 =head2 new_zmq_client
 

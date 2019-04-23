@@ -55,9 +55,12 @@ use parent qw(Net::Async::Blockchain);
 use constant {
     TRANSFER_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
     SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
+    DEFAULT_CURRENCY   => 'ETH',
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
+
+sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
 =head2 subscription_id
 
@@ -257,7 +260,7 @@ async sub _set_transaction_type {
     my @node_transactions;
     for my $transaction ($transactions->@*) {
         my $from = $accounts{$transaction->from};
-        my $to   = any {$accounts{$_}} $transaction->to->@*;
+        my $to = any { $accounts{$_} } $transaction->to->@*;
 
         if ($from && $to) {
             $transaction->{type} = 'internal';
