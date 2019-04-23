@@ -1,7 +1,7 @@
 requires 'indirect',    '>= 0.37';
 requires 'Future::AsyncAwait', '>= 0.21';
 requires 'IO::Async::SSL', 0;
-requires 'JSON', 0;
+requires 'JSON::MaybeXS', 0;
 requires 'JSON::MaybeUTF8', '>= 1.002';
 requires 'Digest::Keccak', 0;
 requires 'Math::BigFloat', '>= 1.999814';

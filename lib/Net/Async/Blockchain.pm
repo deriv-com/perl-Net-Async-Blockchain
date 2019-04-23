@@ -44,7 +44,7 @@ sub currency_symbol : method          { shift->{currency_symbol} }
 
 =head2 configure
 
-Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+Any additional configuration that is not described on L<IO::Async::Notifier>
 must be included and removed here.
 
 =over 4

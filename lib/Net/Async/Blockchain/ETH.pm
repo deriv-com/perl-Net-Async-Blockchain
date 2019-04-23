@@ -40,7 +40,7 @@ no indirect;
 use Future::AsyncAwait;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
-use JSON;
+use JSON::MaybeXS;
 use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
@@ -163,7 +163,7 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON->true);
+    my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON::MaybeXS->true);
     my @transactions = $block_response->{transactions}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }

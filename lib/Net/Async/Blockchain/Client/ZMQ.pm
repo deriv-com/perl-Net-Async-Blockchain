@@ -124,7 +124,7 @@ sub msg_timeout : method { shift->{msg_timeout} // DEFAULT_MSG_TIMEOUT }
 
 =head2 configure
 
-Any additional configuration that is not described on L<IO::ASYNC::Notifier>
+Any additional configuration that is not described on L<IO::Async::Notifier>
 must be included and removed here.
 
 If this class receive a DNS as endpoint this will be resolved on this method

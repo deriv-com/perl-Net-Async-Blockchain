@@ -38,7 +38,6 @@ Omnicore subscription using ZMQ from the bitcoin based blockchain nodes
 
 no indirect;
 
-use JSON;
 use Ryu::Async;
 use Future::AsyncAwait;
 use IO::Async::Loop;
@@ -77,8 +76,6 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction && $received_transaction->{is_mine};
 
-    my %addresses;
-    my %category;
     my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
