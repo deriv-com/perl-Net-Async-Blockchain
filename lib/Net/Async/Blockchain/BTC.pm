@@ -65,7 +65,6 @@ L<Net::Async::Blockchain::Client::ZMQ>
 
 sub new_zmq_client {
     my ($self) = @_;
-    $self->add_child(my $zmq_source = Ryu::Async->new);
     $self->add_child(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
             endpoint    => $self->subscription_url,

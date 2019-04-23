@@ -87,7 +87,6 @@ L<Net::Async::Blockchain::Client::Websocket>
 
 sub new_websocket_client {
     my ($self) = @_;
-    $self->add_child(my $ws_source = Ryu::Async->new());
     $self->add_child(
         my $client = Net::Async::Blockchain::Client::Websocket->new(
             endpoint => $self->subscription_url,

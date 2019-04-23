@@ -130,14 +130,14 @@ sub AUTOLOAD {
         params => [@params],
     };
 
-    return $self->http_client->POST(
-        $self->endpoint,
-        encode_json_utf8($obj),
-        content_type => 'application/json',
-        on_response  => sub {
+    return $self->http_client->POST($self->endpoint, encode_json_utf8($obj), content_type => 'application/json')->transform(
+        done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
-        },
-    );
+        }
+        )->else(
+        sub {
+            Future->fail(@_);
+        });
 }
 
 1;
