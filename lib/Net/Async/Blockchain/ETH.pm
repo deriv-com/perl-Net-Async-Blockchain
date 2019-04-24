@@ -21,9 +21,7 @@ Net::Async::Blockchain::ETH - Ethereum based subscription.
         )
     );
 
-    $eth_client->subscribe("newHeads")->each(sub { print shift->{hash} });
-
-    $loop->run();
+    $eth_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
 
 =head1 DESCRIPTION
 

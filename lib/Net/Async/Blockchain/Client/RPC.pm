@@ -86,7 +86,7 @@ must be included and removed here.
 
 =item * C<endpoint>
 
-=item * C<timeout> connection timeout (milliseconds)
+=item * C<timeout> connection timeout (seconds)
 
 =back
 

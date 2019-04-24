@@ -21,10 +21,7 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
         )
     );
 
-    $btc_client->subscribe("transactions")->each(sub { print shift->{hash} });
-
-    $loop->run();
-
+    $btc_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
 
 =head1 DESCRIPTION
 

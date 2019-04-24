@@ -21,9 +21,7 @@ Net::Async::Blockchain::Client::Websocket - Async websocket Client.
         )
     );
 
-    $client->eth_subscribe('newHeads')->each(sub {print shift->{hash}});
-
-    $loop->run();
+    $client->eth_subscribe('newHeads')->each(sub {print shift->{hash}})->get;
 
 =head1 DESCRIPTION
 

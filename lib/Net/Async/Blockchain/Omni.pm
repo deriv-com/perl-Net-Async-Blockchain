@@ -21,10 +21,7 @@ Net::Async::Blockchain::Omni - Omnicore based subscription.
         )
     );
 
-    $omni_client->subscribe("transactions")->each(sub { print shift->{hash} });
-
-    $loop->run();
-
+    $omni_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
 
 =head1 DESCRIPTION
 

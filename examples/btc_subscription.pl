@@ -15,15 +15,13 @@ $loop->add(
     my $btc_client = Net::Async::Blockchain::BTC->new(
         subscription_url => "tcp://127.0.0.1:28332",
         rpc_url          => 'http://test:test@127.0.0.1:8332',
-        # Timeout time for connection (Milliseconds)
+        # Timeout time for connection (seconds)
         subscription_timeout => 100,
         # Timeout time for received messages, this is applied when we have a bigger
-        # duration interval between the messages (Milliseconds).
-        subscription_msg_timeout => 3600000,
-        # Timeout time for connection (Milliseconds)
+        # duration interval between the messages (seconds).
+        subscription_msg_timeout => 3600,
+        # Timeout time for connection (seconds)
         rpc_timeout => 100,
     ));
 
-$btc_client->subscribe("transactions")->each(sub { print Dumper shift });
-
-$loop->run();
+$btc_client->subscribe("transactions")->each(sub { print Dumper shift })->get;

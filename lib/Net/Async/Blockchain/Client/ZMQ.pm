@@ -20,9 +20,7 @@ Net::Async::Blockchain::Client::ZMQ - Async ZMQ Client.
             endpoint => 'tpc://127.0.0.1:28332',
         ));
 
-    $zmq_client->subscribe('hashblock')->each(sub{print shift->{hash}});
-
-    $loop->run();
+    $zmq_client->subscribe('hashblock')->each(sub{print shift->{hash}})->get;
 
 =head1 DESCRIPTION
 
@@ -46,8 +44,8 @@ use parent qw(IO::Async::Notifier);
 
 use constant {
     DEFAULT_TIMEOUT => 100,
-    # 1 hour (milliseconds)
-    DEFAULT_MSG_TIMEOUT => 3600000,
+    # 1 hour (seconds)
+    DEFAULT_MSG_TIMEOUT => 3600,
     # https://github.com/lestrrat-p5/ZMQ/blob/master/ZMQ-Constants/lib/ZMQ/Constants.pm#L128
     ZMQ_CONNECT_TIMEOUT => 79,
 };
@@ -101,7 +99,7 @@ Timeout time for connection
 
 =back
 
-Integer time in milliseconds
+Integer time in seconds
 
 =cut
 
@@ -116,7 +114,7 @@ duration interval between the messages.
 
 =back
 
-Integer time in milliseconds
+Integer time in seconds
 
 =cut
 
@@ -134,9 +132,9 @@ to an IP address.
 
 =item * C<endpoint>
 
-=item * C<timeout> connection timeout (milliseconds)
+=item * C<timeout> connection timeout (seconds)
 
-=item * C<msg_timeout> msg interval timetout (milliseconds)
+=item * C<msg_timeout> msg interval timetout (seconds)
 
 =back
 
