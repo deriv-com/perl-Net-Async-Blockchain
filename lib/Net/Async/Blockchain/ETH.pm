@@ -45,7 +45,7 @@ use Digest::Keccak qw(keccak_256_hex);
 use List::Util qw(any);
 
 use Net::Async::Blockchain::Transaction;
-use Net::Async::Blockchain::Client::RPC;
+use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
 
 use parent qw(Net::Async::Blockchain);
@@ -74,6 +74,28 @@ An hexadecimal string
 =cut
 
 sub subscription_id { shift->{subscription_id} }
+
+=head2 rpc_client
+
+Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::Client::RPC>
+
+=cut
+
+sub rpc_client : method {
+    my ($self) = @_;
+    return $self->{rpc_client} //= do {
+        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => $self->rpc_url));
+        $self->{rpc_client} = $http_client;
+        return $self->{rpc_client};
+        }
+}
 
 =head2 new_websocket_client
 
@@ -165,7 +187,7 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    my $block_response = await $self->rpc_client->eth_getBlockByHash($block->{hash}, JSON::MaybeXS->true);
+    my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
     my @transactions = $block_response->{transactions}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }
@@ -250,7 +272,7 @@ async sub _set_transaction_type {
 
     return undef unless $transactions;
 
-    my $accounts_response = await $self->rpc_client->eth_accounts();
+    my $accounts_response = await $self->rpc_client->accounts();
     return undef unless $accounts_response;
 
     my %accounts = map { $_ => 1 } $accounts_response->@*;
@@ -303,7 +325,7 @@ async sub _check_contract_transaction {
 
     my @transactions;
 
-    my $receipt = await $self->rpc_client->eth_getTransactionReceipt($transaction->hash);
+    my $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
     my $logs    = $receipt->{logs};
 
     # Contract
@@ -320,7 +342,7 @@ async sub _check_contract_transaction {
         for my $log (@transfer_logs) {
             my $transaction_cp = $transaction->clone();
 
-            my $hex_symbol = await $self->rpc_client->eth_call([{
+            my $hex_symbol = await $self->rpc_client->call([{
                         data => SYMBOL_SIGNATURE,
                         to   => $log->{address}
                     },

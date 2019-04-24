@@ -15,6 +15,8 @@ use HTTP::Request;
 BEGIN {
     use_ok "Net::Async::HTTP";
     use_ok "Net::Async::Blockchain::Client::RPC";
+    use_ok "Net::Async::Blockchain::Client::RPC::ETH";
+    use_ok "Net::Async::Blockchain::Client::RPC::BTC";
 }
 
 my $peersock;
@@ -32,18 +34,18 @@ testing_loop($loop);
 
 subtest 'stall timeout' => sub {
     $loop->add(
-        my $rpc = Net::Async::Blockchain::Client::RPC->new(
+        my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new(
             endpoint => "http://abcd.com",
             timeout  => 0.1,
         ));
 
-    like(exception { $rpc->eth_blockNumber->get() }, qr(Stalled while waiting for response), 'Stall timeout');
+    like(exception { $rpc->accounts->get() }, qr(Stalled while waiting for response), 'Stall timeout');
 };
 
 subtest 'no endpoint' => sub {
-    $loop->add(my $rpc = Net::Async::Blockchain::Client::RPC->new());
+    $loop->add(my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new());
 
-    like(exception { $rpc->eth_blockNumber->get() }, qr(Require either 'uri' or 'request'), 'No endpoint');
+    like(exception { $rpc->accounts->get() }, qr(Require either 'uri' or 'request'), 'No endpoint');
 };
 
 done_testing;

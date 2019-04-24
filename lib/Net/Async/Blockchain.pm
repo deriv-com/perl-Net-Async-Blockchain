@@ -92,27 +92,5 @@ sub source : method {
         }
 }
 
-=head2 rpc_client
-
-Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
-the object
-
-=over 4
-
-=back
-
-L<Net::Async::Blockchain::Client::RPC>
-
-=cut
-
-sub rpc_client : method {
-    my ($self) = @_;
-    return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => $self->rpc_url));
-        $self->{rpc_client} = $http_client;
-        return $self->{rpc_client};
-        }
-}
-
 1;
 

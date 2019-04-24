@@ -42,7 +42,7 @@ use Math::BigFloat;
 use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
-use Net::Async::Blockchain::Client::RPC;
+use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;
 
 use parent qw(Net::Async::Blockchain);
@@ -52,6 +52,28 @@ use constant DEFAULT_CURRENCY => 'BTC';
 my %subscription_dictionary = ('transactions' => 'hashblock');
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
+
+=head2 rpc_client
+
+Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::Client::RPC>
+
+=cut
+
+sub rpc_client : method {
+    my ($self) = @_;
+    return $self->{rpc_client} //= do {
+        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(endpoint => $self->rpc_url));
+        $self->{rpc_client} = $http_client;
+        return $self->{rpc_client};
+        }
+}
 
 =head2 new_zmq_client
 
@@ -122,7 +144,7 @@ async sub hashblock {
     my ($self, $block_hash) = @_;
 
     # 2 here means the full verbosity since we want to get the raw transactions
-    my $block_response = await $self->rpc_client->getblock($block_hash, 2);
+    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
@@ -149,7 +171,7 @@ async sub transform_transaction {
     # txindex must to be 0
     my $received_transaction;
     try {
-        $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction->{txid});
+        $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found

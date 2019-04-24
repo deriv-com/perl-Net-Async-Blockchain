@@ -102,7 +102,7 @@ sub configure {
     $self->SUPER::configure(%params);
 }
 
-=head2 AUTOLOAD
+=head2 _request
 
 Use any argument as the method parameter for the client RPC call
 
@@ -114,15 +114,12 @@ Use any argument as the method parameter for the client RPC call
 
 =back
 
+L<Future>
+
 =cut
 
-sub AUTOLOAD {
-    my ($self, @params) = @_;
-
-    my $method = $Net::Async::Blockchain::Client::RPC::AUTOLOAD;
-    $method =~ s/.*:://;
-
-    return if ($method eq 'DESTROY');
+sub _request {
+    my ($self, $method, @params) = @_;
 
     my $obj = {
         id     => 1,

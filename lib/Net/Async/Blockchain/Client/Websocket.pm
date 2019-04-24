@@ -77,6 +77,19 @@ URL containing the port if needed
 
 sub endpoint : method { shift->{endpoint} }
 
+=head2 websocket_client
+
+Create an L<Net::Async::WebSocket::Client> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::WebSocket::Client>
+
+=cut
+
 sub websocket_client : method {
     my ($self) = @_;
 
