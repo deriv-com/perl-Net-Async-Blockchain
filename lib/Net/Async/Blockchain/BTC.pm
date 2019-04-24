@@ -162,7 +162,7 @@ async sub transform_transaction {
     my %addresses;
     my %category;
     my $amount = Math::BigFloat->new($received_transaction->{amount});
-    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
     my $block  = Math::BigInt->from_hex($decoded_raw_transaction->{block});
 
     # we can have multiple details when:
