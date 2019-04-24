@@ -11,19 +11,11 @@ Net::Async::Blockchain::Client::RPC - Async RPC Client.
 
 =head1 SYNOPSIS
 
-    my $loop = IO::Async::Loop->new();
-
-    $loop->add(
-        my $http_client = Net::Async::Blockchain::Client::RPC->new(endpoint => 'http://127.0.0.1:8332', timeout => 100)
-    );
-
-    my $response = $http_client->getblockchaininfo()->get;
-
-    print $response->{blocks};
+Objects of this type would not normally be constructed directly.
 
 =head1 DESCRIPTION
 
-Auto load the commands as the method parameters for the RPC calls returning them asynchronously.
+Centralize all asynchronous RPC calls.
 
 =over 4
 

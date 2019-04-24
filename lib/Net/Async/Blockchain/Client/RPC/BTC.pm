@@ -2,9 +2,34 @@ package Net::Async::Blockchain::Client::RPC::BTC;
 
 use strict;
 use warnings;
-no indirect;
 
 our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::Client::RPC::BTC - Async BTC RPC Client.
+
+=head1 SYNOPSIS
+
+    my $loop = IO::Async::Loop->new();
+
+    $loop->add(
+        my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(endpoint => 'http://127.0.0.1:8332', timeout => 100)
+    );
+
+    my $response = $http_client->accounts()->get;
+
+=head1 DESCRIPTION
+
+BTC based RPC calls
+
+=over 4
+
+=back
+
+=cut
+
+no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC);
 

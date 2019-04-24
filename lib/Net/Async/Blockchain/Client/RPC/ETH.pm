@@ -2,9 +2,34 @@ package Net::Async::Blockchain::Client::RPC::ETH;
 
 use strict;
 use warnings;
-no indirect;
 
 our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::Client::RPC::ETH - Async ETH RPC Client.
+
+=head1 SYNOPSIS
+
+    my $loop = IO::Async::Loop->new();
+
+    $loop->add(
+        my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => 'http://127.0.0.1:8545', timeout => 100)
+    );
+
+    my $response = $http_client->accounts()->get;
+
+=head1 DESCRIPTION
+
+ETH RPC calls
+
+=over 4
+
+=back
+
+=cut
+
+no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC);
 

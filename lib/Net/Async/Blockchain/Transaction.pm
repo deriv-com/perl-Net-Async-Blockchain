@@ -13,8 +13,6 @@ Net::Async::Blockchain::Transaction - Transaction abstraction.
 
 Objects of this type would not normally be constructed directly.
 
-This object will the return from the subscriptions
-
 =head1 DESCRIPTION
 
 Transaction abstraction
