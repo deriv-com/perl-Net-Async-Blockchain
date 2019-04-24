@@ -42,6 +42,7 @@ use Ryu::Async;
 use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
+use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC;
@@ -100,9 +101,7 @@ sub subscribe {
     $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    my $zmq_source = $self->new_zmq_client->subscribe($subscription);
-    die "Can't connect to ZMQ" unless $zmq_source;
-    $zmq_source->each(async sub { await $self->$subscription(shift) });
+    $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures;
 
     return $self->source;
 }
@@ -149,9 +148,16 @@ L<Net::Async::Blockchain::Transaction>
 async sub transform_transaction {
     my ($self, $decoded_raw_transaction) = @_;
 
-    # the command listtransactions will guarantee that this transactions is from or to one
-    # of the node addresses.
-    my $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction->{txid});
+    # this will guarantee that the transaction is from our node
+    # txindex must to be 0
+    my $received_transaction;
+    try {
+        $received_transaction = await $self->rpc_client->gettransaction($decoded_raw_transaction->{txid});
+    }
+    catch {
+        # transaction not found
+        return undef;
+    };
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;
@@ -160,6 +166,7 @@ async sub transform_transaction {
     my %category;
     my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $block  = Math::BigInt->from_hex($decoded_raw_transaction->{block});
 
     # we can have multiple details when:
     # - multiple `to` addresses transactions
@@ -178,7 +185,7 @@ async sub transform_transaction {
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $self->currency_symbol,
         hash         => $decoded_raw_transaction->{txid},
-        block        => $decoded_raw_transaction->{block},
+        block        => $block,
         from         => '',
         to           => \@addresses,
         amount       => $amount,

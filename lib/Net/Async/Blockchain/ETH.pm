@@ -139,10 +139,10 @@ sub subscribe {
             return undef unless $response->{params} && $response->{params}->{subscription};
             return $response->{params}->{subscription} eq $self->subscription_id;
         }
-        )->each(
+        )->map(
         async sub {
             await $self->$subscription(shift);
-        });
+        })->ordered_futures;
 
     return $self->source;
 }

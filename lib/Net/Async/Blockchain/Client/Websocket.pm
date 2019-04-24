@@ -134,7 +134,7 @@ sub AUTOLOAD {
     $client->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
     $client->configure(
         on_text_frame => sub {
-            my ($s, $frame) = @_;
+            my (undef, $frame) = @_;
             $self->source->emit(decode_json_utf8($frame));
         },
     );
