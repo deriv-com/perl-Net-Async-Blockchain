@@ -129,7 +129,7 @@ Connect to the websocket port and subscribe to the implemented subscription:
 
 =back
 
-L<Ryu::Async>
+L<Ryu::Source>
 
 =cut
 
@@ -190,6 +190,8 @@ async sub newHeads {
     my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
     my @transactions = $block_response->{transactions}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
+
+    return 1;
 }
 
 =head2 transform_transaction

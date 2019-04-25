@@ -109,7 +109,7 @@ Connect to the ZMQ port and subscribe to the implemented subscription:
 
 =back
 
-L<Ryu::Async>
+L<Ryu::Source>
 
 =cut
 
