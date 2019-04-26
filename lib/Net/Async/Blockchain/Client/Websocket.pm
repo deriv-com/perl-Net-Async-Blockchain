@@ -162,7 +162,7 @@ sub _request {
         )->on_fail(
         sub {
             die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
-        })->get;
+        })->retain;
 
     return $self->source;
 }
