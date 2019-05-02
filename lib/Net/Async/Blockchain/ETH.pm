@@ -344,12 +344,12 @@ async sub _check_contract_transaction {
         for my $log (@transfer_logs) {
             my $transaction_cp = $transaction->clone();
 
-            my $hex_symbol = await $self->rpc_client->call([{
-                        data => SYMBOL_SIGNATURE,
-                        to   => $log->{address}
-                    },
-                    "latest"
-                ]);
+            my $hex_symbol = await $self->rpc_client->call({
+                    data => SYMBOL_SIGNATURE,
+                    to   => $log->{address}
+                },
+                "latest"
+            );
             my $symbol = $self->_to_string($hex_symbol);
             next unless $symbol;
 
