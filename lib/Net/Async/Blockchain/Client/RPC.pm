@@ -64,9 +64,8 @@ sub http_client : method {
                 fail_on_error  => 1,
             ));
 
-        $self->{http_client} = $http_client;
-        return $self->{http_client};
-        }
+        $http_client;
+    };
 }
 
 =head2 configure
