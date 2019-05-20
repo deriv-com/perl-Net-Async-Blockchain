@@ -128,7 +128,7 @@ async sub transform_transaction {
     catch {
         # transaction not found
         return undef;
-    };
+    }
 
     # transaction not found, just ignore.
     return undef unless $received_transaction && $received_transaction->{ismine};
