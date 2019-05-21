@@ -136,8 +136,10 @@ async sub transform_transaction {
     my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
-    my $from = await $self->rpc_client->validate_address($received_transaction->{sendingaddress});
-    my $to   = await $self->rpc_client->validate_address($received_transaction->{referenceaddress});
+    my ($from, $to) = await Future->needs_all(
+        $self->rpc_client->validate_address($received_transaction->{sendingaddress}),
+        $self->rpc_client->validate_address($received_transaction->{referenceaddress}),
+    );
 
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction
