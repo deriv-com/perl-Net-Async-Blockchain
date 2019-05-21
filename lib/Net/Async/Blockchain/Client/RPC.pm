@@ -25,6 +25,7 @@ Centralize all asynchronous RPC calls.
 
 no indirect;
 
+use Future::AsyncAwait;
 use Net::Async::HTTP;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use IO::Async::Notifier;
@@ -64,9 +65,8 @@ sub http_client : method {
                 fail_on_error  => 1,
             ));
 
-        $self->{http_client} = $http_client;
-        return $self->{http_client};
-        }
+        $http_client;
+    };
 }
 
 =head2 configure
@@ -110,7 +110,7 @@ L<Future>
 
 =cut
 
-sub _request {
+async sub _request {
     my ($self, $method, @params) = @_;
 
     my $obj = {
@@ -119,14 +119,8 @@ sub _request {
         params => [@params],
     };
 
-    return $self->http_client->POST($self->endpoint, encode_json_utf8($obj), content_type => 'application/json')->transform(
-        done => sub {
-            decode_json_utf8(shift->decoded_content)->{result};
-        }
-        )->else(
-        sub {
-            Future->fail(@_);
-        });
+    my $response = await $self->http_client->POST($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
+    return decode_json_utf8($response->decoded_content)->{result};
 }
 
 1;

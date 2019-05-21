@@ -58,9 +58,8 @@ sub source : method {
     my ($self) = @_;
     return $self->{source} //= do {
         $self->add_child(my $ryu = Ryu::Async->new);
-        $self->{source} = $ryu->source;
-        return $self->{source};
-        }
+        $ryu->source;
+    };
 }
 
 =head2 endpoint
@@ -103,9 +102,8 @@ sub websocket_client : method {
             ));
 
         $client->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
-        $self->{websocket_client} = $client;
-        return $self->{websocket_client};
-        }
+        $client;
+    };
 }
 
 =head2 configure

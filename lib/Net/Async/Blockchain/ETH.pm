@@ -92,9 +92,8 @@ sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
         $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => $self->rpc_url));
-        $self->{rpc_client} = $http_client;
-        return $self->{rpc_client};
-        }
+        $http_client;
+    };
 }
 
 =head2 new_websocket_client

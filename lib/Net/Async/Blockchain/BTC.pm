@@ -70,9 +70,8 @@ sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
         $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(endpoint => $self->rpc_url));
-        $self->{rpc_client} = $http_client;
-        return $self->{rpc_client};
-        }
+        $http_client;
+    };
 }
 
 =head2 new_zmq_client
@@ -176,7 +175,7 @@ async sub transform_transaction {
     catch {
         # transaction not found
         return undef;
-    };
+    }
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;

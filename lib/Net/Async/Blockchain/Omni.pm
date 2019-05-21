@@ -69,9 +69,8 @@ sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
         $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::Omni->new(endpoint => $self->rpc_url));
-        $self->{rpc_client} = $http_client;
-        return $self->{rpc_client};
-        }
+        $http_client;
+    };
 }
 
 =head2 hashblock
@@ -129,7 +128,7 @@ async sub transform_transaction {
     catch {
         # transaction not found
         return undef;
-    };
+    }
 
     # transaction not found, just ignore.
     return undef unless $received_transaction && $received_transaction->{ismine};
@@ -137,8 +136,9 @@ async sub transform_transaction {
     my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
-    my $from = await $self->rpc_client->validate_address($received_transaction->{sendingaddress});
-    my $to   = await $self->rpc_client->validate_address($received_transaction->{referenceaddress});
+    my ($from, $to) = await Future->needs_all(
+        map {$self->rpc_client->validate_address($received_transaction->{$_})} qw(sendingaddress referenceaddress)
+    );
 
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction
