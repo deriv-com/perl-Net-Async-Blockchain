@@ -137,8 +137,7 @@ async sub transform_transaction {
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
     my ($from, $to) = await Future->needs_all(
-        $self->rpc_client->validate_address($received_transaction->{sendingaddress}),
-        $self->rpc_client->validate_address($received_transaction->{referenceaddress}),
+        map {$self->rpc_client->validate_address($received_transaction->{$_})} qw(sendingaddress referenceaddress)
     );
 
     # it can be receive, sent, internal
