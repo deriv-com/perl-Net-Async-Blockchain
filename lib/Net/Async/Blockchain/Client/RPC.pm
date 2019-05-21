@@ -122,10 +122,7 @@ sub _request {
         done => sub {
             decode_json_utf8(shift->decoded_content)->{result};
         }
-        )->else(
-        sub {
-            Future->fail(@_);
-        });
+        );
 }
 
 1;
