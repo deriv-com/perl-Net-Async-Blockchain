@@ -35,7 +35,9 @@ Auto load the commands as the method parameters for the websocket calls returnin
 
 no indirect;
 
+use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
+use Protocol::WebSocket::Request;
 
 use Net::Async::WebSocket::Client;
 
@@ -153,7 +155,12 @@ sub _request {
         method => $method,
         params => [@params]};
 
-    $self->websocket_client->connect(url => $self->endpoint)->on_done(
+    my $url = URI->new($self->endpoint);
+
+    $self->websocket_client->connect(
+        url => $self->endpoint,
+        req => Protocol::WebSocket::Request->new(origin => $url->host),
+        )->on_done(
         sub {
             $self->websocket_client->send_text_frame(encode_json_utf8($obj));
         }
