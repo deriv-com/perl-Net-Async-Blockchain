@@ -97,7 +97,7 @@ async sub hashblock {
     my @future_transactions = map { $self->rpc_client->get_raw_transaction($_, 2) } $block_response->{tx}->@*;
     await Future->needs_all(@future_transactions);
 
-    my @transactions = map {$_->get} @future_transactions;
+    my @transactions = map { $_->get } @future_transactions;
 
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
 }
@@ -136,9 +136,8 @@ async sub transform_transaction {
     my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
 
-    my ($from, $to) = await Future->needs_all(
-        map {$self->rpc_client->validate_address($received_transaction->{$_})} qw(sendingaddress referenceaddress)
-    );
+    my ($from, $to) =
+        await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
 
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction

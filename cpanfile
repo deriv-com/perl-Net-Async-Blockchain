@@ -6,7 +6,7 @@ requires 'JSON::MaybeUTF8', '>= 1.002';
 requires 'Digest::Keccak', 0;
 requires 'Math::BigFloat', '>= 1.999814';
 requires 'Math::BigInt', '>= 1.999814';
-requires 'Net::Async::WebSocket', '>= 0.12';
+requires 'Net::Async::WebSocket', '>= 0.13';
 requires 'Net::Async::HTTP', '>= 0.43';
 requires 'Ryu::Async', '>= 0.011';
 requires 'Syntax::Keyword::Try', '>= 0.09';
