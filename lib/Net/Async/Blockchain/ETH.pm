@@ -147,7 +147,7 @@ sub subscribe {
         sub {
             my $response = shift;
             return 1 unless $response->{result};
-            $self->{subscription_id} = $response->{result};
+            $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
             return 0;
         })
         # we use the subscription id received as the first response to filter

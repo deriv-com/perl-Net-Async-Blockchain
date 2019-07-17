@@ -101,8 +101,12 @@ sub websocket_client : method {
                     my (undef, $frame) = @_;
                     $self->source->emit(decode_json_utf8($frame));
                 },
+                on_closed => sub {
+                    die "Connection closed by peer";
+                },
             ));
 
+        $client->{close_on_read_eof} = 1;
         $client->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
         $client;
     };
@@ -133,7 +137,7 @@ sub configure {
 
 =head2 _request
 
-Use any argument as the method parameter for the websocket client call
+Prepare the data to be sent to the websocket and call the request
 
 =over 4
 
@@ -150,24 +154,44 @@ L<Ryu::Source>
 sub _request {
     my ($self, $method, @params) = @_;
 
-    my $obj = {
+    my $url = URI->new($self->endpoint);
+
+    # this is a simple block number request
+    my $timer_call = {
+        id     => 1,
+        method => 'eth_blockNumber',
+        params => []};
+
+    # we need to keep sending requests to the node
+    # otherwise after some period of time we just
+    # get disconnected by the peer, 5 seconds is enough
+    # to keep the connection alive.
+    my $timer = IO::Async::Timer::Periodic->new(
+        interval => 5,
+        on_tick  => sub {
+            $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
+        },
+    );
+
+    $self->add_child($timer);
+
+    # this is the client request
+    my $request_call = {
         id     => 1,
         method => $method,
         params => [@params]};
 
-    my $url = URI->new($self->endpoint);
-
     $self->websocket_client->connect(
         url => $self->endpoint,
         req => Protocol::WebSocket::Request->new(origin => $url->host),
+        )->then(
+        sub {
+            return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
+        }
         )->on_done(
         sub {
-            $self->websocket_client->send_text_frame(encode_json_utf8($obj));
-        }
-        )->on_fail(
-        sub {
-            die "Can't connect to the websocket endpoint: @{[$self->endpoint]}";
-        })->retain;
+            $timer->start();
+        })->retain();
 
     return $self->source;
 }
