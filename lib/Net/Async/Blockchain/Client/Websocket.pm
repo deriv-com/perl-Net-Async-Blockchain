@@ -169,7 +169,7 @@ sub _request {
     my $timer = IO::Async::Timer::Periodic->new(
         interval => 5,
         on_tick  => sub {
-            $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
+            $self->websocket_client->send_ping_frame(encode_json_utf8($timer_call));
         },
     );
 
