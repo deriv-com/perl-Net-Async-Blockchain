@@ -282,7 +282,6 @@ async sub _set_transaction_type {
     for my $transaction ($transactions->@*) {
         my $from = $accounts{$transaction->from};
         my $to = any { $accounts{$_} } $transaction->to->@*;
-
         if ($from && $to) {
             $transaction->{type} = 'internal';
         } elsif ($from) {
@@ -392,10 +391,9 @@ string
 sub _remove_zeros {
     my ($self, $trxn_topic) = @_;
 
-    # remove 0x
-    my $address = substr($trxn_topic, 2);
-    # remove all left 0
-    $address =~ s/^0+(?=.)//s;
+    # get only the last 40 characters from the string (ETH address size).
+    my $address = substr($trxn_topic, -40, length($trxn_topic));
+
     return "0x$address";
 }
 
