@@ -43,6 +43,8 @@ use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
+use constant KEEP_ALIVE => 5;
+
 =head2 source
 
 Create an L<Ryu::Source> instance, if it is already defined just return
@@ -104,9 +106,9 @@ sub websocket_client : method {
                 on_closed => sub {
                     die "Connection closed by peer";
                 },
+                close_on_read_eof => 1,
             ));
 
-        $client->{close_on_read_eof} = 1;
         $client->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
         $client;
     };
@@ -167,7 +169,7 @@ sub _request {
     # get disconnected by the peer, 5 seconds is enough
     # to keep the connection alive.
     my $timer = IO::Async::Timer::Periodic->new(
-        interval => 5,
+        interval => KEEP_ALIVE,
         on_tick  => sub {
             $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
         },
