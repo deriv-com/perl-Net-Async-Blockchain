@@ -39,6 +39,7 @@ use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
 use IO::Async::Timer::Periodic;
+use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
 
