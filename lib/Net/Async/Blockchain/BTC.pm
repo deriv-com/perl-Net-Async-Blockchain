@@ -119,7 +119,10 @@ sub subscribe {
     $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures;
+    Future->needs_all(
+        $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
+        $self->recursive_search());
+
 
     return $self->source;
 }
