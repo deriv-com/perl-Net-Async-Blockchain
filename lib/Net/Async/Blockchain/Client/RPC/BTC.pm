@@ -103,5 +103,39 @@ sub validate_address {
     return $self->_request('validateaddress', @params);
 }
 
+=head2 get_last_block
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getblockcount/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_last_block {
+    my ($self) = @_;
+    return $self->_request('getblockcount');
+}
+
+=head2 get_block_hash
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getblockhash/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_block_hash {
+    my ($self, @params) = @_;
+    return $self->_request('getblockhash', @params);
+}
+
 1;
 

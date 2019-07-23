@@ -41,6 +41,7 @@ sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
 sub currency_symbol : method          { shift->{currency_symbol} }
+sub base_block_number : method        { shift->{base_block_number} }
 
 =head2 configure
 
@@ -55,6 +56,7 @@ must be included and removed here.
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
 =item * C<currency_symbol> Currency symbol
+=item * C<base_block_number> base block for recursive search if needed, generally used when you need a lost event from a previous transaction
 
 =back
 
@@ -63,7 +65,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol)) {
+    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
