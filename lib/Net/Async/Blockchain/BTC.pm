@@ -127,6 +127,19 @@ sub subscribe {
     return $self->source;
 }
 
+=head2 recursive_search
+
+go into each block starting from the C<base_block_number> searching
+for transactions from the node, this is usually needed when you stop
+the subscription and need to check the blocks since the last one that
+you received.
+
+=over 4
+
+=back
+
+=cut
+
 async sub recursive_search {
     my ($self) = @_;
 
