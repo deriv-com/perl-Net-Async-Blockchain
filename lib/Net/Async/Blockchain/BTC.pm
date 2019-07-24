@@ -123,7 +123,6 @@ sub subscribe {
         $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
         $self->recursive_search());
 
-
     return $self->source;
 }
 

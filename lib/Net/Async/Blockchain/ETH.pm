@@ -165,9 +165,9 @@ sub subscribe {
             }
             )->ordered_futures->completed(),
         $self->recursive_search(),
-        );
+    );
 
-        return $self->source;
+    return $self->source;
 }
 
 =head2 recursive_search
@@ -310,7 +310,7 @@ async sub _set_transaction_type {
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
-        my $from = $accounts{ $transaction->from };
+        my $from = $accounts{$transaction->from};
         my $to = any { $accounts{$_} } $transaction->to->@*;
         if ($from && $to) {
             $transaction->{type} = 'internal';
