@@ -158,8 +158,15 @@ is owned by the node.
 async sub hashblock {
     my ($self, $block_hash) = @_;
 
-    # 2 here means the full verbosity since we want to get the raw transactions
-    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
+    my $block_response;
+    try {
+        # 2 here means the full verbosity since we want to get the raw transactions
+        $block_response = await $self->rpc_client->get_block($block_hash, 2);
+    }
+    catch {
+        # block not found
+        return undef;
+    }
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
