@@ -39,12 +39,30 @@ use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
 use IO::Async::Timer::Periodic;
+use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
 use constant KEEP_ALIVE => 5;
+
+=head2 latest_subscription
+
+Latest subscription sent from this module
+
+=cut
+
+sub latest_subscription : method { shift->{latest_subscription} }
+
+=head2 timer
+
+Keep alive timer, we need this control to stop and start the timer
+when/if the reconnection occurs.
+
+=cut
+
+sub timer : method { shift->{timer} }
 
 =head2 source
 
@@ -105,9 +123,12 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    die "Connection closed by peer";
+                    # when the connection is closed by the peer we need
+                    # to reconnect to keep receiving the subscription info.
+                    $self->timer->stop();
+                    $self->{websocket_client} = undef;
+                    $self->eth_subscribe($self->latest_subscription);
                 },
-                close_on_read_eof => 1,
             ));
 
         $client->{framebuffer} = Protocol::WebSocket::Frame->new(max_payload_size => 0);
@@ -169,14 +190,14 @@ sub _request {
     # otherwise after some period of time we just
     # get disconnected by the peer, 5 seconds is enough
     # to keep the connection alive.
-    my $timer = IO::Async::Timer::Periodic->new(
+    $self->{timer} = IO::Async::Timer::Periodic->new(
         interval => KEEP_ALIVE,
         on_tick  => sub {
             $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
         },
     );
 
-    $self->add_child($timer);
+    $self->add_child($self->timer);
 
     # this is the client request
     my $request_call = {
@@ -193,7 +214,7 @@ sub _request {
         }
         )->on_done(
         sub {
-            $timer->start();
+            $self->timer->start();
         })->retain();
 
     return $self->source;
@@ -215,6 +236,7 @@ Subscribe to an event
 
 sub eth_subscribe {
     my ($self, $subscription) = @_;
+    $self->{latest_subscription} = $subscription;
     return $self->_request('eth_subscribe', $subscription);
 }
 
