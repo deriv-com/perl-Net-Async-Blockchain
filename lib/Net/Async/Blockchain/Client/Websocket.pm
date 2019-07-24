@@ -215,7 +215,7 @@ sub _request {
         )->on_done(
         sub {
             $self->timer->start();
-        })->get();
+        })->retain();
 
     return $self->source;
 }
