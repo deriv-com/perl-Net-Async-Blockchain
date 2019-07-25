@@ -18,8 +18,6 @@ my @serverframes;
 my $reconnections = 0;
 
 my $server = Net::Async::WebSocket::Server->new(
-    # handle => $serversock,
-
     on_client => sub {
         my (undef, $client) = @_;
 
