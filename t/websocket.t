@@ -5,17 +5,17 @@ use warnings;
 
 use Test::More;
 use Test::Fatal;
-use IO::Socket::INET;
+use IO::Socket::IP;
 use IO::Async::Test;
 use IO::Async::Loop;
 use Net::Async::WebSocket::Server;
-use Net::Async::Blockchain::Client::Websocket;
+use Net::Async::Blockchain::Client::Websocket::ETH;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
 
-my $serversock = IO::Socket::INET->new(
+my $serversock = IO::Socket::IP->new(
     LocalHost => "127.0.0.1",
     Listen    => 1,
 ) or die "Cannot allocate listening socket - $@";
@@ -23,17 +23,15 @@ my $serversock = IO::Socket::INET->new(
 my @serverframes;
 my $reconnections = 0;
 
-my $acceptedclient;
 my $server = Net::Async::WebSocket::Server->new(
     handle => $serversock,
 
     on_client => sub {
-        my (undef, $thisclient) = @_;
+        my (undef, $client) = @_;
 
         $reconnections += 1;
-        $acceptedclient = $thisclient;
 
-        $thisclient->configure(
+        $client->configure(
             on_text_frame => sub {
                 my ($self, $frame) = @_;
                 push @serverframes, $frame;
@@ -48,13 +46,13 @@ my @clientframes;
 my $host    = $serversock->sockhost;
 my $service = $serversock->sockport;
 
-my $ws_client = Net::Async::Blockchain::Client::Websocket->new(
+my $ws_client = Net::Async::Blockchain::Client::Websocket::ETH->new(
     endpoint => sprintf("ws://%s:%s", $host, $service),
 );
 
 $loop->add($ws_client);
 
-$ws_client->eth_subscribe('newHeads');
+$ws_client->subscribe('newHeads');
 
 wait_for { @serverframes };
 
