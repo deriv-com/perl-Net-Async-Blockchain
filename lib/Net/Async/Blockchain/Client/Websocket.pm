@@ -7,7 +7,7 @@ our $VERSION = '0.001';
 
 =head1 NAME
 
-Net::Async::Blockchain::Client::RPC - Async RPC Client.
+Net::Async::Blockchain::Client::Websocket - Async websocket Client.
 
 =head1 SYNOPSIS
 
@@ -15,7 +15,7 @@ Objects of this type would not normally be constructed directly.
 
 =head1 DESCRIPTION
 
-Centralize all asynchronous RPC calls.
+Auto load the commands as the method parameters for the websocket calls returning them asynchronously.
 
 =over 4
 
