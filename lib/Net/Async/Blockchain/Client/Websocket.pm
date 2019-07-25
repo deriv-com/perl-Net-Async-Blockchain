@@ -11,17 +11,7 @@ Net::Async::Blockchain::Client::Websocket - Async websocket Client.
 
 =head1 SYNOPSIS
 
-    my $loop = IO::Async::Loop->new();
-
-    $loop->add(my $ws_source = Ryu::Async->new());
-
-    $loop->add(
-        my $client = Net::Async::Blockchain::Client::Websocket->new(
-            endpoint => "ws://127.0.0.1:8546",
-        )
-    );
-
-    $client->eth_subscribe('newHeads')->each(sub {print shift->{hash}})->get;
+Objects of this type would not normally be constructed directly.
 
 =head1 DESCRIPTION
 
@@ -35,17 +25,13 @@ Auto load the commands as the method parameters for the websocket calls returnin
 
 no indirect;
 
-use URI;
-use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
-use Protocol::WebSocket::Request;
-use IO::Async::Timer::Periodic;
+use JSON::MaybeUTF8 qw(decode_json_utf8);
+use Protocol::WebSocket::Frame;
 use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
-
-use constant KEEP_ALIVE => 5;
 
 =head2 latest_subscription
 
@@ -57,8 +43,8 @@ sub latest_subscription : method { shift->{latest_subscription} }
 
 =head2 timer
 
-Keep alive timer, we need this control to stop and start the timer
-when/if the reconnection occurs.
+L<IO::Async::Timer::Periodic> object, it will send periodic frames to keep the connection alive
+if needed, if not needed just leave it as undef.
 
 =cut
 
@@ -125,9 +111,9 @@ sub websocket_client : method {
                 on_closed => sub {
                     # when the connection is closed by the peer we need
                     # to reconnect to keep receiving the subscription info.
-                    $self->timer->stop();
+                    $self->timer->stop() if $self->timer;
                     $self->{websocket_client} = undef;
-                    $self->eth_subscribe($self->latest_subscription);
+                    $self->subscribe($self->latest_subscription);
                 },
             ));
 
@@ -159,68 +145,7 @@ sub configure {
     $self->SUPER::configure(%params);
 }
 
-=head2 _request
-
-Prepare the data to be sent to the websocket and call the request
-
-=over 4
-
-=item * C<method>
-
-=item * C<@_> - any parameter required by the RPC call
-
-=back
-
-L<Ryu::Source>
-
-=cut
-
-sub _request {
-    my ($self, $method, @params) = @_;
-
-    my $url = URI->new($self->endpoint);
-
-    # this is a simple block number request
-    my $timer_call = {
-        id     => 1,
-        method => 'eth_blockNumber',
-        params => []};
-
-    # we need to keep sending requests to the node
-    # otherwise after some period of time we just
-    # get disconnected by the peer, 5 seconds is enough
-    # to keep the connection alive.
-    $self->{timer} = IO::Async::Timer::Periodic->new(
-        interval => KEEP_ALIVE,
-        on_tick  => sub {
-            $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
-        },
-    );
-
-    $self->add_child($self->timer);
-
-    # this is the client request
-    my $request_call = {
-        id     => 1,
-        method => $method,
-        params => [@params]};
-
-    $self->websocket_client->connect(
-        url => $self->endpoint,
-        req => Protocol::WebSocket::Request->new(origin => $url->host),
-        )->then(
-        sub {
-            return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
-        }
-        )->on_done(
-        sub {
-            $self->timer->start();
-        })->retain();
-
-    return $self->source;
-}
-
-=head2 eth_subscribe
+=head2 subscribe
 
 Subscribe to an event
 
@@ -234,10 +159,8 @@ Subscribe to an event
 
 =cut
 
-sub eth_subscribe {
-    my ($self, $subscription) = @_;
-    $self->{latest_subscription} = $subscription;
-    return $self->_request('eth_subscribe', $subscription);
+sub subscribe {
+    die 'Not implemented';
 }
 
 1;

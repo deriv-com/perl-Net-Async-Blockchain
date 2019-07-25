@@ -46,7 +46,7 @@ use List::Util qw(any);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
-use Net::Async::Blockchain::Client::Websocket;
+use Net::Async::Blockchain::Client::Websocket::ETH;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -111,7 +111,7 @@ L<Net::Async::Blockchain::Client::Websocket>
 sub new_websocket_client {
     my ($self) = @_;
     $self->add_child(
-        my $client = Net::Async::Blockchain::Client::Websocket->new(
+        my $client = Net::Async::Blockchain::Client::Websocket::ETH->new(
             endpoint => $self->subscription_url,
         ));
     return $client;
@@ -141,7 +141,7 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     Future->needs_all(
-        $self->new_websocket_client()->eth_subscribe($subscription)
+        $self->new_websocket_client()->subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
             ->skip_until(
