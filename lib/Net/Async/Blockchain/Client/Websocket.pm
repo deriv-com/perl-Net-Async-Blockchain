@@ -109,6 +109,7 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
+                    warn "Connection closed by peer, trying reconnetion";
                     # when the connection is closed by the peer we need
                     # to reconnect to keep receiving the subscription info.
                     $self->timer->stop() if $self->timer;
