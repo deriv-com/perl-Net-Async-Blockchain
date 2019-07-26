@@ -232,7 +232,7 @@ async sub transform_transaction {
     );
 
     my $transactions;
-    try{
+    try {
         # check if the transaction is from an ERC20 contract
         # this can return more than one transaction since we can have
         # logs for different contracts in the same transaction.
@@ -243,7 +243,8 @@ async sub transform_transaction {
         # to => received
         # from => sent
         $transactions = await $self->_set_transaction_type($transactions) if $transactions;
-    }catch{
+    }
+    catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $transaction->{hash}, $err);
     }
@@ -283,12 +284,12 @@ async sub _set_transaction_type {
     my $accounts_response = await $self->rpc_client->accounts();
     return undef unless $accounts_response;
 
-    my %accounts = map { $_ => 1 } $accounts_response->@*;
+    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
-        my $from = $accounts{$transaction->from};
-        my $to = any { $accounts{$_} } $transaction->to->@*;
+        my $from = $accounts{lc($transaction->from)};
+        my $to = any { $accounts{lc($_)} } $transaction->to->@*;
         if ($from && $to) {
             $transaction->{type} = 'internal';
         } elsif ($from) {
@@ -336,14 +337,15 @@ async sub _check_contract_transaction {
     # the info and the eth_getTransactionReceipt command returns a empty result, to handle
     # this we check at least 5 times for the transaction receipt, it's enough time to
     # receive the response.
+    # if the logs are still empty after all we going to handle this a non contract transaction.
     my $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
     my $retries = 0;
-    while(!$receipt->{logs} && $retries < 5){
-       $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
-       $retries+=1;
+    while (!$receipt->{logs} && $retries < 5) {
+        $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
+        $retries += 1;
     }
 
-    my $logs    = $receipt->{logs};
+    my $logs = $receipt->{logs};
 
     # Contract
     if ($logs && $logs->@* > 0) {
