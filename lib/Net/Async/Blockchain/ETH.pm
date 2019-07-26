@@ -43,6 +43,7 @@ use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use List::Util qw(any);
+use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -188,7 +189,7 @@ async sub newHeads {
 
     my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
     my @transactions = $block_response->{transactions}->@*;
-    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
+    await Future->wait_all(map { $self->transform_transaction($_) } @transactions);
 
     return 1;
 }
@@ -230,16 +231,22 @@ async sub transform_transaction {
         type         => '',
     );
 
-    # check if the transaction is from an ERC20 contract
-    # this can return more than one transaction since we can have
-    # logs for different contracts in the same transaction.
-    my $transactions = await $self->_check_contract_transaction($transaction);
+    my $transactions;
+    try{
+        # check if the transaction is from an ERC20 contract
+        # this can return more than one transaction since we can have
+        # logs for different contracts in the same transaction.
+        $transactions = await $self->_check_contract_transaction($transaction);
 
-    # set the type for each transaction
-    # from and to => internal
-    # to => received
-    # from => sent
-    $transactions = await $self->_set_transaction_type($transactions) if $transactions;
+        # set the type for each transaction
+        # from and to => internal
+        # to => received
+        # from => sent
+        $transactions = await $self->_set_transaction_type($transactions) if $transactions;
+    }catch{
+        my $err = $@;
+        warn sprintf("Error processing transaction: %s, error: %s", $transaction->{hash}, $err);
+    }
 
     if ($transactions) {
         $self->source->emit($_) for $transactions->@*;
@@ -325,11 +332,21 @@ async sub _check_contract_transaction {
 
     my @transactions;
 
+    # even if 1 block confirmation sometimes the node still take some seconds to update
+    # the info and the eth_getTransactionReceipt command returns a empty result, to handle
+    # this we check at least 5 times for the transaction receipt, it's enough time to
+    # receive the response.
     my $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
+    my $retries = 0;
+    while(!$receipt->{logs} && $retries < 5){
+       $receipt = await $self->rpc_client->get_transaction_receipt($transaction->hash);
+       $retries+=1;
+    }
+
     my $logs    = $receipt->{logs};
 
     # Contract
-    if ($logs->@* > 0) {
+    if ($logs && $logs->@* > 0) {
         # Ignore unsuccessful transactions.
         return undef unless $receipt->{status} && hex($receipt->{status}) == 1;
 
