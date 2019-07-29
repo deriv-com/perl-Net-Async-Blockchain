@@ -53,7 +53,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 =item * C<fee> The transaction value
 =item * C<fee_currency> The currency of the fee paid for this transaction
 =item * C<type> String transaction type it can be (receive, sent, internal)
-=item * C<data> contract instrutions
+=item * C<data> contract instructions
 
 =back
 
