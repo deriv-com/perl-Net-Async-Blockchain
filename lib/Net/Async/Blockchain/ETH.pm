@@ -55,7 +55,6 @@ use constant {
     TRANSFER_SIGNATURE  => '0x' . keccak_256_hex('transfer(address,uint256)'),
     SYMBOL_SIGNATURE    => '0x' . keccak_256_hex('symbol()'),
     DEFAULT_CURRENCY    => 'ETH',
-    MAX_RECEIPT_RETRIES => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -309,9 +308,6 @@ currency => the contract symbol
 amount => tokens
 to => address that will receive the tokens
 contract => the contract address
-
-One contract transaction can have multiple contract transfer so here we can
-return one or more transactions.
 
 =over 4
 
