@@ -306,12 +306,12 @@ async sub _set_transaction_type {
     my $accounts_response = await $self->rpc_client->accounts();
     return undef unless $accounts_response;
 
-    my %accounts = map { $_ => 1 } $accounts_response->@*;
+    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
 
     my @node_transactions;
     for my $transaction ($transactions->@*) {
-        my $from = $accounts{$transaction->from};
-        my $to = any { $accounts{$_} } $transaction->to->@*;
+        my $from = $accounts{lc($transaction->from)};
+        my $to = any { $accounts{lc($_)} } $transaction->to->@*;
         if ($from && $to) {
             $transaction->{type} = 'internal';
         } elsif ($from) {

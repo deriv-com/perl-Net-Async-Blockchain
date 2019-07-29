@@ -45,7 +45,10 @@ use Net::Async::WebSocket::Client;
 
 use parent qw(Net::Async::Blockchain::Client::Websocket);
 
-use constant KEEP_ALIVE => 5;
+use constant {
+    KEEP_ALIVE => 5,
+    RECONNECTION_DELAY_WHEN_NODE_IS_DOWN => 10,
+};
 
 =head2 _request
 
@@ -103,6 +106,11 @@ sub _request {
         )->on_done(
         sub {
             $self->timer->start();
+        }
+        )->on_fail(
+        sub {
+            warn "Failing to connect to the node, reconnection will be delayed by @{[RECONNECTION_DELAY_WHEN_NODE_IS_DOWN]} seconds";
+            $self->reconnect(RECONNECTION_DELAY_WHEN_NODE_IS_DOWN);
         })->retain();
 
     return $self->source;

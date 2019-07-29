@@ -27,6 +27,7 @@ no indirect;
 
 use JSON::MaybeUTF8 qw(decode_json_utf8);
 use Protocol::WebSocket::Frame;
+use IO::Async::Timer::Countdown;
 use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
@@ -109,11 +110,10 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
+                    warn "Connection closed by peer, trying reconnetion";
                     # when the connection is closed by the peer we need
                     # to reconnect to keep receiving the subscription info.
-                    $self->timer->stop() if $self->timer;
-                    $self->{websocket_client} = undef;
-                    $self->subscribe($self->latest_subscription);
+                    $self->reconnect(1);
                 },
             ));
 
@@ -143,6 +143,36 @@ sub configure {
     }
 
     $self->SUPER::configure(%params);
+}
+
+=head2 reconnect
+
+Reconnects to the server passing the latest subscription done and stops the
+keep alive timer if it exists.
+
+=over 4
+
+=item * C<delay> how much seconds the reconnection should be delayed.
+
+=back
+
+=cut
+
+sub reconnect {
+    my ($self, $delay) = @_;
+
+    my $reconnection_timer = IO::Async::Timer::Countdown->new(
+        delay => $delay,
+
+        on_expire => sub {
+            $self->timer->stop() if $self->timer;
+            $self->{websocket_client} = undef;
+            $self->subscribe($self->latest_subscription);
+        },
+    );
+
+    $self->loop->add($reconnection_timer);
+    $reconnection_timer->start();
 }
 
 =head2 subscribe
