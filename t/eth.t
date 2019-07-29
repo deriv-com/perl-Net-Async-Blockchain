@@ -22,6 +22,7 @@ my $transaction = Net::Async::Blockchain::Transaction->new(
     fee          => 0.0004032,
     fee_currency => 'ETH',
     type         => '',
+    data         => '0x',
 );
 
 my $subscription_client = Net::Async::Blockchain::ETH->new();
@@ -32,40 +33,32 @@ $mock_rpc->mock(
         return ["0x1D8b942384c41Be24f202d458e819640E6f0218a"];
     });
 
-my $transactions    = $subscription_client->_set_transaction_type([$transaction])->get;
-my @transactions_nr = $transactions->@*;
+my $received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
 
-is $transactions_nr[0]->{type}, 'receive', "valid transaction type for `to` address";
+is $received_transaction->{type}, 'receive', "valid transaction type for `to` address";
 
 $mock_rpc->mock(
     accounts => async sub {
         return ["0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F"];
     });
 
-$transactions    = $subscription_client->_set_transaction_type([$transaction])->get;
-@transactions_nr = $transactions->@*;
+$received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
 
-is $transactions_nr[0]->{type}, 'sent', "valid transaction type for `from` address";
+is $received_transaction->{type}, 'sent', "valid transaction type for `from` address";
 
 $mock_rpc->mock(
     accounts => async sub {
         return ["0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F", "0x1D8b942384c41Be24f202d458e819640E6f0218a"];
     });
 
-$transactions    = $subscription_client->_set_transaction_type([$transaction])->get;
-@transactions_nr = $transactions->@*;
+$received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
 
-is $transactions_nr[0]->{type}, 'internal', "valid transaction type for `from` and `to` address";
+is $received_transaction->{type}, 'internal', "valid transaction type for `from` and `to` address";
 
 $mock_rpc->mock(
     get_transaction_receipt => async sub {
         return {logs => []};
     });
-
-$transactions    = $subscription_client->_check_contract_transaction($transaction)->get;
-@transactions_nr = $transactions->@*;
-
-is @transactions_nr, 1, "valid transactions after no contract found";
 
 is $subscription_client->_remove_zeros("0x0f72a63496D0D5F17d3186750b65226201963716"), "0x0f72a63496D0D5F17d3186750b65226201963716",
     "no zeros to be removed";
@@ -83,36 +76,21 @@ $transaction = Net::Async::Blockchain::Transaction->new(
     fee          => 0.00023465,
     fee_currency => 'ETH',
     type         => '',
+    data =>
+        '0xa9059cbb0000000000000000000000002ae6d1401af58f9fbe2eda032b8494d519af5813000000000000000000000000000000000000000000000000000000003b9aca00',
 );
 
 $mock_rpc->mock(
-    get_transaction_receipt => async sub {
-        return {
-            logs => [{
-                    address => "0xdac17f958d2ee523a2206206994597c13d831ec7",
-                    topics  => [
-                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                        "0x0000000000000000000000000749c36df05f1ddb6cc0c797c94a676499191851",
-                        "0x000000000000000000000000938534b724e7ea82da66f22eed82dd75bb486194"
-                    ],
-                    data => "0x000000000000000000000000000000000000000000000000000000001e3834c0"
-                }
-            ],
-            status => "0x1"
-        };
-    },
     call => async sub {
         return
             "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000035553420000000000000000000000000000000000000000000000000000000000";
     });
 
-$transactions    = $subscription_client->_check_contract_transaction($transaction)->get;
-@transactions_nr = $transactions->@*;
+$received_transaction = $subscription_client->_check_contract_transaction($transaction)->get;
 
-is @transactions_nr, 1, "valid transactions after no contract found";
-is $transactions_nr[0]->{currency}, 'USB', 'correct contract symbol';
-is $transactions_nr[0]->{to}[0], '0x938534b724e7ea82da66f22eed82dd75bb486194', 'correct address `to`';
-is $transactions_nr[0]->{amount}->bstr(), 507000000, 'correct amount';
-is $transactions_nr[0]->{contract}, '0xdac17f958d2ee523a2206206994597c13d831ec7', 'correct contract address';
+is $received_transaction->{currency}, 'USB', 'correct contract symbol';
+is $received_transaction->{to}[0], '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
+is $received_transaction->{amount}->bstr(), 1000000000, 'correct amount';
+is $received_transaction->{contract}, '0xdac17f958d2ee523a2206206994597c13d831ec7', 'correct contract address';
 
 done_testing;

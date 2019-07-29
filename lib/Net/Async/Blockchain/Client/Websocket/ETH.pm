@@ -46,7 +46,7 @@ use Net::Async::WebSocket::Client;
 use parent qw(Net::Async::Blockchain::Client::Websocket);
 
 use constant {
-    KEEP_ALIVE => 5,
+    KEEP_ALIVE                           => 5,
     RECONNECTION_DELAY_WHEN_NODE_IS_DOWN => 10,
 };
 
