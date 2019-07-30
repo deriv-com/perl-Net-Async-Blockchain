@@ -1,3 +1,4 @@
+requires 'perl', '5.024';
 requires 'indirect',    '>= 0.37';
 requires 'Future::AsyncAwait', '>= 0.23';
 requires 'IO::Async::SSL', 0;

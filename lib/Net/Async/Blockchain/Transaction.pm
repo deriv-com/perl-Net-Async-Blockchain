@@ -35,6 +35,7 @@ sub amount : method       { shift->{amount} }
 sub fee : method          { shift->{fee} }
 sub fee_currency : method { shift->{fee_currency} }
 sub type : method         { shift->{type} }
+sub data : method         { shift->{data} }
 
 =head2 new
 
@@ -52,6 +53,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 =item * C<fee> The transaction value
 =item * C<fee_currency> The currency of the fee paid for this transaction
 =item * C<type> String transaction type it can be (receive, sent, internal)
+=item * C<data> contract instructions
 
 =back
 
@@ -64,7 +66,7 @@ sub new {
 
     my $self = bless {}, $class;
 
-    foreach (qw(currency hash block from to contract amount fee fee_currency type)) {
+    foreach (qw(currency hash block from to contract amount fee fee_currency type data)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
 
