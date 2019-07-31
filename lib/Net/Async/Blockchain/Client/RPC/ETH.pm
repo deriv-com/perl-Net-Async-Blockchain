@@ -101,5 +101,39 @@ sub get_block_by_hash {
     return $self->_request('eth_getBlockByHash', @params);
 }
 
+=head2 get_block_by_number
+
+https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getblockbynumber
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_block_by_number {
+    my ($self, @params) = @_;
+    return $self->_request('eth_getBlockByNumber', @params);
+}
+
+=head2 get_last_block
+
+https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_blocknumber
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_last_block {
+    my ($self) = @_;
+    return $self->_request('eth_blockNumber');
+}
+
 1;
 

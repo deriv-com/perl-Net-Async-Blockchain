@@ -52,9 +52,9 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE  => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE    => '0x' . keccak_256_hex('symbol()'),
-    DEFAULT_CURRENCY    => 'ETH',
+    TRANSFER_SIGNATURE => '0x' . keccak_256_hex('transfer(address,uint256)'),
+    SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
+    DEFAULT_CURRENCY   => 'ETH',
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -141,30 +141,60 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
-    $self->new_websocket_client()->eth_subscribe($subscription)
-        # the first response from the node is the subscription id
-        # once we received it we can start to listening the subscription.
-        ->skip_until(
-        sub {
-            my $response = shift;
-            return 1 unless $response->{result};
-            $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
-            return 0;
-        })
-        # we use the subscription id received as the first response to filter
-        # all incoming subscription responses.
-        ->filter(
-        sub {
-            my $response = shift;
-            return undef unless $response->{params} && $response->{params}->{subscription};
-            return $response->{params}->{subscription} eq $self->subscription_id;
-        }
-        )->map(
-        async sub {
-            await $self->$subscription(shift);
-        })->ordered_futures;
+    Future->needs_all(
+        $self->new_websocket_client()->subscribe($subscription)
+            # the first response from the node is the subscription id
+            # once we received it we can start to listening the subscription.
+            ->skip_until(
+            sub {
+                my $response = shift;
+                return 1 unless $response->{result};
+                $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
+                return 0;
+            })
+            # we use the subscription id received as the first response to filter
+            # all incoming subscription responses.
+            ->filter(
+            sub {
+                my $response = shift;
+                return undef unless $response->{params} && $response->{params}->{subscription};
+                return $response->{params}->{subscription} eq $self->subscription_id;
+            }
+            )->map(
+            async sub {
+                await $self->$subscription(shift);
+            }
+            )->ordered_futures->completed(),
+        $self->recursive_search(),
+    );
 
     return $self->source;
+}
+
+=head2 recursive_search
+
+go into each block starting from the C<base_block_number> searching
+for transactions from the node, this is usually needed when you stop
+the subscription and need to check the blocks since the last one that
+you received.
+
+=over 4
+
+=back
+
+=cut
+
+async sub recursive_search {
+    my ($self) = @_;
+
+    return undef unless $self->base_block_number;
+
+    my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
+    while ($current_block->bgt($self->base_block_number)) {
+        my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
+        await $self->newHeads({params => {result => $block}});
+        $self->{base_block_number} += 1;
+    }
 }
 
 =head2 newHeads
