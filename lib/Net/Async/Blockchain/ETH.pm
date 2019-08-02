@@ -142,7 +142,7 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     Future->needs_all(
-        $self->new_websocket_client()->subscribe($subscription)
+        $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
             ->skip_until(
@@ -313,7 +313,8 @@ async sub _set_transaction_type {
     my $accounts_response = await $self->rpc_client->accounts();
     return undef unless $accounts_response;
 
-    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    my @accounts_response = $accounts_response->@*;
+    my %accounts = map { lc($_) => 1 } @accounts_response;
 
     my $from = $accounts{lc($transaction->from)};
     my $to = any { $accounts{lc($_)} } $transaction->to->@*;
