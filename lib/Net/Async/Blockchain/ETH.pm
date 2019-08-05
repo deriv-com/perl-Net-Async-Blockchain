@@ -114,6 +114,11 @@ sub new_websocket_client {
     $self->add_child(
         my $client = Net::Async::Blockchain::Client::Websocket->new(
             endpoint => $self->subscription_url,
+            on_shutdown => sub {
+                my ($error) = @_;
+                warn $error;
+                $self->source->finish();
+            }
         ));
     return $client;
 }

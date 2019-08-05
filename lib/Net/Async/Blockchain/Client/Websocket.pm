@@ -106,7 +106,7 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    die "Connection closed by peer";
+                    $self->shutdown("Connection closed by peer");
                 },
                 close_on_read_eof => 1,
             ));
@@ -132,7 +132,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint)) {
+    for my $k (qw(endpoint on_shutdown)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -195,9 +195,21 @@ sub _request {
         )->on_done(
         sub {
             $timer->start();
+        })->on_fail(
+        sub{
+            $self->shutdown("Can't connect to node websocket");
         })->retain();
 
     return $self->source;
+}
+
+sub shutdown {
+    my ($self, $error) = @_;
+
+    if( my $code = $self->{on_shutdown} || $self->can( "on_shutdown" ) ) {
+        return $code->($error);
+    }
+    return undef;
 }
 
 =head2 eth_subscribe
