@@ -195,18 +195,31 @@ sub _request {
         )->on_done(
         sub {
             $timer->start();
-        })->on_fail(
-        sub{
+        }
+        )->on_fail(
+        sub {
             $self->shutdown("Can't connect to node websocket");
         })->retain();
 
     return $self->source;
 }
 
+=head2 shutdown
+
+run the configured shutdown action if any
+
+=over 4
+
+=item * C<error> error message
+
+=back
+
+=cut
+
 sub shutdown {
     my ($self, $error) = @_;
 
-    if( my $code = $self->{on_shutdown} || $self->can( "on_shutdown" ) ) {
+    if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
         return $code->($error);
     }
     return undef;

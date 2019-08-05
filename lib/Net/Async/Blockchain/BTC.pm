@@ -93,7 +93,12 @@ sub new_zmq_client {
             endpoint    => $self->subscription_url,
             timeout     => $self->subscription_timeout,
             msg_timeout => $self->subscription_msg_timeout,
-        ));
+            on_shutdown => sub {
+                my ($error) = @_;
+                warn $error;
+                # finishes the final client source
+                $self->source->finish();
+            }));
     return $zmq_client;
 }
 

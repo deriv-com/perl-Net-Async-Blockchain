@@ -142,7 +142,7 @@ to an IP address.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint timeout msg_timeout)) {
+    for my $k (qw(endpoint timeout msg_timeout on_shutdown)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -189,24 +189,25 @@ sub subscribe {
     # zmq_setsockopt_string is not exported
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
 
-    my $connect_response = zmq_connect($socket, $self->endpoint);
-    die "zmq_connect failed with $!" unless $connect_response == 0;
-
     # set connection timeout
     zmq_setsockopt($socket, ZMQ_CONNECT_TIMEOUT, $self->timeout);
+
+    my $connect_response = zmq_connect($socket, $self->endpoint);
+    $self->shutdown("zmq_connect failed with $!") unless $connect_response == 0;
 
     # receive message timeout
     zmq_setsockopt($socket, ZMQ_RCVTIMEO, $self->msg_timeout);
 
     # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
-    open(my $io, '<&', $fd) or die "Unable to open file descriptor";
+    open(my $io, '<&', $fd) or $self->shutdown("Unable to open file descriptor");
 
     $self->add_child(
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
             on_closed   => sub {
-                close($io) or die "Unable to close file descriptor";
+                eval { close($io) };
+                $self->shutdown("Connection closed by peer");
             },
             on_read_ready => sub {
                 while (my @msg = $self->_recv_multipart($socket)) {
@@ -243,6 +244,27 @@ sub _recv_multipart {
     }
 
     return @multipart;
+}
+
+=head2 shutdown
+
+run the configured shutdown action if any
+
+=over 4
+
+=item * C<error> error message
+
+=back
+
+=cut
+
+sub shutdown {
+    my ($self, $error) = @_;
+
+    if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
+        return $code->($error);
+    }
+    return undef;
 }
 
 1;
