@@ -199,9 +199,11 @@ async sub recursive_search {
     await try_repeat {
         return $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true)->then(
             sub {
-                $self->newHeads({params => {result => shift}});
-                $self->{base_block_number} += 1;
-            });
+                return $self->newHeads({params => {result => shift}});
+            })->on_done(
+                sub {
+                    $self->{base_block_number} += 1;
+                });
     }
     while => sub { return $current_block->bgt($self->base_block_number) };
 }
