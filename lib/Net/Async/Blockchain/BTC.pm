@@ -182,6 +182,7 @@ async sub hashblock {
     }
     catch {
         # block not found
+        warn sprintf("Can't reach response for block %s", $block_hash);
         return undef;
     }
 
