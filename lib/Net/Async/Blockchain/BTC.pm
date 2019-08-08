@@ -155,10 +155,11 @@ async sub recursive_search {
         return $self->rpc_client->get_block_hash($self->base_block_number + 0)->then(
             sub {
                 $self->hashblock(shift);
-            })->on_done(
-                sub {
-                    $self->{base_block_number} += 1;
-                });
+            }
+            )->on_done(
+            sub {
+                $self->{base_block_number} += 1;
+            });
     }
     while => sub { return $current_block > $self->base_block_number };
 }
