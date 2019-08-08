@@ -37,6 +37,7 @@ no indirect;
 
 use Ryu::Async;
 use Future::AsyncAwait;
+use Future::Utils qw( try_repeat );
 use IO::Async::Loop;
 use Math::BigFloat;
 use Syntax::Keyword::Try;
@@ -150,11 +151,14 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = await $self->rpc_client->get_last_block();
-    while ($current_block > $self->base_block_number) {
-        my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
-        await $self->hashblock($block_hash);
-        $self->{base_block_number} += 1;
+    await try_repeat {
+        return $self->rpc_client->get_block_hash($self->base_block_number + 0)->then(
+            sub {
+                $self->hashblock(shift);
+                $self->{base_block_number} += 1;
+            });
     }
+    while => sub { return $current_block > $self->base_block_number };
 }
 
 =head2 hashblock
