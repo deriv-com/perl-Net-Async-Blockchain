@@ -43,9 +43,6 @@ use Socket;
 use parent qw(IO::Async::Notifier);
 
 use constant {
-    DEFAULT_TIMEOUT => 100,
-    # 1 hour (seconds)
-    DEFAULT_MSG_TIMEOUT => 3600,
     # https://github.com/lestrrat-p5/ZMQ/blob/master/ZMQ-Constants/lib/ZMQ/Constants.pm#L128
     ZMQ_CONNECT_TIMEOUT => 79,
 };
@@ -102,7 +99,7 @@ Integer time in seconds
 
 =cut
 
-sub timeout : method { shift->{timeout} // DEFAULT_TIMEOUT }
+sub timeout : method { shift->{timeout} }
 
 =head2 msg_timeout
 
@@ -117,7 +114,7 @@ Integer time in seconds
 
 =cut
 
-sub msg_timeout : method { shift->{msg_timeout} // DEFAULT_MSG_TIMEOUT }
+sub msg_timeout : method { shift->{msg_timeout} }
 
 =head2 configure
 
@@ -190,13 +187,13 @@ sub subscribe {
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
 
     # set connection timeout
-    zmq_setsockopt($socket, ZMQ_CONNECT_TIMEOUT, $self->timeout);
+    zmq_setsockopt($socket, ZMQ_CONNECT_TIMEOUT, $self->timeout) if $self->timeout;
 
     my $connect_response = zmq_connect($socket, $self->endpoint);
     $self->shutdown("zmq_connect failed with $!") unless $connect_response == 0;
 
     # receive message timeout
-    zmq_setsockopt($socket, ZMQ_RCVTIMEO, $self->msg_timeout);
+    zmq_setsockopt($socket, ZMQ_RCVTIMEO, $self->msg_timeout) if $self->msg_timeout;
 
     # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
