@@ -162,6 +162,7 @@ async sub transform_transaction {
         fee          => $fee,
         fee_currency => FEE_CURRENCY,
         type         => $transaction_type,
+        property_id  => $received_transaction->{propertyid},
     );
 
     $self->source->emit($transaction) if $transaction;
