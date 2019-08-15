@@ -37,6 +37,7 @@ no indirect;
 
 use Ryu::Async;
 use Future::AsyncAwait;
+use Future::Utils qw( try_repeat );
 use IO::Async::Loop;
 use Math::BigFloat;
 use Syntax::Keyword::Try;
@@ -93,7 +94,12 @@ sub new_zmq_client {
             endpoint    => $self->subscription_url,
             timeout     => $self->subscription_timeout,
             msg_timeout => $self->subscription_msg_timeout,
-        ));
+            on_shutdown => sub {
+                my ($error) = @_;
+                warn $error;
+                # finishes the final client source
+                $self->source->finish();
+            }));
     return $zmq_client;
 }
 
@@ -119,9 +125,43 @@ sub subscribe {
     $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures;
+    Future->needs_all(
+        $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
+        $self->recursive_search());
 
     return $self->source;
+}
+
+=head2 recursive_search
+
+go into each block starting from the C<base_block_number> searching
+for transactions from the node, this is usually needed when you stop
+the subscription and need to check the blocks since the last one that
+you received.
+
+=over 4
+
+=back
+
+=cut
+
+async sub recursive_search {
+    my ($self) = @_;
+
+    return undef unless $self->base_block_number;
+
+    my $current_block = await $self->rpc_client->get_last_block();
+    await try_repeat {
+        return $self->rpc_client->get_block_hash($self->base_block_number + 0)->then(
+            sub {
+                $self->hashblock(shift);
+            }
+            )->on_done(
+            sub {
+                $self->{base_block_number} += 1;
+            });
+    }
+    while => sub { return $current_block > $self->base_block_number };
 }
 
 =head2 hashblock
@@ -142,8 +182,16 @@ is owned by the node.
 async sub hashblock {
     my ($self, $block_hash) = @_;
 
-    # 2 here means the full verbosity since we want to get the raw transactions
-    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
+    my $block_response;
+    try {
+        # 2 here means the full verbosity since we want to get the raw transactions
+        $block_response = await $self->rpc_client->get_block($block_hash, 2);
+    }
+    catch {
+        # block not found
+        warn sprintf("Can't reach response for block %s", $block_hash);
+        return undef;
+    }
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);

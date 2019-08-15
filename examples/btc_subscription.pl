@@ -22,6 +22,8 @@ $loop->add(
         subscription_msg_timeout => 3600,
         # Timeout time for connection (seconds)
         rpc_timeout => 100,
+        # block number to search from when start
+        base_block_number => 1,
     ));
 
-$btc_client->subscribe("transactions")->each(sub { print Dumper shift })->get;
+$btc_client->subscribe("transactions")->each(sub { print Dumper shift->{hash} })->get;
