@@ -196,17 +196,11 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
-    await try_repeat {
-        return $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true)->then(
-            sub {
-                return $self->newHeads({params => {result => shift}});
-            }
-            )->on_done(
-            sub {
-                $self->{base_block_number} += 1;
-            });
+    while($current_block->bgt($self->base_block_number)){
+        my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
+        await $self->newHeads({params => {result => $block}}) if $block;
+        $self->{base_block_number} += 1;
     }
-    while => sub { return $current_block->bgt($self->base_block_number) };
 }
 
 =head2 newHeads
@@ -230,6 +224,9 @@ async sub newHeads {
     my $block = $response->{params}->{result};
 
     my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
+
+    return undef unless $block_response;
+
     my @transactions = $block_response->{transactions}->@*;
     await Future->wait_all(map { $self->transform_transaction($_) } @transactions);
 
