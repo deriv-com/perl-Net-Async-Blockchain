@@ -152,10 +152,19 @@ async sub recursive_search {
 
     return undef unless $current_block;
 
-    while ($current_block > $self->base_block_number){
-        my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
-        await $self->hashblock($block_hash) if $block_hash;
-        $self->{base_block_number} += 1;
+    KEEP_RUNNING:
+    while (1) {
+        await $self->loop->delay_future(after => 10);
+        my $count = 0;
+
+        while ($current_block > $self->base_block_number) {
+            $count++;
+            last if $count >= 10;
+            my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
+            await $self->hashblock($block_hash) if $block_hash;
+            $self->{base_block_number} += 1;
+        }
+        last KEEP_RUNNING unless $current_block > $self->base_block_number;
     }
 }
 
@@ -181,7 +190,7 @@ async sub hashblock {
     my $block_response = await $self->rpc_client->get_block($block_hash, 2);
 
     # block not found or some issue in the RPC call
-    unless ($block_response){
+    unless ($block_response) {
         warn sprintf("Can't reach response for block %s", $block_hash);
         return undef;
     }

@@ -195,10 +195,19 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
-    while($current_block->bgt($self->base_block_number)){
-        my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
-        await $self->newHeads({params => {result => $block}}) if $block;
-        $self->{base_block_number} += 1;
+    KEEP_RUNNING:
+    while (1) {
+        await $self->loop->delay_future(after => 10);
+        my $count = 0;
+
+        while ($current_block->bgt($self->base_block_number)) {
+            $count++;
+            last if $count >= 10;
+            my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
+            await $self->newHeads({params => {result => $block}}) if $block;
+            $self->{base_block_number} += 1;
+        }
+        last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
     }
 }
 
