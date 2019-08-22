@@ -191,11 +191,9 @@ async sub hashblock {
 
     # block not found or some issue in the RPC call
     unless ($block_response) {
-        warn sprintf("Can't reach response for block %s", $block_hash);
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash);
         return undef;
     }
-
-    return undef unless $block_response;
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
     await Future->needs_all(map { $self->transform_transaction($_) } @transactions);

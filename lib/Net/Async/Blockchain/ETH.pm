@@ -233,7 +233,11 @@ async sub newHeads {
 
     my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
 
-    return undef unless $block_response;
+    # block not found or some issue in the RPC call
+    unless ($block_response) {
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block->{hash});
+        return undef;
+    }
 
     my @transactions = $block_response->{transactions}->@*;
     await Future->wait_all(map { $self->transform_transaction($_) } @transactions);
