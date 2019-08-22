@@ -36,7 +36,6 @@ Ethereum subscription using websocket node client
 no indirect;
 
 use Future::AsyncAwait;
-use Future::Utils qw( try_repeat );
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON::MaybeXS;

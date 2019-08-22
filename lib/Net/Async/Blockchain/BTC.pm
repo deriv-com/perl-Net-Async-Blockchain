@@ -37,10 +37,8 @@ no indirect;
 
 use Ryu::Async;
 use Future::AsyncAwait;
-use Future::Utils qw( try_repeat );
 use IO::Async::Loop;
 use Math::BigFloat;
-use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
@@ -177,13 +175,11 @@ is owned by the node.
 async sub hashblock {
     my ($self, $block_hash) = @_;
 
-    my $block_response;
-    try {
-        # 2 here means the full verbosity since we want to get the raw transactions
-        $block_response = await $self->rpc_client->get_block($block_hash, 2);
-    }
-    catch {
-        # block not found
+    # 2 here means the full verbosity since we want to get the raw transactions
+    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
+
+    # block not found or some issue in the RPC call
+    unless ($block_response){
         warn sprintf("Can't reach response for block %s", $block_hash);
         return undef;
     }
@@ -213,14 +209,7 @@ async sub transform_transaction {
 
     # this will guarantee that the transaction is from our node
     # txindex must to be 0
-    my $received_transaction;
-    try {
-        $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-    }
-    catch {
-        # transaction not found
-        return undef;
-    }
+    my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;

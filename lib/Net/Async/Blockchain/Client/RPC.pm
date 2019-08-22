@@ -63,7 +63,6 @@ sub http_client : method {
                 decode_content => 1,
                 stall_timeout  => $self->timeout,
                 timeout        => $self->timeout,
-                fail_on_error  => 1,
             ));
 
         $http_client;
