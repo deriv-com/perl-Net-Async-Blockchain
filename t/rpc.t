@@ -32,14 +32,14 @@ local *IO::Async::Handle::connect = sub {
 my $loop = IO::Async::Loop->new();
 testing_loop($loop);
 
-subtest 'stall timeout' => sub {
+subtest 'timeout' => sub {
     $loop->add(
         my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new(
             endpoint => "http://abcd.com",
             timeout  => 0.1,
         ));
 
-    like(exception { $rpc->accounts->get() }, qr(Stalled while waiting for response), 'Stall timeout');
+    like(exception { $rpc->accounts->get() }, qr(Timed out), 'Timeout');
 };
 
 subtest 'no endpoint' => sub {

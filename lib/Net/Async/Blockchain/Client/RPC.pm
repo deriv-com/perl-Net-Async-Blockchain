@@ -62,7 +62,7 @@ sub http_client : method {
             my $http_client = Net::Async::HTTP->new(
                 decode_content => 1,
                 stall_timeout  => $self->timeout,
-                fail_on_error  => 1,
+                timeout        => $self->timeout,
             ));
 
         $http_client;

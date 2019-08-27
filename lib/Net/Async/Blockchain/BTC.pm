@@ -37,10 +37,8 @@ no indirect;
 
 use Ryu::Async;
 use Future::AsyncAwait;
-use Future::Utils qw( try_repeat );
 use IO::Async::Loop;
 use Math::BigFloat;
-use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
@@ -151,17 +149,19 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = await $self->rpc_client->get_last_block();
-    await try_repeat {
-        return $self->rpc_client->get_block_hash($self->base_block_number + 0)->then(
-            sub {
-                $self->hashblock(shift);
-            }
-            )->on_done(
-            sub {
-                $self->{base_block_number} += 1;
-            });
+
+    return undef unless $current_block;
+
+    KEEP_RUNNING:
+    while (1) {
+        await $self->loop->delay_future(after => 10);
+        for (my $i = 0; $i < 10; $i++) {
+            last KEEP_RUNNING unless $current_block > $self->base_block_number;
+            my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
+            await $self->hashblock($block_hash) if $block_hash;
+            $self->{base_block_number}++;
+        }
     }
-    while => sub { return $current_block > $self->base_block_number };
 }
 
 =head2 hashblock
@@ -182,14 +182,12 @@ is owned by the node.
 async sub hashblock {
     my ($self, $block_hash) = @_;
 
-    my $block_response;
-    try {
-        # 2 here means the full verbosity since we want to get the raw transactions
-        $block_response = await $self->rpc_client->get_block($block_hash, 2);
-    }
-    catch {
-        # block not found
-        warn sprintf("Can't reach response for block %s", $block_hash);
+    # 2 here means the full verbosity since we want to get the raw transactions
+    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
+
+    # block not found or some issue in the RPC call
+    unless ($block_response) {
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash);
         return undef;
     }
 
@@ -216,14 +214,7 @@ async sub transform_transaction {
 
     # this will guarantee that the transaction is from our node
     # txindex must to be 0
-    my $received_transaction;
-    try {
-        $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-    }
-    catch {
-        # transaction not found
-        return undef;
-    }
+    my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;

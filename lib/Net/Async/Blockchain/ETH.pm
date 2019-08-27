@@ -36,7 +36,6 @@ Ethereum subscription using websocket node client
 no indirect;
 
 use Future::AsyncAwait;
-use Future::Utils qw( try_repeat );
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use JSON::MaybeXS;
@@ -196,17 +195,19 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
-    await try_repeat {
-        return $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true)->then(
-            sub {
-                return $self->newHeads({params => {result => shift}});
-            }
-            )->on_done(
-            sub {
-                $self->{base_block_number} += 1;
-            });
+
+    return undef unless $current_block;
+
+    KEEP_RUNNING:
+    while (1) {
+        await $self->loop->delay_future(after => 10);
+        for (my $i = 0; $i < 10; $i++) {
+            last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
+            my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
+            await $self->newHeads({params => {result => $block}}) if $block;
+            $self->{base_block_number}++;
+        }
     }
-    while => sub { return $current_block->bgt($self->base_block_number) };
 }
 
 =head2 newHeads
@@ -230,6 +231,13 @@ async sub newHeads {
     my $block = $response->{params}->{result};
 
     my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
+
+    # block not found or some issue in the RPC call
+    unless ($block_response) {
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block->{hash});
+        return undef;
+    }
+
     my @transactions = $block_response->{transactions}->@*;
     await Future->wait_all(map { $self->transform_transaction($_) } @transactions);
 
