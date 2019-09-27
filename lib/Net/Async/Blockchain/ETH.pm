@@ -52,10 +52,10 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE   => '0x' . keccak_256_hex('symbol()'),
-    DECIMALS_SIGNATURE => '0x' . keccak_256_hex('decimals()'),
-    DEFAULT_CURRENCY   => 'ETH',
+    TRANSFER_SIGNATURE     => '0x' . keccak_256_hex('transfer(address,uint256)'),
+    SYMBOL_SIGNATURE       => '0x' . keccak_256_hex('symbol()'),
+    DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
+    DEFAULT_CURRENCY       => 'ETH',
     DEFAULT_DECIMAL_PLACES => 18,
 };
 
@@ -266,7 +266,7 @@ async sub transform_transaction {
     return undef unless $decoded_transaction->{to};
 
     # fee = gas * gasPrice
-    my $fee    = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+    my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
     # - received: `0x49f0421a52800`
     # - hex conversion: 1300740000000000
     # - 1300740000000000 * 10**18 = 0.0013007400000000000
@@ -411,7 +411,6 @@ async sub _check_contract_transaction {
         );
 
         if ($decimals) {
-            print $decimals;
             $transaction->{amount} = Math::BigFloat->from_hex($amount)->bdiv(Math::BigInt->new(10)->bpow($decimals))->bround(hex $decimals);
         } else {
             $transaction->{amount} = Math::BigFloat->from_hex($amount);
