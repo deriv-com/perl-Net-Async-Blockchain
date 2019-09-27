@@ -18,8 +18,8 @@ my $transaction = Net::Async::Blockchain::Transaction->new(
     from         => '0xe6c5de11dec1acda652bd7bf1e96fb56662e9f8f',
     to           => ['0x1d8b942384c41be24f202d458e819640e6f0218a'],
     contract     => '',
-    amount       => 0.3292619388,
-    fee          => 0.0004032,
+    amount       => Math::BigFloat->new(0.3292619388),
+    fee          => Math::BigFloat->new(0.0004032),
     fee_currency => 'ETH',
     type         => '',
     data         => '0x',
@@ -72,8 +72,8 @@ $transaction = Net::Async::Blockchain::Transaction->new(
     from         => '0x0749c36df05f1ddb6cc0c797c94a676499191851',
     to           => ['0xdac17f958d2ee523a2206206994597c13d831ec7'],
     contract     => '',
-    amount       => 0,
-    fee          => 0.00023465,
+    amount       => Math::BigFloat->bzero(),
+    fee          => Math::BigFloat->new(0.00023465),
     fee_currency => 'ETH',
     type         => '',
     data =>
@@ -82,15 +82,20 @@ $transaction = Net::Async::Blockchain::Transaction->new(
 
 $mock_rpc->mock(
     call => async sub {
-        return
-            "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000035553420000000000000000000000000000000000000000000000000000000000";
+        my ($self, $args) = @_;
+        if ($args->{data} eq Net::Async::Blockchain::ETH::SYMBOL_SIGNATURE){
+            return
+                "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000035553420000000000000000000000000000000000000000000000000000000000";
+        }else {
+            return "0x0000000000000000000000000000000000000000000000000000000000000006";
+        }
     });
 
 $received_transaction = $subscription_client->_check_contract_transaction($transaction)->get;
 
 is $received_transaction->{currency}, 'USB', 'correct contract symbol';
 is $received_transaction->{to}[0], '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
-is $received_transaction->{amount}->bstr(), 1000000000, 'correct amount';
+is $received_transaction->{amount}->bstr(), Math::BigFloat->new(1000)->bround(6)->bstr, 'correct amount';
 is $received_transaction->{contract}, '0xdac17f958d2ee523a2206206994597c13d831ec7', 'correct contract address';
 
 done_testing;
