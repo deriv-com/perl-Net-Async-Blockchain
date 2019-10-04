@@ -83,10 +83,10 @@ $transaction = Net::Async::Blockchain::Transaction->new(
 $mock_rpc->mock(
     call => async sub {
         my ($self, $args) = @_;
-        if ($args->{data} eq Net::Async::Blockchain::ETH::SYMBOL_SIGNATURE){
+        if ($args->{data} eq Net::Async::Blockchain::ETH::SYMBOL_SIGNATURE) {
             return
                 "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000035553420000000000000000000000000000000000000000000000000000000000";
-        }else {
+        } else {
             return "0x0000000000000000000000000000000000000000000000000000000000000006";
         }
     });
