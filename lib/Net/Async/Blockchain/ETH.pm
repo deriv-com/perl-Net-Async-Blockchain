@@ -94,7 +94,7 @@ L<Net::Async::Blockchain::Client::RPC>
 sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => $self->rpc_url));
+        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => $self->rpc_url, timeout => $self->rpc_timeout));
         $http_client;
     };
 }
@@ -303,6 +303,7 @@ async sub transform_transaction {
     catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $transaction->hash, $err);
+        return 0;
     }
 
     $self->source->emit($transaction) if $transaction;
