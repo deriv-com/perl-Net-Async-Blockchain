@@ -37,6 +37,7 @@ sub fee_currency : method { shift->{fee_currency} }
 sub type : method         { shift->{type} }
 sub data : method         { shift->{data} }
 sub property_id : method  { shift->{property_id} }
+sub timestamp : method    { shift->{timestamp} }
 
 =head2 new
 
@@ -56,6 +57,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 =item * C<type> String transaction type it can be (receive, sent, internal)
 =item * C<data> contract instructions
 =item * C<property_id> omnicore property id
+=item * C<timestamp> block timestamp
 
 =back
 
@@ -68,7 +70,7 @@ sub new {
 
     my $self = bless {}, $class;
 
-    foreach (qw(currency hash block from to contract amount fee fee_currency type data property_id)) {
+    foreach (qw(currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
 
