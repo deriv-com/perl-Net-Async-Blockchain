@@ -38,7 +38,6 @@ no indirect;
 use Future::AsyncAwait;
 use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
-use JSON::MaybeXS;
 use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
@@ -94,7 +93,11 @@ L<Net::Async::Blockchain::Client::RPC>
 sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => $self->rpc_url));
+        $self->add_child(
+            my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(
+                endpoint => $self->rpc_url,
+                timeout  => $self->rpc_timeout
+            ));
         $http_client;
     };
 }
@@ -205,7 +208,7 @@ async sub recursive_search {
         await $self->loop->delay_future(after => 10);
         for (my $i = 0; $i < 10; $i++) {
             last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
-            my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), JSON::MaybeXS->true);
+            my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), \0);
             await $self->newHeads({params => {result => $block}}) if $block;
             $self->{base_block_number}++;
         }
@@ -232,7 +235,7 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, JSON::MaybeXS->true);
+    my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, \1);
 
     # block not found or some issue in the RPC call
     unless ($block_response) {
@@ -241,7 +244,7 @@ async sub newHeads {
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    await Future->wait_all(map { $self->transform_transaction($_) } @transactions);
+    await Future->wait_all(map { $self->transform_transaction($_, $block_response->{timestamp}) } @transactions);
 
     return 1;
 }
@@ -260,37 +263,43 @@ once converted it emits all transactions to the client source.
 =cut
 
 async sub transform_transaction {
-    my ($self, $decoded_transaction) = @_;
+    my ($self, $decoded_transaction, $timestamp) = @_;
 
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
 
-    # fee = gas * gasPrice
-    my $fee = Math::BigFloat->from_hex($decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
     # - received: `0x49f0421a52800`
     # - hex conversion: 1300740000000000
     # - 1300740000000000 * 10**18 = 0.0013007400000000000
-    my $amount = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
-    my $block  = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
+    my $amount        = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
+    my $block         = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
+    my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
 
-    my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_symbol,
-        hash         => $decoded_transaction->{hash},
-        block        => $block,
-        from         => $decoded_transaction->{from},
-        to           => [$decoded_transaction->{to}],
-        contract     => '',
-        amount       => $amount,
-        fee          => $fee,
-        fee_currency => $self->currency_symbol,
-        type         => '',
-        data         => $decoded_transaction->{input},
-    );
+    my $transaction;
 
     try {
+        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        # fee = gas * gasPrice
+        my $fee = Math::BigFloat->from_hex($receipt->{gasUsed} // $decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+
+        $transaction = Net::Async::Blockchain::Transaction->new(
+            currency     => $self->currency_symbol,
+            hash         => $decoded_transaction->{hash},
+            block        => $block,
+            from         => $decoded_transaction->{from},
+            to           => [$decoded_transaction->{to}],
+            contract     => '',
+            amount       => $amount,
+            fee          => $fee,
+            fee_currency => $self->currency_symbol,
+            type         => '',
+            data         => $decoded_transaction->{input},
+            timestamp    => $int_timestamp,
+        );
+
         # if the input is not 0x we check the transaction searching by any
         # transfer event to any contract, this can return more than 1 transaction.
-        if ($decoded_transaction->{input} ne '0x') {
+        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
             $transaction = await $self->_check_contract_transaction($transaction);
         }
 
@@ -303,6 +312,7 @@ async sub transform_transaction {
     catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $transaction->hash, $err);
+        return 0;
     }
 
     $self->source->emit($transaction) if $transaction;

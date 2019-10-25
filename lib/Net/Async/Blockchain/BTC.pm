@@ -249,6 +249,7 @@ async sub transform_transaction {
         fee          => $fee,
         fee_currency => $self->currency_symbol,
         type         => $transaction_type,
+        timestamp    => $received_transaction->{blocktime},
     );
 
     $self->source->emit($transaction) if $transaction;
