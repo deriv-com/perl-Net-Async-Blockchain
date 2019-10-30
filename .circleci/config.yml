@@ -1,0 +1,33 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: perl:5.26-slim
+    steps:
+      - run:
+          name: Install libraries and other packages
+          command: |
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libssl-dev libzmq3-dev zlib1g-dev
+      - checkout
+      - run:
+          name: Install dzil
+          command: |
+            cpanm --quiet --notest Dist::Zilla Dist::Zilla::App::Command::cover App::cpm Devel::Cover::Report::Codecov
+      - run:
+          name: Install dzil author deps
+          command: cpm install -w 2 --mirror=http://cpan.cpantesters.org/ -g $(dzil authordeps --missing)
+      - run:
+          name: Install distribution deps
+          command: cpm install -w 2 --mirror=http://cpan.cpantesters.org/ -g $(dzil listdeps --author --missing)
+      - run:
+          name: Run smoke test
+          command: dzil smoke --release --author
+      - run:
+          name: Run coverage test
+          command: dzil cover -test -report codecov
+      - run:
+          name: Run extended author test
+          command: dzil xtest
+
