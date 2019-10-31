@@ -151,7 +151,7 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
-    Future->needs_all(
+    Future->wait_all(
         $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
@@ -206,7 +206,7 @@ async sub recursive_search {
     KEEP_RUNNING:
     while (1) {
         await $self->loop->delay_future(after => 10);
-        for (my $i = 0; $i < 10; $i++) {
+        for (my $i = 0; $i < 5; $i++) {
             last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
             my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), \0);
             await $self->newHeads({params => {result => $block}}) if $block;
@@ -244,7 +244,9 @@ async sub newHeads {
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    await Future->wait_all(map { $self->transform_transaction($_, $block_response->{timestamp}) } @transactions);
+    for my $transaction (@transactions){
+        await $self->transform_transaction($_, $block_response->{timestamp});
+    }
 
     return 1;
 }
@@ -297,17 +299,17 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        # if the input is not 0x we check the transaction searching by any
-        # transfer event to any contract, this can return more than 1 transaction.
-        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
-            $transaction = await $self->_check_contract_transaction($transaction);
-        }
-
         # set the type for each transaction
         # from and to => internal
         # to => received
         # from => sent
         $transaction = await $self->_set_transaction_type($transaction) if $transaction;
+
+        # if the input is not 0x we check the transaction searching by any
+        # transfer event to any contract, this can return more than 1 transaction.
+        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
+            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
+        }
     }
     catch {
         my $err = $@;
