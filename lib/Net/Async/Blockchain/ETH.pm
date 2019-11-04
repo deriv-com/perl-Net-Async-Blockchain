@@ -232,6 +232,9 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
+    # for the remote nodes sometimes we received the subscription but
+    # trying to get the block it is not still able to be reached, so we wait
+    # a few seconds before call it, this way the node will be able to make it available.
     await $self->loop->delay_future(after => 2);
     my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
