@@ -300,17 +300,19 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
+        # if the input is not 0x we check the transaction searching by any
+        # transfer event to any contract, this can return more than 1 transaction.
+        # we need to do this before set the transaction type since the `to` address
+        # will change in case it be a contract.
+        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
+            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
+        }
+
         # set the type for each transaction
         # from and to => internal
         # to => received
         # from => sent
         $transaction = await $self->_set_transaction_type($transaction) if $transaction;
-
-        # if the input is not 0x we check the transaction searching by any
-        # transfer event to any contract, this can return more than 1 transaction.
-        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
-            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
-        }
     }
     catch {
         my $err = $@;
