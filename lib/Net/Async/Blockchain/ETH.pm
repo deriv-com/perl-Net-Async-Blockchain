@@ -361,8 +361,6 @@ async sub _set_transaction_type {
     } elsif ($to) {
         $transaction->{type} = 'receive';
     }
-    $transaction->{type} = 'internal';
-    return $transaction;
 
     return $transaction->type ? $transaction : undef;
 }
