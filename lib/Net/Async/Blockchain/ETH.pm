@@ -51,11 +51,13 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE     => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE       => '0x' . keccak_256_hex('symbol()'),
-    DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
-    DEFAULT_CURRENCY       => 'ETH',
-    DEFAULT_DECIMAL_PLACES => 18,
+    TRANSFER_SIGNATURE           => '0x' . keccak_256_hex('transfer(address,uint256)'),
+    SYMBOL_SIGNATURE             => '0x' . keccak_256_hex('symbol()'),
+    DECIMALS_SIGNATURE           => '0x' . keccak_256_hex('decimals()'),
+    DEFAULT_CURRENCY             => 'ETH',
+    DEFAULT_DECIMAL_PLACES       => 18,
+    DELAY_BLOCK_CALL             => 2,
+    DELAY_BLOCK_RECURSIVE_SEARCH => 5,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -208,7 +210,7 @@ async sub recursive_search {
         last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
         await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
         $self->{base_block_number}++;
-        await $self->loop->delay_future(after => 5);
+        await $self->loop->delay_future(after => DELAY_BLOCK_RECURSIVE_SEARCH);
     }
 }
 
@@ -235,7 +237,7 @@ async sub newHeads {
     # for the remote nodes sometimes we received the subscription but
     # trying to get the block it is not still able to be reached, so we wait
     # a few seconds before call it, this way the node will be able to make it available.
-    await $self->loop->delay_future(after => 2);
+    await $self->loop->delay_future(after => DELAY_BLOCK_CALL);
     my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
