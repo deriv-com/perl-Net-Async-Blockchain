@@ -205,13 +205,10 @@ async sub recursive_search {
 
     KEEP_RUNNING:
     while (1) {
-        await $self->loop->delay_future(after => 10);
-        for (my $i = 0; $i < 5; $i++) {
-            last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
-            my $block = await $self->rpc_client->get_block_by_number(sprintf("0x%X", $self->base_block_number), \0);
-            await $self->newHeads({params => {result => $block}}) if $block;
-            $self->{base_block_number}++;
-        }
+        last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
+        await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
+        $self->{base_block_number}++;
+        await $self->loop->delay_future(after => 5);
     }
 }
 
@@ -235,17 +232,18 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    my $block_response = await $self->rpc_client->get_block_by_hash($block->{hash}, \1);
+    await $self->loop->delay_future(after => 2);
+    my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
     unless ($block_response) {
-        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block->{hash});
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr);
         return undef;
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    for my $transaction (@transactions){
-        await $self->transform_transaction($_, $block_response->{timestamp});
+    for my $transaction (@transactions) {
+        await $self->transform_transaction($transaction, $block_response->{timestamp});
     }
 
     return 1;
@@ -363,6 +361,8 @@ async sub _set_transaction_type {
     } elsif ($to) {
         $transaction->{type} = 'receive';
     }
+    $transaction->{type} = 'internal';
+    return $transaction;
 
     return $transaction->type ? $transaction : undef;
 }
