@@ -106,7 +106,7 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    $self->shutdown("Connection closed by peer");
+                    $self->active_shutdown("Connection closed by peer");
                 },
                 close_on_read_eof => 1,
             ));
@@ -198,13 +198,13 @@ sub _request {
         }
         )->on_fail(
         sub {
-            $self->shutdown("Can't connect to node websocket");
+            $self->active_shutdown("Can't connect to node websocket");
         })->retain();
 
     return $self->source;
 }
 
-=head2 shutdown
+=head2 active_shutdown
 
 run the configured shutdown action if any
 
@@ -216,7 +216,7 @@ run the configured shutdown action if any
 
 =cut
 
-sub shutdown {
+sub active_shutdown {
     my ($self, $error) = @_;
 
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
