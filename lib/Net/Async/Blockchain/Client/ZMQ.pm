@@ -203,7 +203,7 @@ sub subscribe {
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
             on_closed   => sub {
-                eval { close($io) };
+                close($io);
                 $self->shutdown("Connection closed by peer");
             },
             on_read_ready => sub {
@@ -255,7 +255,7 @@ run the configured shutdown action if any
 
 =cut
 
-sub shutdown {
+sub shutdown {                  ## no critic
     my ($self, $error) = @_;
 
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {

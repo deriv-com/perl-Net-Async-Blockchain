@@ -216,7 +216,7 @@ run the configured shutdown action if any
 
 =cut
 
-sub shutdown {
+sub shutdown {                  ## no critic
     my ($self, $error) = @_;
 
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
