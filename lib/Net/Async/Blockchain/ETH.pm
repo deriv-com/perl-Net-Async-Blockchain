@@ -79,6 +79,18 @@ An hexadecimal string
 
 sub subscription_id { shift->{subscription_id} }
 
+=head2 recursive_search_running
+
+=over 4
+
+=back
+
+return if the recursive search is running at the moment.
+
+=cut
+
+sub recursive_search_running { shift->{recursive_search_running} // 0 }
+
 =head2 rpc_client
 
 Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
@@ -164,6 +176,11 @@ sub subscribe {
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })
+            ->skip_until(
+            sub {
+                return 0 if $self->recursive_search_running();
+                return 1;
+            })
             # we use the subscription id received as the first response to filter
             # all incoming subscription responses.
             ->filter(
@@ -205,13 +222,16 @@ async sub recursive_search {
 
     return undef unless $current_block;
 
-    KEEP_RUNNING:
+    $self->{recursive_search_running} = 1;
+
     while (1) {
-        last KEEP_RUNNING unless $current_block->bgt($self->base_block_number);
+        last unless $current_block->bgt($self->base_block_number);
         await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
+        $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
         $self->{base_block_number}++;
-        await $self->loop->delay_future(after => DELAY_BLOCK_RECURSIVE_SEARCH);
     }
+
+    $self->{recursive_search_running} = 0;
 }
 
 =head2 newHeads
@@ -247,9 +267,7 @@ async sub newHeads {
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    for my $transaction (@transactions) {
-        await $self->transform_transaction($transaction, $block_response->{timestamp});
-    }
+    await Future->wait_all(map { $self->transform_transaction($_, $block_response->{timestamp}) } @transactions);
 
     return 1;
 }
@@ -516,4 +534,3 @@ sub _to_string {
 }
 
 1;
-
