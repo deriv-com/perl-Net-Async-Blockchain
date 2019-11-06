@@ -56,8 +56,6 @@ use constant {
     DECIMALS_SIGNATURE           => '0x' . keccak_256_hex('decimals()'),
     DEFAULT_CURRENCY             => 'ETH',
     DEFAULT_DECIMAL_PLACES       => 18,
-    DELAY_BLOCK_CALL             => 2,
-    DELAY_BLOCK_RECURSIVE_SEARCH => 5,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -254,10 +252,6 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    # for the remote nodes sometimes we received the subscription but
-    # trying to get the block it is not still able to be reached, so we wait
-    # a few seconds before call it, this way the node will be able to make it available.
-    await $self->loop->delay_future(after => DELAY_BLOCK_CALL);
     my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
