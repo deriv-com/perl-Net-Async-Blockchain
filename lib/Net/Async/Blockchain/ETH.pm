@@ -77,18 +77,6 @@ An hexadecimal string
 
 sub subscription_id { shift->{subscription_id} }
 
-=head2 recursive_search_running
-
-=over 4
-
-=back
-
-return if the recursive search is running at the moment.
-
-=cut
-
-sub recursive_search_running { shift->{recursive_search_running} // 0 }
-
 =head2 rpc_client
 
 Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
