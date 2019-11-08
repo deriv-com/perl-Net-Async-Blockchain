@@ -78,6 +78,45 @@ An hexadecimal string
 
 sub subscription_id { shift->{subscription_id} }
 
+
+=head2 accounts
+
+return the blockchain accounts, if is the first time will call eth_accounts.
+
+=over 4
+
+=back
+
+returns a Future, the on_done response will be the accounts array.
+
+=cut
+
+
+async sub accounts {
+    my $self = shift;
+    return $self->{accounts} //= do {
+        await $self->rpc_client->accounts()
+    };
+}
+
+=head2 update_accounts
+
+update the C<accounts> variable every 10 seconds
+
+=over 4
+
+=back
+
+=cut
+
+async sub update_accounts {
+    my $self = shift;
+    while(1){
+        await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
+        $self->{accounts} = await $self->rpc_client->accounts();
+    }
+}
+
 =head2 rpc_client
 
 Create an L<Net::Async::Blockchain::Client::RPC> instance, if it is already defined just return
