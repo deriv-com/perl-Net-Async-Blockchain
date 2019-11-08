@@ -56,6 +56,7 @@ use constant {
     DECIMALS_SIGNATURE           => '0x' . keccak_256_hex('decimals()'),
     DEFAULT_CURRENCY             => 'ETH',
     DEFAULT_DECIMAL_PLACES       => 18,
+    UPDATE_ACCOUNTS              => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -162,11 +163,6 @@ sub subscribe {
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })
-            ->skip_until(
-            sub {
-                return 0 if $self->recursive_search_running();
-                return 1;
-            })
             # we use the subscription id received as the first response to filter
             # all incoming subscription responses.
             ->filter(
@@ -181,6 +177,7 @@ sub subscribe {
             }
             )->ordered_futures->completed(),
         $self->recursive_search(),
+        $self->update_accounts(),
     );
 
     return $self->source;
@@ -208,16 +205,11 @@ async sub recursive_search {
 
     return undef unless $current_block;
 
-    $self->{recursive_search_running} = 1;
-
     while (1) {
         last unless $current_block->bgt($self->base_block_number);
         await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
-        $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
         $self->{base_block_number}++;
     }
-
-    $self->{recursive_search_running} = 0;
 }
 
 =head2 newHeads
@@ -249,7 +241,9 @@ async sub newHeads {
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    await Future->wait_all(map { $self->transform_transaction($_, $block_response->{timestamp}) } @transactions);
+    for my $transaction (@transactions){
+        await $self->transform_transaction($transaction, $block_response->{timestamp});
+    }
 
     return 1;
 }
@@ -283,9 +277,15 @@ async sub transform_transaction {
     my $transaction;
 
     try {
-        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        my $receipt;
+        my $gas;
+        if($decoded_transaction->{input} ne '0x'){
+            $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+            $gas = $receipt->{gasUsed};
+        }
+
         # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($receipt->{gasUsed} // $decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+        my $fee = Math::BigFloat->from_hex($gas // $decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
 
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
@@ -306,7 +306,7 @@ async sub transform_transaction {
         # transfer event to any contract, this can return more than 1 transaction.
         # we need to do this before set the transaction type since the `to` address
         # will change in case it be a contract.
-        if ($receipt->{logs} && $receipt->{logs}->@* > 0) {
+        if ($receipt && $receipt->{logs} && $receipt->{logs}->@* > 0) {
             $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
         }
 
@@ -352,10 +352,10 @@ async sub _set_transaction_type {
 
     return undef unless $transaction;
 
-    my $accounts_response = await $self->rpc_client->accounts();
-    return undef unless $accounts_response;
+    my $accounts = await $self->accounts;
+    return undef unless $accounts;
 
-    my @accounts_response = $accounts_response->@*;
+    my @accounts_response = $accounts->@*;
     my %accounts = map { lc($_) => 1 } @accounts_response;
 
     my $from = $accounts{lc($transaction->from)};

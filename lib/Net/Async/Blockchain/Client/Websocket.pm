@@ -38,14 +38,11 @@ no indirect;
 use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
-use IO::Async::Timer::Periodic;
 use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
-
-use constant KEEP_ALIVE => 5;
 
 =head2 source
 
@@ -160,25 +157,6 @@ sub _request {
 
     my $url = URI->new($self->endpoint);
 
-    # this is a simple block number request
-    my $timer_call = {
-        id     => 1,
-        method => 'eth_blockNumber',
-        params => []};
-
-    # we need to keep sending requests to the node
-    # otherwise after some period of time we just
-    # get disconnected by the peer, 5 seconds is enough
-    # to keep the connection alive.
-    my $timer = IO::Async::Timer::Periodic->new(
-        interval => KEEP_ALIVE,
-        on_tick  => sub {
-            $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
-        },
-    );
-
-    $self->add_child($timer);
-
     # this is the client request
     my $request_call = {
         id     => 1,
@@ -191,10 +169,6 @@ sub _request {
         )->then(
         sub {
             return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
-        }
-        )->on_done(
-        sub {
-            $timer->start();
         }
         )->on_fail(
         sub {
