@@ -60,8 +60,4 @@ wait_for { @serverframes };
 
 is_deeply(decode_json_utf8(shift(@serverframes))->{params}, ["newHeads"], 'received subscription');
 
-wait_for { @serverframes };
-
-is_deeply(decode_json_utf8(shift(@serverframes))->{method}, "eth_blockNumber", 'received keep alive timer response');
-
 done_testing;

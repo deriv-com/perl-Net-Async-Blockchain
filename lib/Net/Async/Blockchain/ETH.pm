@@ -78,7 +78,6 @@ An hexadecimal string
 
 sub subscription_id { shift->{subscription_id} }
 
-
 =head2 accounts
 
 return the blockchain accounts, if is the first time will call eth_accounts.
@@ -91,11 +90,10 @@ returns a Future, the on_done response will be the accounts array.
 
 =cut
 
-
 async sub accounts {
     my $self = shift;
     return $self->{accounts} //= do {
-        await $self->rpc_client->accounts()
+        await $self->rpc_client->accounts();
     };
 }
 
@@ -111,7 +109,7 @@ update the C<accounts> variable every 10 seconds
 
 async sub update_accounts {
     my $self = shift;
-    while(1){
+    while (1) {
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
         $self->{accounts} = await $self->rpc_client->accounts();
     }
