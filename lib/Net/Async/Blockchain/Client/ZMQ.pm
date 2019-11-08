@@ -190,21 +190,21 @@ sub subscribe {
     zmq_setsockopt($socket, ZMQ_CONNECT_TIMEOUT, $self->timeout) if $self->timeout;
 
     my $connect_response = zmq_connect($socket, $self->endpoint);
-    $self->active_shutdown("zmq_connect failed with $!") unless $connect_response == 0;
+    $self->shutdown("zmq_connect failed with $!") unless $connect_response == 0;
 
     # receive message timeout
     zmq_setsockopt($socket, ZMQ_RCVTIMEO, $self->msg_timeout) if $self->msg_timeout;
 
     # create a reader for IO::Async::Handle using the ZMQ socket file descriptor
     my $fd = zmq_getsockopt($socket, ZMQ_FD);
-    open(my $io, '<&', $fd) or $self->active_shutdown("Unable to open file descriptor");
+    open(my $io, '<&', $fd) or $self->shutdown("Unable to open file descriptor");
 
     $self->add_child(
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
             on_closed   => sub {
                 eval { close($io) } // undef;
-                $self->active_shutdown("Connection closed by peer");
+                $self->shutdown("Connection closed by peer");
             },
             on_read_ready => sub {
                 while (my @msg = $self->_recv_multipart($socket)) {
@@ -243,7 +243,7 @@ sub _recv_multipart {
     return @multipart;
 }
 
-=head2 active_shutdown
+=head2 shutdown
 
 run the configured shutdown action if any
 
@@ -255,7 +255,7 @@ run the configured shutdown action if any
 
 =cut
 
-sub active_shutdown {
+sub shutdown {    ## no critic
     my ($self, $error) = @_;
 
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {

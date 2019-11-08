@@ -42,7 +42,6 @@ sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
 sub currency_symbol : method          { shift->{currency_symbol} }
 sub base_block_number : method        { shift->{base_block_number} }
-sub recursive_search_running : method { shift->{recursive_search_running} // 0 }
 
 =head2 configure
 

@@ -51,12 +51,12 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE           => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE             => '0x' . keccak_256_hex('symbol()'),
-    DECIMALS_SIGNATURE           => '0x' . keccak_256_hex('decimals()'),
-    DEFAULT_CURRENCY             => 'ETH',
-    DEFAULT_DECIMAL_PLACES       => 18,
-    UPDATE_ACCOUNTS              => 10,
+    TRANSFER_SIGNATURE     => '0x' . keccak_256_hex('transfer(address,uint256)'),
+    SYMBOL_SIGNATURE       => '0x' . keccak_256_hex('symbol()'),
+    DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
+    DEFAULT_CURRENCY       => 'ETH',
+    DEFAULT_DECIMAL_PLACES => 18,
+    UPDATE_ACCOUNTS        => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -241,7 +241,7 @@ async sub newHeads {
     }
 
     my @transactions = $block_response->{transactions}->@*;
-    for my $transaction (@transactions){
+    for my $transaction (@transactions) {
         await $self->transform_transaction($transaction, $block_response->{timestamp});
     }
 
@@ -279,9 +279,9 @@ async sub transform_transaction {
     try {
         my $receipt;
         my $gas;
-        if($decoded_transaction->{input} ne '0x'){
+        if ($decoded_transaction->{input} ne '0x') {
             $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-            $gas = $receipt->{gasUsed};
+            $gas     = $receipt->{gasUsed};
         }
 
         # fee = gas * gasPrice
