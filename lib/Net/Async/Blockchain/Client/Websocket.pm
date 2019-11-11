@@ -44,7 +44,7 @@ use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
-use constant RECONNECTION_DELAY => 60;    # 60 delay to try reconnect
+use constant RECONNECTION_DELAY => 60;    # 60 seconds delay to try reconnect
 
 =head2 source
 
