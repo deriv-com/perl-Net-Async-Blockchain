@@ -189,7 +189,7 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
-    Future->wait_all(
+    Future->needs_all(
         $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
@@ -315,14 +315,15 @@ async sub transform_transaction {
 
     try {
         my $receipt;
-        my $gas;
+        my $gas = $decoded_transaction->{gas};
+        # the node response for an empty input is 0x
         if ($decoded_transaction->{input} ne '0x') {
             $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
             $gas     = $receipt->{gasUsed};
         }
 
         # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($gas // $decoded_transaction->{gas})->bmul($decoded_transaction->{gasPrice});
+        my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
 
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,

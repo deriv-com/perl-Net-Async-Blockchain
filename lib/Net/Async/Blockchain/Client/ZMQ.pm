@@ -203,7 +203,7 @@ sub subscribe {
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
             on_closed   => sub {
-                eval { close($io) } // undef;
+                close($io);
                 $self->shutdown("Connection closed by peer");
             },
             on_read_ready => sub {

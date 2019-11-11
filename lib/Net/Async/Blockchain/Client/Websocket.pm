@@ -44,6 +44,8 @@ use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
+use constant RECONNECTION_DELAY => 60;    # 60 delay to try reconnect
+
 =head2 source
 
 Create an L<Ryu::Source> instance, if it is already defined just return
@@ -79,6 +81,14 @@ URL containing the port if needed
 
 sub endpoint : method { shift->{endpoint} }
 
+=head2 latest_subscription
+
+Latest subscription sent from this module
+
+=cut
+
+sub latest_subscription : method { shift->{latest_subscription} }
+
 =head2 websocket_client
 
 Create an L<Net::Async::WebSocket::Client> instance, if it is already defined just return
@@ -103,7 +113,10 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    $self->shutdown("Connection closed by peer");
+                    warn "Connection closed by peer, trying reconnection";
+                    # when the connection is closed by the peer we need
+                    # to reconnect to keep receiving the subscription info.
+                    $self->reconnect(RECONNECTION_DELAY);
                 },
                 close_on_read_eof => 1,
             ));
@@ -178,6 +191,35 @@ sub _request {
     return $self->source;
 }
 
+=head2 reconnect
+
+Reconnects to the server passing the latest subscription done and stops the
+keep alive timer if it exists.
+
+=over 4
+
+=item * C<delay> how much seconds the reconnection should be delayed.
+
+=back
+
+=cut
+
+sub reconnect {
+    my ($self, $delay) = @_;
+
+    my $reconnection_timer = IO::Async::Timer::Countdown->new(
+        delay => $delay,
+
+        on_expire => sub {
+            $self->{websocket_client} = undef;
+            $self->eth_subscribe($self->latest_subscription);
+        },
+    );
+
+    $self->loop->add($reconnection_timer);
+    $reconnection_timer->start();
+}
+
 =head2 shutdown
 
 run the configured shutdown action if any
@@ -215,8 +257,8 @@ Subscribe to an event
 
 sub eth_subscribe {
     my ($self, $subscription) = @_;
+    $self->{latest_subscription} = $subscription;
     return $self->_request('eth_subscribe', $subscription);
 }
 
 1;
-
