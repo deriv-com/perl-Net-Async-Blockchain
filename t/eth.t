@@ -28,7 +28,9 @@ my $transaction = Net::Async::Blockchain::Transaction->new(
 my $subscription_client = Net::Async::Blockchain::ETH->new();
 
 my $mock_rpc = Test::MockModule->new("Net::Async::Blockchain::Client::RPC::ETH");
-$mock_rpc->mock(
+my $mock_eth = Test::MockModule->new("Net::Async::Blockchain::ETH");
+
+$mock_eth->mock(
     accounts => async sub {
         return ["0x1D8b942384c41Be24f202d458e819640E6f0218a"];
     });
@@ -37,7 +39,7 @@ my $received_transaction = $subscription_client->_set_transaction_type($transact
 
 is $received_transaction->{type}, 'receive', "valid transaction type for `to` address";
 
-$mock_rpc->mock(
+$mock_eth->mock(
     accounts => async sub {
         return ["0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F"];
     });
@@ -46,7 +48,7 @@ $received_transaction = $subscription_client->_set_transaction_type($transaction
 
 is $received_transaction->{type}, 'sent', "valid transaction type for `from` address";
 
-$mock_rpc->mock(
+$mock_eth->mock(
     accounts => async sub {
         return ["0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F", "0x1D8b942384c41Be24f202d458e819640E6f0218a"];
     });

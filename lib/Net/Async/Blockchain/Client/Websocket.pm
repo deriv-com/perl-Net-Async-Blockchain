@@ -38,14 +38,13 @@ no indirect;
 use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
-use IO::Async::Timer::Periodic;
 use Ryu::Async;
 
 use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
-use constant KEEP_ALIVE => 5;
+use constant RECONNECTION_DELAY => 60;    # 60 seconds delay to try reconnect
 
 =head2 source
 
@@ -82,6 +81,14 @@ URL containing the port if needed
 
 sub endpoint : method { shift->{endpoint} }
 
+=head2 latest_subscription
+
+Latest subscription sent from this module
+
+=cut
+
+sub latest_subscription : method { shift->{latest_subscription} }
+
 =head2 websocket_client
 
 Create an L<Net::Async::WebSocket::Client> instance, if it is already defined just return
@@ -106,7 +113,10 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    $self->shutdown("Connection closed by peer");
+                    warn "Connection closed by peer, trying reconnection";
+                    # when the connection is closed by the peer we need
+                    # to reconnect to keep receiving the subscription info.
+                    $self->reconnect(RECONNECTION_DELAY);
                 },
                 close_on_read_eof => 1,
             ));
@@ -160,25 +170,6 @@ sub _request {
 
     my $url = URI->new($self->endpoint);
 
-    # this is a simple block number request
-    my $timer_call = {
-        id     => 1,
-        method => 'eth_blockNumber',
-        params => []};
-
-    # we need to keep sending requests to the node
-    # otherwise after some period of time we just
-    # get disconnected by the peer, 5 seconds is enough
-    # to keep the connection alive.
-    my $timer = IO::Async::Timer::Periodic->new(
-        interval => KEEP_ALIVE,
-        on_tick  => sub {
-            $self->websocket_client->send_text_frame(encode_json_utf8($timer_call));
-        },
-    );
-
-    $self->add_child($timer);
-
     # this is the client request
     my $request_call = {
         id     => 1,
@@ -192,16 +183,41 @@ sub _request {
         sub {
             return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
         }
-        )->on_done(
-        sub {
-            $timer->start();
-        }
         )->on_fail(
         sub {
             $self->shutdown("Can't connect to node websocket");
         })->retain();
 
     return $self->source;
+}
+
+=head2 reconnect
+
+Reconnects to the server passing the latest subscription done and stops the
+keep alive timer if it exists.
+
+=over 4
+
+=item * C<delay> how much seconds the reconnection should be delayed.
+
+=back
+
+=cut
+
+sub reconnect {
+    my ($self, $delay) = @_;
+
+    my $reconnection_timer = IO::Async::Timer::Countdown->new(
+        delay => $delay,
+
+        on_expire => sub {
+            $self->{websocket_client} = undef;
+            $self->eth_subscribe($self->latest_subscription);
+        },
+    );
+
+    $self->loop->add($reconnection_timer);
+    $reconnection_timer->start();
 }
 
 =head2 shutdown
@@ -216,7 +232,7 @@ run the configured shutdown action if any
 
 =cut
 
-sub shutdown {
+sub shutdown {    ## no critic
     my ($self, $error) = @_;
 
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
@@ -241,8 +257,8 @@ Subscribe to an event
 
 sub eth_subscribe {
     my ($self, $subscription) = @_;
+    $self->{latest_subscription} = $subscription;
     return $self->_request('eth_subscribe', $subscription);
 }
 
 1;
-
