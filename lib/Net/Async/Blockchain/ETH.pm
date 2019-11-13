@@ -314,13 +314,15 @@ async sub transform_transaction {
     my $transaction;
 
     try {
-        my $receipt;
         my $gas = $decoded_transaction->{gas};
         # the node response for an empty input is 0x
         if ($decoded_transaction->{input} ne '0x') {
-            $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-            $gas     = $receipt->{gasUsed};
+            my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+            $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
         }
+
+        # if the gas is empty we don't proceed
+        return 0 unless $gas && $decoded_transaction->{gasPrice};
 
         # fee = gas * gasPrice
         my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
@@ -344,7 +346,8 @@ async sub transform_transaction {
         # transfer event to any contract, this can return more than 1 transaction.
         # we need to do this before set the transaction type since the `to` address
         # will change in case it be a contract.
-        if ($receipt && $receipt->{logs} && $receipt->{logs}->@* > 0) {
+        # the node response for an empty input is 0x
+        if ($decoded_transaction->{input} ne '0x') {
             $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
         }
 
