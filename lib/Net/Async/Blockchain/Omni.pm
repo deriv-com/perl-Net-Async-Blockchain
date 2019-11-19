@@ -134,19 +134,20 @@ async sub transform_transaction {
     return undef unless $received_transaction && $received_transaction->{ismine};
 
     my $amount = Math::BigFloat->new($received_transaction->{amount});
-    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
-
+    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $block  = Math::BigInt->new($received_transaction->{block});
     my ($from, $to) =
         await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
 
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction
+
     my $transaction_type;
-    if ($from->{ismine} && $to->{ismine}) {
+    if ($from->{address} && $to->{address}) {
         $transaction_type = 'internal';
-    } elsif ($from->{ismine}) {
+    } elsif ($from->{address}) {
         $transaction_type = 'sent';
-    } elsif ($to->{ismine}) {
+    } elsif ($to->{address}) {
         $transaction_type = 'receive';
     }
 
@@ -155,7 +156,7 @@ async sub transform_transaction {
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $self->currency_symbol,
         hash         => $decoded_raw_transaction->{txid},
-        block        => $received_transaction->{block},
+        block        => $block,
         from         => $from->{address},
         to           => [$to->{address}],
         amount       => $amount,
