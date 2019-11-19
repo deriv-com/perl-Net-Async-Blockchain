@@ -122,8 +122,10 @@ async sub transform_transaction {
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
     my $received_transaction;
+    my $detail_transaction;
     try {
         $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+        $detail_transaction   = await $self->rpc_client->get_detail_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
@@ -139,17 +141,19 @@ async sub transform_transaction {
     my ($from, $to) =
         await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
 
+    my %addresses;
+    my %category;
+
+    for my $tx ($detail_transaction->{details}->@*) {
+        $addresses{$tx->{address}} = 1;
+        $category{$tx->{category}} = 1;
+    }
+    my @addresses  = keys %addresses;
+    my @categories = keys %category;
+
     # it can be receive, sent, internal
     # if categories has send and receive it means that is an internal transaction
-
-    my $transaction_type;
-    if ($from->{address} && $to->{address}) {
-        $transaction_type = 'internal';
-    } elsif ($from->{address}) {
-        $transaction_type = 'sent';
-    } elsif ($to->{address}) {
-        $transaction_type = 'receive';
-    }
+    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
     return undef unless $transaction_type;
 
