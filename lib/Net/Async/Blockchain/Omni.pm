@@ -122,10 +122,10 @@ async sub transform_transaction {
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
     my $received_transaction;
-    my $detail_transaction;
+    my $detailed_transaction;
     try {
         $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-        $detail_transaction   = await $self->rpc_client->get_detail_transaction($decoded_raw_transaction->{txid});
+        $detailed_transaction   = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
@@ -143,7 +143,7 @@ async sub transform_transaction {
 
     my %category;
 
-    for my $tx ($detail_transaction->{details}->@*) {
+    for my $tx ($detailed_transaction->{details}->@*) {
         $category{$tx->{category}} = 1;
     }
     my @categories = keys %category;
