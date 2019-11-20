@@ -141,11 +141,14 @@ async sub transform_transaction {
     my ($from, $to) =
         await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
 
+    my %addresses;
     my %category;
 
     for my $tx ($detail_transaction->{details}->@*) {
+        $addresses{$tx->{address}} = 1;
         $category{$tx->{category}} = 1;
     }
+    my @addresses  = keys %addresses;
     my @categories = keys %category;
 
     # it can be receive, sent, internal
