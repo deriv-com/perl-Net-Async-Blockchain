@@ -56,7 +56,7 @@ https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/gettransaction/
 
 =cut
 
-sub get_detail_transaction {
+sub get_detailed_transaction {
     my ($self, @params) = @_;
     return $self->_request('gettransaction', @params);
 }
