@@ -230,9 +230,7 @@ async sub transform_transaction {
     for my $tx ($received_transaction->{details}->@*) {
         my $address = $tx->{address};
 
-        if($addresses{$address}){
-            next;
-        }
+        next if $addresses{$address}++;
 
         my %categories = map {$_->{category} => 1} grep {$_->{address} eq $address} $received_transaction->{details}->@*;
         my @categories = keys %categories;
