@@ -152,15 +152,11 @@ async sub recursive_search {
 
     return undef unless $current_block;
 
-    KEEP_RUNNING:
     while (1) {
-        await $self->loop->delay_future(after => 10);
-        for (my $i = 0; $i < 10; $i++) {
-            last KEEP_RUNNING unless $current_block > $self->base_block_number;
-            my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
-            await $self->hashblock($block_hash) if $block_hash;
-            $self->{base_block_number}++;
-        }
+        last unless $current_block > $self->base_block_number;
+        my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
+        await $self->hashblock($block_hash) if $block_hash;
+        $self->{base_block_number}++;
     }
 }
 
@@ -192,7 +188,9 @@ async sub hashblock {
     }
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
-    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
+    for my $transaction (@transactions) {
+        await $self->transform_transaction($transaction);
+    }
 }
 
 =head2 transform_transaction
