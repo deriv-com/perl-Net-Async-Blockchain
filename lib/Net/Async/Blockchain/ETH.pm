@@ -332,7 +332,7 @@ async sub transform_transaction {
             hash         => $decoded_transaction->{hash},
             block        => $block,
             from         => $decoded_transaction->{from},
-            to           => [$decoded_transaction->{to}],
+            to           => $decoded_transaction->{to},
             contract     => '',
             amount       => $amount,
             fee          => $fee,

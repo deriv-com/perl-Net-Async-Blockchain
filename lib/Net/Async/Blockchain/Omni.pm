@@ -157,7 +157,7 @@ async sub transform_transaction {
         hash         => $decoded_raw_transaction->{txid},
         block        => $received_transaction->{block},
         from         => $from->{address},
-        to           => [$to->{address}],
+        to           => $to->{address},
         amount       => $amount,
         fee          => $fee,
         fee_currency => FEE_CURRENCY,
