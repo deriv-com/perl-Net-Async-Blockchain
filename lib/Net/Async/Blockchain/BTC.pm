@@ -219,40 +219,46 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction;
 
-    my %addresses;
-    my %category;
-    my $amount = Math::BigFloat->new($received_transaction->{amount});
     my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
     my $block  = Math::BigInt->new($decoded_raw_transaction->{block});
+    my @transactions;
+    my %addresses;
 
     # we can have multiple details when:
     # - multiple `to` addresses transactions
     # - sent and received by the same node
     for my $tx ($received_transaction->{details}->@*) {
-        $addresses{$tx->{address}} = 1;
-        $category{$tx->{category}} = 1;
+        my $address = $tx->{address};
+
+        if($addresses{$address}){
+            next;
+        }
+
+        my %categories = map {$_->{category} => 1} grep {$_->{address} eq $address} $received_transaction->{details}->@*;
+        my @categories = keys %categories;
+        my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
+
+        my $amount = Math::BigFloat->new($tx->{amount});
+
+        my $transaction = Net::Async::Blockchain::Transaction->new(
+            currency     => $self->currency_symbol,
+            hash         => $decoded_raw_transaction->{txid},
+            block        => $block,
+            from         => '',
+            to           => $address,
+            amount       => $amount,
+            fee          => $fee,
+            fee_currency => $self->currency_symbol,
+            type         => $transaction_type,
+            timestamp    => $received_transaction->{blocktime},
+        );
+
+        push(@transactions, $transaction);
     }
-    my @addresses  = keys %addresses;
-    my @categories = keys %category;
 
-    # it can be receive, sent, internal
-    # if categories has send and receive it means that is an internal transaction
-    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
-
-    my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_symbol,
-        hash         => $decoded_raw_transaction->{txid},
-        block        => $block,
-        from         => '',
-        to           => \@addresses,
-        amount       => $amount,
-        fee          => $fee,
-        fee_currency => $self->currency_symbol,
-        type         => $transaction_type,
-        timestamp    => $received_transaction->{blocktime},
-    );
-
-    $self->source->emit($transaction) if $transaction;
+    for my $transaction (@transactions){
+        $self->source->emit($transaction);
+    }
 
     return 1;
 }
