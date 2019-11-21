@@ -230,11 +230,14 @@ async sub transform_transaction {
 
         next if $addresses{$address}++;
 
-        my %categories       = map { $_->{category} => 1 } grep { $_->{address} eq $address } $received_transaction->{details}->@*;
+        my @details = grep { $_->{address} eq $address } $received_transaction->{details}->@*;
+
+        my %categories       = map { $_->{category} => 1 } @details;
         my @categories       = keys %categories;
         my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
-        my $amount = Math::BigFloat->new($tx->{amount});
+        my $amount = Math::BigFloat->bzero();
+        $amount->badd($_->{amount}) for @details;
 
         my $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
