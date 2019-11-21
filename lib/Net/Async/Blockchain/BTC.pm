@@ -219,8 +219,8 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction;
 
-    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
-    my $block  = Math::BigInt->new($decoded_raw_transaction->{block});
+    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $block = Math::BigInt->new($decoded_raw_transaction->{block});
     my @transactions;
     my %addresses;
 
@@ -232,8 +232,8 @@ async sub transform_transaction {
 
         next if $addresses{$address}++;
 
-        my %categories = map {$_->{category} => 1} grep {$_->{address} eq $address} $received_transaction->{details}->@*;
-        my @categories = keys %categories;
+        my %categories       = map { $_->{category} => 1 } grep { $_->{address} eq $address } $received_transaction->{details}->@*;
+        my @categories       = keys %categories;
         my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
         my $amount = Math::BigFloat->new($tx->{amount});
@@ -254,7 +254,7 @@ async sub transform_transaction {
         push(@transactions, $transaction);
     }
 
-    for my $transaction (@transactions){
+    for my $transaction (@transactions) {
         $self->source->emit($transaction);
     }
 
