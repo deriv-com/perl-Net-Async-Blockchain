@@ -449,7 +449,7 @@ async sub _check_contract_transaction {
 
         return undef unless $address && $amount;
 
-        my $contract_address = shift($transaction->to->@*);
+        my $contract_address = $transaction->to;
 
         my $hex_symbol = await $self->rpc_client->call({
                 data => SYMBOL_SIGNATURE,
