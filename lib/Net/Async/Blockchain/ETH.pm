@@ -476,7 +476,7 @@ async sub _check_contract_transaction {
 
         $transaction->{currency} = $symbol;
         $transaction->{contract} = $contract_address;
-        $transaction->{to}       = [$self->_remove_zeros($address)];
+        $transaction->{to}       = $self->_remove_zeros($address);
 
         return $transaction;
     }
