@@ -400,7 +400,7 @@ async sub _set_transaction_type {
     my %accounts = map { lc($_) => 1 } @accounts_response;
 
     my $from = $accounts{lc($transaction->from)};
-    my $to = any { $accounts{lc($_)} } $transaction->to->@*;
+    my $to   = $accounts{lc($transaction->to)};
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
