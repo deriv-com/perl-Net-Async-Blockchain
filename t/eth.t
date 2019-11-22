@@ -96,7 +96,7 @@ $mock_rpc->mock(
 $received_transaction = $subscription_client->_check_contract_transaction($transaction)->get;
 
 is $received_transaction->{currency}, 'USB', 'correct contract symbol';
-is $received_transaction->{to}[0], '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
+is $received_transaction->{to}, '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
 is $received_transaction->{amount}->bstr(), Math::BigFloat->new(1000)->bround(6)->bstr, 'correct amount';
 is $received_transaction->{contract}, '0xdac17f958d2ee523a2206206994597c13d831ec7', 'correct contract address';
 
