@@ -332,7 +332,7 @@ async sub transform_transaction {
             hash         => $decoded_transaction->{hash},
             block        => $block,
             from         => $decoded_transaction->{from},
-            to           => [$decoded_transaction->{to}],
+            to           => $decoded_transaction->{to},
             contract     => '',
             amount       => $amount,
             fee          => $fee,
@@ -400,7 +400,7 @@ async sub _set_transaction_type {
     my %accounts = map { lc($_) => 1 } @accounts_response;
 
     my $from = $accounts{lc($transaction->from)};
-    my $to = any { $accounts{lc($_)} } $transaction->to->@*;
+    my $to   = $accounts{lc($transaction->to)};
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
@@ -449,7 +449,7 @@ async sub _check_contract_transaction {
 
         return undef unless $address && $amount;
 
-        my $contract_address = shift($transaction->to->@*);
+        my $contract_address = $transaction->to;
 
         my $hex_symbol = await $self->rpc_client->call({
                 data => SYMBOL_SIGNATURE,
@@ -476,7 +476,7 @@ async sub _check_contract_transaction {
 
         $transaction->{currency} = $symbol;
         $transaction->{contract} = $contract_address;
-        $transaction->{to}       = [$self->_remove_zeros($address)];
+        $transaction->{to}       = $self->_remove_zeros($address);
 
         return $transaction;
     }

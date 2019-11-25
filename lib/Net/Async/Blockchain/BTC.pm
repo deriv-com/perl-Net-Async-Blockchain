@@ -152,15 +152,11 @@ async sub recursive_search {
 
     return undef unless $current_block;
 
-    KEEP_RUNNING:
     while (1) {
-        await $self->loop->delay_future(after => 10);
-        for (my $i = 0; $i < 10; $i++) {
-            last KEEP_RUNNING unless $current_block > $self->base_block_number;
-            my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
-            await $self->hashblock($block_hash) if $block_hash;
-            $self->{base_block_number}++;
-        }
+        last unless $current_block > $self->base_block_number;
+        my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
+        await $self->hashblock($block_hash) if $block_hash;
+        $self->{base_block_number}++;
     }
 }
 
@@ -192,7 +188,9 @@ async sub hashblock {
     }
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
-    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
+    for my $transaction (@transactions) {
+        await $self->transform_transaction($transaction);
+    }
 }
 
 =head2 transform_transaction
@@ -219,40 +217,50 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction;
 
+    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $block = Math::BigInt->new($decoded_raw_transaction->{block});
+    my @transactions;
     my %addresses;
-    my %category;
-    my $amount = Math::BigFloat->new($received_transaction->{amount});
-    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
-    my $block  = Math::BigInt->new($decoded_raw_transaction->{block});
 
     # we can have multiple details when:
     # - multiple `to` addresses transactions
     # - sent and received by the same node
     for my $tx ($received_transaction->{details}->@*) {
-        $addresses{$tx->{address}} = 1;
-        $category{$tx->{category}} = 1;
+        my $address = $tx->{address};
+
+        next if $addresses{$address}++;
+
+        my @details = grep { $_->{address} eq $address } $received_transaction->{details}->@*;
+
+        my $amount = Math::BigFloat->bzero();
+        my %categories;
+        for my $detail (@details) {
+            $amount->badd($detail->{amount});
+            $categories{$detail->{category}} = 1;
+        }
+
+        my @categories = keys %categories;
+        my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
+
+        my $transaction = Net::Async::Blockchain::Transaction->new(
+            currency     => $self->currency_symbol,
+            hash         => $decoded_raw_transaction->{txid},
+            block        => $block,
+            from         => '',
+            to           => $address,
+            amount       => $amount,
+            fee          => $fee,
+            fee_currency => $self->currency_symbol,
+            type         => $transaction_type,
+            timestamp    => $received_transaction->{blocktime},
+        );
+
+        push(@transactions, $transaction);
     }
-    my @addresses  = keys %addresses;
-    my @categories = keys %category;
 
-    # it can be receive, sent, internal
-    # if categories has send and receive it means that is an internal transaction
-    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
-
-    my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_symbol,
-        hash         => $decoded_raw_transaction->{txid},
-        block        => $block,
-        from         => '',
-        to           => \@addresses,
-        amount       => $amount,
-        fee          => $fee,
-        fee_currency => $self->currency_symbol,
-        type         => $transaction_type,
-        timestamp    => $received_transaction->{blocktime},
-    );
-
-    $self->source->emit($transaction) if $transaction;
+    for my $transaction (@transactions) {
+        $self->source->emit($transaction);
+    }
 
     return 1;
 }
