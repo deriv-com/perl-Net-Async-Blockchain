@@ -73,35 +73,6 @@ sub rpc_client : method {
     };
 }
 
-=head2 hashblock
-
-hashblock subscription
-
-Convert and emit a L<Net::Async::Blockchain::Transaction> for the client source every new block received that
-is owned by the node.
-
-=over 4
-
-=item * C<block_hash> omnicore block hash
-
-=back
-
-=cut
-
-async sub hashblock {
-    my ($self, $block_hash) = @_;
-
-    my $block_response = await $self->rpc_client->get_block($block_hash);
-
-    # 2 here for full verbosity
-    my @future_transactions = map { $self->rpc_client->get_raw_transaction($_, 2) } $block_response->{tx}->@*;
-    await Future->needs_all(@future_transactions);
-
-    my @transactions = map { $_->get } @future_transactions;
-
-    await Future->needs_all(map { $self->transform_transaction($_) } @transactions);
-}
-
 =head2 transform_transaction
 
 Receive a decoded raw transaction and convert it to a L<Net::Async::Blockchain::Transaction> object
@@ -157,7 +128,7 @@ async sub transform_transaction {
         hash         => $decoded_raw_transaction->{txid},
         block        => $received_transaction->{block},
         from         => $from->{address},
-        to           => [$to->{address}],
+        to           => $to->{address},
         amount       => $amount,
         fee          => $fee,
         fee_currency => FEE_CURRENCY,
