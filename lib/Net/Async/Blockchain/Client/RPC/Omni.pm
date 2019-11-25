@@ -50,5 +50,16 @@ sub get_transaction {
     return $self->_request('omni_gettransaction', @params);
 }
 
+=head2 get_detailed_transaction
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/gettransaction/
+
+=cut
+
+sub get_detailed_transaction {
+    my ($self, @params) = @_;
+    return $self->_request('gettransaction', @params);
+}
+
 1;
 
