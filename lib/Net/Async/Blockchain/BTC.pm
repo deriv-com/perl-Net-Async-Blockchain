@@ -5,6 +5,7 @@ use warnings;
 
 our $VERSION = '0.001';
 
+
 =head1 NAME
 
 Net::Async::Blockchain::BTC - Bitcoin based subscription.
@@ -39,6 +40,7 @@ use Ryu::Async;
 use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
+use ZMQ::LibZMQ3;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
@@ -123,9 +125,18 @@ sub subscribe {
     $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
+    my ($zmq_client_source, $zmq_client_socket) = $self->new_zmq_client->subscribe($subscription);
+
+    my $error_handler = sub {
+        my $error = shift;
+        $self->source->fail($error);
+        zmq_close($zmq_client_socket);
+    };
+
+## Please see file lib/Net/Async/Blockchain/BTC.pm.ERR
     Future->needs_all(
-        $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed()->on_fail(sub { $self->source->fail(@_); }),
-        $self->recursive_search()->on_fail(sub { $self->source->fail(@_); }));
+        $zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
+        $self->recursive_search())->on_fail($error_handler)->retain;
 
     return $self->source;
 }
@@ -236,7 +247,7 @@ async sub transform_transaction {
         my %categories;
         for my $detail (@details) {
             $amount->badd($detail->{amount});
-            $categories{$detail->{category}} = 1;
+            $categories{ $detail->{category} } = 1;
         }
 
         my @categories = keys %categories;
