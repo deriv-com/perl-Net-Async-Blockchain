@@ -124,8 +124,8 @@ sub subscribe {
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
     Future->needs_all(
-        $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
-        $self->recursive_search())->on_fail(sub { $self->source->fail(@_); });
+        $self->new_zmq_client->subscribe($subscription)->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed()->on_fail(sub { $self->source->fail(@_); }),
+        $self->recursive_search());
 
     return $self->source;
 }
