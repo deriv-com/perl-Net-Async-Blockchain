@@ -215,7 +215,7 @@ sub subscribe {
             )->ordered_futures->completed(),
         $self->recursive_search(),
         $self->update_accounts(),
-    );
+    )->on_fail( sub { $self->source->fail(@_) });
 
     return $self->source;
 }

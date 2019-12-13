@@ -44,8 +44,6 @@ use Net::Async::WebSocket::Client;
 
 use parent qw(IO::Async::Notifier);
 
-use constant RECONNECTION_DELAY => 60;    # 60 seconds delay to try reconnect
-
 =head2 source
 
 Create an L<Ryu::Source> instance, if it is already defined just return
@@ -113,10 +111,9 @@ sub websocket_client : method {
                     $self->source->emit(decode_json_utf8($frame));
                 },
                 on_closed => sub {
-                    warn "Connection closed by peer, trying reconnection";
-                    # when the connection is closed by the peer we need
-                    # to reconnect to keep receiving the subscription info.
-                    $self->reconnect(RECONNECTION_DELAY);
+                    my $error = "Connection closed by peer";
+                    warn $error;
+                    $self->source->fail($error);
                 },
                 close_on_read_eof => 1,
             ));
@@ -189,35 +186,6 @@ sub _request {
         })->retain();
 
     return $self->source;
-}
-
-=head2 reconnect
-
-Reconnects to the server passing the latest subscription done and stops the
-keep alive timer if it exists.
-
-=over 4
-
-=item * C<delay> how much seconds the reconnection should be delayed.
-
-=back
-
-=cut
-
-sub reconnect {
-    my ($self, $delay) = @_;
-
-    my $reconnection_timer = IO::Async::Timer::Countdown->new(
-        delay => $delay,
-
-        on_expire => sub {
-            $self->{websocket_client} = undef;
-            $self->eth_subscribe($self->latest_subscription);
-        },
-    );
-
-    $self->loop->add($reconnection_timer);
-    $reconnection_timer->start();
 }
 
 =head2 shutdown
