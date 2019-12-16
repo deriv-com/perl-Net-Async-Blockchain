@@ -40,9 +40,9 @@ use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
-use Digest::Keccak qw(keccak_256_hex);
 use List::Util qw(any);
 use Syntax::Keyword::Try;
+use Module::PluginFinder;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -51,15 +51,22 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE     => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE       => '0x' . keccak_256_hex('symbol()'),
-    DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
     DEFAULT_CURRENCY       => 'ETH',
     DEFAULT_DECIMAL_PLACES => 18,
     UPDATE_ACCOUNTS        => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
+
+my $filter = Module::PluginFinder->new(
+    search_path => 'Plugins',
+
+    filter => sub {
+        my ($module) = @_;
+        return $module if ($module->enabled());
+        return 0;
+    },
+);
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
@@ -314,12 +321,10 @@ async sub transform_transaction {
     my $transaction;
 
     try {
-        my $gas = $decoded_transaction->{gas};
-        # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-            $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
-        }
+        my $gas     = $decoded_transaction->{gas};
+        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+
+        $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
 
         # if the gas is empty we don't proceed
         return 0 unless $gas && $decoded_transaction->{gasPrice};
@@ -342,14 +347,7 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        # if the input is not 0x we check the transaction searching by any
-        # transfer event to any contract, this can return more than 1 transaction.
-        # we need to do this before set the transaction type since the `to` address
-        # will change in case it be a contract.
-        # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
-        }
+        $transaction = await $self->_check_plugins($transaction, $receipt) if $transaction;
 
         # set the type for each transaction
         # from and to => internal
@@ -413,7 +411,7 @@ async sub _set_transaction_type {
     return $transaction->type ? $transaction : undef;
 }
 
-=head2 _check_contract_transaction
+=head2 _check_plugins
 
 We need to identify what are the transactions that have a contract as
 destination, once we found we change:
@@ -433,127 +431,18 @@ hashref from an array of L<Net::Async::Blockchain::Transaction>
 
 =cut
 
-async sub _check_contract_transaction {
-    my ($self, $transaction) = @_;
+async sub _check_plugins {
+    my ($self, $transaction, $receipt) = @_;
 
-    # ERC20 transfer
-    # transfer(address _to, uint256 _value)
-    # signature = 4 bytes
-    # address = 32 bytes
-    # amount = 32 bytes
-    # total = 68 bytes, characters = 136
-    # including "0x" = 138
-    if (length($transaction->data) >= 138 && substr($transaction->data, 0, 10) eq substr(TRANSFER_SIGNATURE, 0, 10)) {
-        my $address = substr($transaction->data, 10, 64);
-        my $amount  = substr($transaction->data, 74, 64);
+    my @modules = $filter->modules();
+    my @transactions;
 
-        return undef unless $address && $amount;
-
-        my $contract_address = $transaction->to;
-
-        my $hex_symbol = await $self->rpc_client->call({
-                data => SYMBOL_SIGNATURE,
-                to   => $contract_address
-            },
-            "latest"
-        );
-
-        my $symbol = $self->_to_string($hex_symbol);
-        return undef unless $symbol;
-
-        my $decimals = await $self->rpc_client->call({
-                data => DECIMALS_SIGNATURE,
-                to   => $contract_address
-            },
-            "latest"
-        );
-
-        if ($decimals) {
-            $transaction->{amount} = Math::BigFloat->from_hex($amount)->bdiv(Math::BigInt->new(10)->bpow($decimals))->bround(hex $decimals);
-        } else {
-            $transaction->{amount} = Math::BigFloat->from_hex($amount);
-        }
-
-        $transaction->{currency} = $symbol;
-        $transaction->{contract} = $contract_address;
-        $transaction->{to}       = $self->_remove_zeros($address);
-
-        return $transaction;
+    for my $module (@modules) {
+        my @module_response = await $module->check($transaction, $receipt);
+        push(@transactions, @module_response) if @module_response;
     }
 
-    return undef;
-}
-
-=head2 _remove_zeros
-
-The address on the topic logs is always a 32 bytes string so we will
-have addresses like: `000000000000000000000000c636d4c672b3d3760b2e759b8ad72546e3156ce9`
-
-We need to remove all the extra zeros and add the `0x`
-
-=over 4
-
-=item * C<trxn_topic> The log string
-
-=back
-
-string
-
-=cut
-
-sub _remove_zeros {
-    my ($self, $trxn_topic) = @_;
-
-    # get only the last 40 characters from the string (ETH address size).
-    my $address = substr($trxn_topic, -40, length($trxn_topic));
-
-    return "0x$address";
-}
-
-=head2 _to_string
-
-The response from the contract will be in the dynamic type format when we call the symbol, so we will
-have a response like: `0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003414c480000000000000000000000000000000000000000000000000000000000`
-
-This is basically:
-
-First 32 bytes: 0000000000000000000000000000000000000000000000000000000000000020 = 32 (offset to start of data part of second parameter)
-Second 32 bytes: 0000000000000000000000000000000000000000000000000000000000000003 = 3 (value size)
-Third 32 bytes: 414c480000000000000000000000000000000000000000000000000000000000 = ALH (padded left value)
-
-=over 4
-
-=item * C<trxn_topic> The log string
-
-=back
-
-string
-
-=cut
-
-sub _to_string {
-    my ($self, $response) = @_;
-
-    return undef unless $response;
-
-    $response = substr($response, 2) if $response =~ /^0x/;
-
-    # split every 32 bytes
-    my @chunks = $response =~ /(.{1,64})/g;
-
-    return undef unless scalar @chunks >= 3;
-
-    # position starting from the second item
-    my $position = Math::BigFloat->from_hex($chunks[0])->bdiv(32)->badd(1)->bint();
-
-    # size
-    my $size = Math::BigFloat->from_hex($chunks[1])->bint();
-
-    # hex string to string
-    my $packed_response = pack('H*', $chunks[$position]);
-
-    # substring by the data size
-    return substr($packed_response, 0, $size);
+    return @transactions;
 }
 
 1;
