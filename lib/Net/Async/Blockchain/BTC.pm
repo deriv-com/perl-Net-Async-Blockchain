@@ -133,7 +133,6 @@ sub subscribe {
         zmq_close($zmq_client_socket);
     };
 
-## Please see file lib/Net/Async/Blockchain/BTC.pm.ERR
     Future->needs_all(
         $zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
         $self->recursive_search())->on_fail($error_handler)->retain;
