@@ -347,21 +347,27 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        $transaction = await $self->_check_plugins($transaction, $receipt) if $transaction;
+        my @transactions = await $self->_check_plugins($transaction, $receipt);
+
+        unless (scalar @transactions) {
+            @transactions = ($transaction);
+        }
 
         # set the type for each transaction
         # from and to => internal
         # to => received
         # from => sent
-        $transaction = await $self->_set_transaction_type($transaction) if $transaction;
+        for my $tx (@transactions) {
+            my $tx_type_response = await $self->_set_transaction_type($tx);
+            $self->source->emit($tx_type_response) if $tx_type_response;
+        }
+
     }
     catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $transaction->hash, $err);
         return 0;
     }
-
-    $self->source->emit($transaction) if $transaction;
 
     return 1;
 }

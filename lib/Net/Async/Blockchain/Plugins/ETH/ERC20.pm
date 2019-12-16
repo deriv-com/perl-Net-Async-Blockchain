@@ -17,6 +17,8 @@ use constant {
     DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
 };
 
+sub enabled { return 1 }
+
 =head2 check
 
 We need to identify what are the transactions that have a contract as

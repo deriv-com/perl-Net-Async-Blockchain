@@ -10,6 +10,24 @@ use Math::BigFloat;
 
 sub enabled { return 0 }
 
+=head2 new
+
+Create a new L<Net::Async::Blockchain::Plugins::ETH::Utility> instance
+
+=back
+
+L<Net::Async::Blockchain::Plugins::ETH::Utility>
+
+=cut
+
+sub new {
+    my ($class) = @_;
+
+    my $self = bless {}, $class;
+
+    return $self;
+}
+
 =head2 _remove_zeros
 
 The address on the topic logs is always a 32 bytes string so we will
