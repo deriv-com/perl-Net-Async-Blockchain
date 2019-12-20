@@ -92,11 +92,11 @@ async sub transform_transaction {
 
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
-    my $received_transaction;
-    my $detailed_transaction;
+    my ($omni_transaction, $parent_transaction);
+
     try {
-        $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-        $detailed_transaction   = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
+        $omni_transaction   = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+        $parent_transaction = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
@@ -104,17 +104,43 @@ async sub transform_transaction {
     }
 
     # transaction not found, just ignore.
-    return undef unless $received_transaction && $received_transaction->{ismine};
+    return undef unless $omni_transaction && $omni_transaction->{ismine};
 
-    my $amount = Math::BigFloat->new($received_transaction->{amount});
-    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
-    my $block  = Math::BigInt->new($received_transaction->{block});
-    my ($from, $to) =
-        await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
+    my $transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
+
+    $self->source->emit($transaction) if $transaction;
+
+    return 1;
+}
+
+=head2 _process_transaction
+
+This will process the transaction.
+
+=cut
+
+async sub _process_transaction {
+    my ($self, $omni_transaction, $parent_transaction) = @_;
+
+    my ($senall_amount, $sendall_property_id);
+
+    if ($omni_transaction->{type} eq "Send All") {
+        for my $data ($omni_transaction->{subsends}->@*) {
+            if ($data->{propertyid} == '31') {
+                $senall_amount += $data->{amount};
+                $sendall_property_id = $data->{propertyid};
+            }
+        }
+    }
+
+    my $amount = Math::BigFloat->new($omni_transaction->{amount} // $senall_amount);
+    my $fee    = Math::BigFloat->new($omni_transaction->{fee}    // 0);
+    my $block  = Math::BigInt->new($omni_transaction->{block});
+
+    my ($from, $to) = mapping_address($self, $omni_transaction);
 
     my %category;
-
-    for my $tx ($detailed_transaction->{details}->@*) {
+    for my $tx ($parent_transaction->{details}->@*) {
         $category{$tx->{category}} = 1;
     }
     my @categories = keys %category;
@@ -127,7 +153,7 @@ async sub transform_transaction {
 
     my $transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $self->currency_symbol,
-        hash         => $decoded_raw_transaction->{txid},
+        hash         => $omni_transaction->{txid},
         block        => $block,
         from         => $from->{address},
         to           => $to->{address},
@@ -135,13 +161,21 @@ async sub transform_transaction {
         fee          => $fee,
         fee_currency => FEE_CURRENCY,
         type         => $transaction_type,
-        property_id  => $received_transaction->{propertyid},
-        timestamp    => $received_transaction->{blocktime},
+        property_id  => $omni_transaction->{propertyid} // $sendall_property_id,
+        timestamp    => $omni_transaction->{blocktime},
     );
 
-    $self->source->emit($transaction) if $transaction;
+    return $transaction if $transaction;
 
-    return 1;
+}
+
+=head2
+=cut
+
+sub mapping_address {
+
+    my ($self, $omni_transaction) = @_;
+    return Future->needs_all(map { $self->rpc_client->validate_address($omni_transaction->{$_}) } qw(sendingaddress referenceaddress))->get;
 }
 
 1;
