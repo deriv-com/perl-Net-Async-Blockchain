@@ -49,8 +49,6 @@ use parent qw(Net::Async::Blockchain::BTC);
 
 # fee for Omnicore is always BTC
 use constant FEE_CURRENCY => 'BTC';
-# Tether property id is 31
-use constant PROPERTY_ID => 31;
 
 my %subscription_dictionary = ('transactions' => 'hashblock');
 
@@ -124,20 +122,11 @@ This will fetch the required parameters from transaction to process further.
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
-    my ($sendall_amount, $sendall_property_id);
+    my ($transaction, %sendall);
 
-    if ($omni_transaction->{type} eq "Send All") {
-        for my $data ($omni_transaction->{subsends}->@*) {
-            if ($data->{propertyid} == PROPERTY_ID) {
-                $sendall_amount += $data->{amount};
-                $sendall_property_id = PROPERTY_ID;
-            }
-        }
-    }
-
-    my $amount = Math::BigFloat->new($omni_transaction->{amount} // $sendall_amount);
-    my $fee    = Math::BigFloat->new($omni_transaction->{fee}    // 0);
-    my $block  = Math::BigInt->new($omni_transaction->{block});
+    my $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
+    my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
+    my $block = Math::BigInt->new($omni_transaction->{block});
 
     my ($from, $to) = mapping_address($self, $omni_transaction);
 
@@ -153,19 +142,48 @@ async sub _process_transaction {
 
     return undef unless $transaction_type;
 
-    my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_symbol,
-        hash         => $omni_transaction->{txid},
-        block        => $block,
-        from         => $from->{address},
-        to           => $to->{address},
-        amount       => $amount,
-        fee          => $fee,
-        fee_currency => FEE_CURRENCY,
-        type         => $transaction_type,
-        property_id  => $omni_transaction->{propertyid} // PROPERTY_ID,
-        timestamp    => $omni_transaction->{blocktime},
-    );
+    if ($omni_transaction->{type} eq "Send All") {
+
+        for my $data ($omni_transaction->{subsends}->@*) {
+            $sendall{$data->{propertyid}} = $data->{amount};
+        }
+
+        for my $propertyid (keys %sendall) {
+
+            $transaction = Net::Async::Blockchain::Transaction->new(
+
+                currency     => $self->currency_symbol,
+                hash         => $omni_transaction->{txid},
+                block        => $block,
+                from         => $from->{address},
+                to           => $to->{address},
+                amount       => Math::BigFloat->new($sendall{$propertyid}),
+                fee          => $fee,
+                fee_currency => FEE_CURRENCY,
+                type         => $transaction_type,
+                property_id  => $propertyid,
+                timestamp    => $omni_transaction->{blocktime},
+            );
+        }
+    }
+
+    else {
+
+        $transaction = Net::Async::Blockchain::Transaction->new(
+
+            currency     => $self->currency_symbol,
+            hash         => $omni_transaction->{txid},
+            block        => $block,
+            from         => $from->{address},
+            to           => $to->{address},
+            amount       => $amount,
+            fee          => $fee,
+            fee_currency => FEE_CURRENCY,
+            type         => $transaction_type,
+            property_id  => $omni_transaction->{propertyid},
+            timestamp    => $omni_transaction->{blocktime},
+        );
+    }
 
     return $transaction if $transaction;
 
