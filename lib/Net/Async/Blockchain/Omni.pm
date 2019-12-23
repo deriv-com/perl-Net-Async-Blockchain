@@ -49,6 +49,8 @@ use parent qw(Net::Async::Blockchain::BTC);
 
 # fee for Omnicore is always BTC
 use constant FEE_CURRENCY => 'BTC';
+# Tether property id is 31
+use constant PROPERTY_ID => 31;
 
 my %subscription_dictionary = ('transactions' => 'hashblock');
 
@@ -115,7 +117,7 @@ async sub transform_transaction {
 
 =head2 _process_transaction
 
-This will process the transaction.
+This will fetch the required parameters from transaction to process further.
 
 =cut
 
@@ -126,9 +128,9 @@ async sub _process_transaction {
 
     if ($omni_transaction->{type} eq "Send All") {
         for my $data ($omni_transaction->{subsends}->@*) {
-            if ($data->{propertyid} == '31') {
+            if ($data->{propertyid} == PROPERTY_ID) {
                 $senall_amount += $data->{amount};
-                $sendall_property_id = $data->{propertyid};
+                $sendall_property_id = PROPERTY_ID;
             }
         }
     }
@@ -161,7 +163,7 @@ async sub _process_transaction {
         fee          => $fee,
         fee_currency => FEE_CURRENCY,
         type         => $transaction_type,
-        property_id  => $omni_transaction->{propertyid} // $sendall_property_id,
+        property_id  => $omni_transaction->{propertyid} // PROPERTY_ID,
         timestamp    => $omni_transaction->{blocktime},
     );
 
