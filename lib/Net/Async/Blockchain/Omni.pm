@@ -124,18 +124,18 @@ This will fetch the required parameters from transaction to process further.
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
-    my ($senall_amount, $sendall_property_id);
+    my ($sendall_amount, $sendall_property_id);
 
     if ($omni_transaction->{type} eq "Send All") {
         for my $data ($omni_transaction->{subsends}->@*) {
             if ($data->{propertyid} == PROPERTY_ID) {
-                $senall_amount += $data->{amount};
+                $sendall_amount += $data->{amount};
                 $sendall_property_id = PROPERTY_ID;
             }
         }
     }
 
-    my $amount = Math::BigFloat->new($omni_transaction->{amount} // $senall_amount);
+    my $amount = Math::BigFloat->new($omni_transaction->{amount} // $sendall_amount);
     my $fee    = Math::BigFloat->new($omni_transaction->{fee}    // 0);
     my $block  = Math::BigInt->new($omni_transaction->{block});
 
