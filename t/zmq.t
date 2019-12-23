@@ -47,8 +47,9 @@ subtest 'receive msg' => sub {
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
             endpoint => "tcp://127.0.0.1:$port",
         ));
+    my ($zmq_client_source, $zmq_client_socket) = $zmq_client->subscribe('');
 
-    $zmq_client->subscribe('')->take(10)->each(
+    $zmq_client_source->take(10)->each(
         sub {
             is shift, unpack("H*", $msg[1]), "Correct message received";
         })->get;
