@@ -122,13 +122,13 @@ This will fetch the required parameters from transaction to process further.
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
-    my ($transaction, %sendall);
+    my ($transaction, %sendall, $amount);
 
-    my $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
+    $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
     my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
     my $block = Math::BigInt->new($omni_transaction->{block});
 
-    my ($from, $to) = mapping_address($self, $omni_transaction);
+    my ($from, $to) = await mapping_address($self, $omni_transaction);
 
     my %category;
     for my $tx ($parent_transaction->{details}->@*) {
@@ -198,7 +198,7 @@ This will return from and to hash.
 sub mapping_address {
 
     my ($self, $omni_transaction) = @_;
-    return Future->needs_all(map { $self->rpc_client->validate_address($omni_transaction->{$_}) } qw(sendingaddress referenceaddress))->get;
+    return Future->needs_all(map { $self->rpc_client->validate_address($omni_transaction->{$_}) } qw(sendingaddress referenceaddress));
 }
 
 1;
