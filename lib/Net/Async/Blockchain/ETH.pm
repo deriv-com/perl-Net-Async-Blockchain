@@ -215,7 +215,7 @@ sub subscribe {
             }
             )->ordered_futures->completed(),
         $self->recursive_search(),
-    );
+    )->on_fail( sub { $self->source->fail(@_) })->retain;
 
     return $self->source;
 }
