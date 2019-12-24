@@ -110,8 +110,8 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
         $self->{accounts} = await $self->rpc_client->accounts();
+        await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
 }
 
@@ -190,6 +190,7 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     Future->needs_all(
+        $self->update_accounts(),
         $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
@@ -214,7 +215,6 @@ sub subscribe {
             }
             )->ordered_futures->completed(),
         $self->recursive_search(),
-        $self->update_accounts(),
     );
 
     return $self->source;
@@ -239,6 +239,11 @@ async sub recursive_search {
     return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
+
+    unless ($current_block->bgt(0)) {
+        my $syncing = await $self->rpc_client->syncing();
+        $current_block = Math::BigInt->from_hex($syncing->{currentBlock}) if $syncing;
+    }
 
     return undef unless $current_block;
 
@@ -315,11 +320,8 @@ async sub transform_transaction {
 
     try {
         my $gas = $decoded_transaction->{gas};
-        # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-            $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
-        }
+        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
 
         # if the gas is empty we don't proceed
         return 0 unless $gas && $decoded_transaction->{gasPrice};
@@ -347,8 +349,8 @@ async sub transform_transaction {
         # we need to do this before set the transaction type since the `to` address
         # will change in case it be a contract.
         # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
+        if ($receipt) {
+            $transaction = await $self->_check_contract_transaction($transaction, $receipt) if $transaction;
         }
 
         # set the type for each transaction
@@ -359,7 +361,7 @@ async sub transform_transaction {
     }
     catch {
         my $err = $@;
-        warn sprintf("Error processing transaction: %s, error: %s", $transaction->hash, $err);
+        warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
         return 0;
     }
 
@@ -434,7 +436,7 @@ hashref from an array of L<Net::Async::Blockchain::Transaction>
 =cut
 
 async sub _check_contract_transaction {
-    my ($self, $transaction) = @_;
+    my ($self, $transaction, $receipt) = @_;
 
     # ERC20 transfer
     # transfer(address _to, uint256 _value)
@@ -444,6 +446,7 @@ async sub _check_contract_transaction {
     # total = 68 bytes, characters = 136
     # including "0x" = 138
     if (length($transaction->data) >= 138 && substr($transaction->data, 0, 10) eq substr(TRANSFER_SIGNATURE, 0, 10)) {
+
         my $address = substr($transaction->data, 10, 64);
         my $amount  = substr($transaction->data, 74, 64);
 

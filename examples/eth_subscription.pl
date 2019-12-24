@@ -15,7 +15,8 @@ $loop->add(
     my $eth_client = Net::Async::Blockchain::ETH->new(
         subscription_url => "ws://127.0.0.1:8546",
         rpc_url          => "http://127.0.0.1:8545",
+        base_block_number => 9008914
     ));
 
-$eth_client->subscribe("transactions")->each(sub { print Dumper shift })->get();
+$eth_client->subscribe("transactions")->each(sub {  })->get();
 
