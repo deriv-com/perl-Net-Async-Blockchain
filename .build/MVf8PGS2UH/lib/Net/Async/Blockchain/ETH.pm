@@ -59,8 +59,13 @@ use constant {
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
 my $filter = Module::PluginFinder->new(
-    search_path => 'Net::Async::Blockchain::Plugins::ETH',
-    filter      => sub { },
+    search_path => 'Plugins',
+
+    filter => sub {
+        my ($module) = @_;
+        return $module if ($module->enabled());
+        return 0;
+    },
 );
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
@@ -438,8 +443,8 @@ async sub _check_plugins {
     my @modules = $filter->modules();
     my @transactions;
 
-    for my $module (grep { $_->can("enabled") && $_->enabled } @modules) {
-        my @module_response = await $module->check($self, $transaction, $receipt);
+    for my $module (@modules) {
+        my @module_response = await $module->check($transaction, $receipt);
         push(@transactions, @module_response) if @module_response;
     }
 
