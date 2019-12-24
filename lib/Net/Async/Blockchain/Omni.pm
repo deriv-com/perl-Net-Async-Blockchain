@@ -152,7 +152,7 @@ async sub _process_transaction {
 
         for my $propertyid (keys %sendall) {
 
-            @transaction = Net::Async::Blockchain::Transaction->new(
+             push @transaction , Net::Async::Blockchain::Transaction->new(
 
                 currency     => $self->currency_symbol,
                 hash         => $omni_transaction->{txid},
