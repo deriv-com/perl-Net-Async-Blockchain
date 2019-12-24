@@ -67,7 +67,6 @@ L<Net::Async::Blockchain::Transaction>
 
 sub new {
     my ($class, %params) = @_;
-
     my $self = bless {}, $class;
 
     foreach (qw(currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {

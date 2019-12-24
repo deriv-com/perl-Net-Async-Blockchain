@@ -106,10 +106,12 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $omni_transaction && $omni_transaction->{ismine};
 
-    my $transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
+    my @transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
 
-    $self->source->emit($transaction) if $transaction;
+    if (@transaction) {
 
+        for my $transaction (@transaction) { $self->source->emit($transaction); }
+    }
     return 1;
 }
 
@@ -122,7 +124,7 @@ This will fetch the required parameters from transaction to process further.
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
-    my ($transaction, %sendall, $amount);
+    my (@transaction, %sendall, $amount);
 
     $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
     my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
@@ -150,7 +152,7 @@ async sub _process_transaction {
 
         for my $propertyid (keys %sendall) {
 
-            $transaction = Net::Async::Blockchain::Transaction->new(
+            @transaction = Net::Async::Blockchain::Transaction->new(
 
                 currency     => $self->currency_symbol,
                 hash         => $omni_transaction->{txid},
@@ -169,7 +171,7 @@ async sub _process_transaction {
 
     else {
 
-        $transaction = Net::Async::Blockchain::Transaction->new(
+        @transaction = Net::Async::Blockchain::Transaction->new(
 
             currency     => $self->currency_symbol,
             hash         => $omni_transaction->{txid},
@@ -185,7 +187,7 @@ async sub _process_transaction {
         );
     }
 
-    return $transaction if $transaction;
+    return @transaction if @transaction;
 
 }
 
