@@ -41,11 +41,10 @@ hashref from an array of L<Net::Async::Blockchain::Transaction>
 
 async sub check {
     my ($self, $client, $transaction, $receipt) = @_;
-
     my $logs = $receipt->{logs};
     my @transactions;
 
-    if (scalar $logs->@* > 0) {
+    if (ref $logs eq 'ARRAY' && scalar $logs->@* > 0) {
         return undef unless $receipt->{status} && hex($receipt->{status}) == 1;
 
         for my $log ($logs->@*) {
@@ -64,9 +63,9 @@ async sub check {
                 );
 
                 my $symbol = $self->_to_string($hex_symbol);
-                return undef unless $symbol;
+                next unless $symbol;
 
-                $transaction->{currency} = $symbol;
+                $transaction_cp->{currency} = $symbol;
 
                 my $decimals = await $client->rpc_client->call({
                         data => DECIMALS_SIGNATURE,
@@ -76,22 +75,25 @@ async sub check {
                 );
 
                 if ($decimals) {
-                    $transaction->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($decimals))->bround(hex $decimals);
+                    # default size 64 + `0x`
+                    next unless length($decimals) == 66;
+                    $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($decimals));
                 } else {
-                    $transaction->{amount} = $amount;
+                    $transaction_cp->{amount} = $amount;
                 }
 
                 if (scalar @topics > 1) {
-                    $transaction_cp->{to} = [$self->_remove_zeros($topics[2])];
+                    $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
                 }
 
-                $transaction->{contract} = $address;
+                $transaction_cp->{contract} = $address;
 
-                push(@transactions, $transaction);
+                push(@transactions, $transaction_cp);
             }
         }
     }
+
+    return @transactions;
 }
 
 1;
-

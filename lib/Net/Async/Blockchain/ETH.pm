@@ -95,7 +95,7 @@ returns a Future, the on_done response will be the accounts array.
 async sub accounts {
     my $self = shift;
     return $self->{accounts} //= do {
-        await $self->rpc_client->accounts();
+        $self->get_hash_accounts();
     };
 }
 
@@ -112,9 +112,23 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        $self->{accounts} = await $self->rpc_client->accounts();
+        $self->{accounts} = $self->get_hash_accounts();
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
+}
+
+=head2 get_hash_accounts
+
+=back
+
+=cut
+
+async sub get_hash_accounts {
+    my ($self) = @_;
+
+    my @accounts_response = await $self->rpc_client->accounts();
+    my %accounts = map { lc($_) => 1 } @accounts_response;
+    return \%accounts;
 }
 
 =head2 rpc_client
@@ -403,8 +417,7 @@ async sub _set_transaction_type {
     my $accounts = await $self->accounts;
     return undef unless $accounts;
 
-    my @accounts_response = $accounts->@*;
-    my %accounts = map { lc($_) => 1 } @accounts_response;
+    my %accounts = $accounts->%*;
 
     my $from = $accounts{lc($transaction->from)};
     my $to   = $accounts{lc($transaction->to)};
@@ -441,7 +454,10 @@ async sub _check_plugins {
     for my $module (grep { $_->can("enabled") && $_->enabled } @modules) {
         my @module_response = await $module->check($self, $transaction, $receipt);
         push(@transactions, @module_response) if @module_response;
+        undef @module_response;
     }
+
+    undef @modules;
 
     return @transactions;
 }
