@@ -17,21 +17,25 @@ use constant {
     DECIMALS_SIGNATURE       => '0x' . keccak_256_hex('decimals()'),
 };
 
+=head2 enabled
+
+To disable this plugin set the return to 0
+
+=cut
+
 sub enabled { return 1 }
 
 =head2 check
 
-We need to identify what are the transactions that have a contract as
-destination, once we found we change:
-
-currency => the contract symbol
-amount => tokens
-to => address that will receive the tokens
-contract => the contract address
+Check if the transactions contains ERC20 transfers
 
 =over 4
 
+=item * client L<Net::Async::Blockchain::ETH>
+
 =item * L<Net::Async::Blockchain::Transaction>
+
+=item * transaction receipt received from `eth_getTransactionReceipt`
 
 =back
 

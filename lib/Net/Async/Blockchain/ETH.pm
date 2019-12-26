@@ -119,7 +119,11 @@ async sub update_accounts {
 
 =head2 get_hash_accounts
 
+Request the node accounts and convert it to a hash
+
 =back
+
+hash ref containing the accounts as keys
 
 =cut
 
