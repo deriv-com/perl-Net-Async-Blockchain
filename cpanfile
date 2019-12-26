@@ -17,7 +17,7 @@ requires 'Module::PluginFinder', '>= 0.04';
 
 on test => sub {
     requires 'Test::More', '>= 0.98';
-    requires 'Test::MockModule', 0;
+    requires 'Test::MockModule', '>= 0.15';
 };
 
 on develop => sub {
