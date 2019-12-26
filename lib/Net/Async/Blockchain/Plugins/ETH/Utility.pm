@@ -12,6 +12,8 @@ use Math::BigFloat;
 
 Create a new L<Net::Async::Blockchain::Plugins::ETH::Utility> instance
 
+=over 4
+
 =back
 
 L<Net::Async::Blockchain::Plugins::ETH::Utility>
