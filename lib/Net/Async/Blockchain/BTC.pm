@@ -225,7 +225,7 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction;
 
-    my $fee   = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
     my $block = Math::BigInt->new($decoded_raw_transaction->{block});
     my @transactions;
     my %addresses;

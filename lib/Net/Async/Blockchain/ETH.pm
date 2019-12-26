@@ -95,7 +95,7 @@ returns a Future, the on_done response will be the accounts array.
 async sub accounts {
     my $self = shift;
     return $self->{accounts} //= do {
-        $self->get_hash_accounts();
+        await $self->get_hash_accounts();
     };
 }
 
@@ -112,7 +112,7 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        $self->{accounts} = $self->get_hash_accounts();
+        $self->{accounts} = await $self->get_hash_accounts();
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
 }
@@ -132,8 +132,8 @@ hash ref containing the accounts as keys
 async sub get_hash_accounts {
     my ($self) = @_;
 
-    my @accounts_response = await $self->rpc_client->accounts();
-    my %accounts = map { lc($_) => 1 } @accounts_response;
+    my $accounts_response = await $self->rpc_client->accounts();
+    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
     return \%accounts;
 }
 
@@ -231,13 +231,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-        )->map(
+            )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-        )->ordered_futures->completed(),
+            )->ordered_futures->completed(),
         $self->recursive_search(),
-    )->on_fail(
+        )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
