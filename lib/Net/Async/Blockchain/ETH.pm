@@ -133,8 +133,7 @@ async sub get_hash_accounts {
     my ($self) = @_;
 
     my $accounts_response = await $self->rpc_client->accounts();
-    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
-    return \%accounts;
+    return +{map { lc($_) => 1 } $accounts_response->@*};
 }
 
 =head2 rpc_client
@@ -265,12 +264,8 @@ async sub recursive_search {
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
-    unless ($current_block->bgt(0)) {
-        my $syncing = await $self->rpc_client->syncing();
-        $current_block = Math::BigInt->from_hex($syncing->{currentBlock}) if $syncing;
-    }
-
-    return undef unless $current_block;
+    # the node will return empty for the block number when it's not synced
+    die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
     while (1) {
         last unless $current_block->bgt($self->base_block_number);
