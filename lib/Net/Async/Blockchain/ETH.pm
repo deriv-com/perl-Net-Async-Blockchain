@@ -438,11 +438,11 @@ For now this method just check the ERC20 contracts
 
 =over 4
 
-=item * L<Net::Async::Blockchain::Transaction>
+=item * C<$client> - a L<Net::Async::Blockchain::ETH> instance
 
 =back
 
-hashref from an array of L<Net::Async::Blockchain::Transaction>
+Returns an array of hashrefs with fields matching attributes in L<Net::Async::Blockchain::Transaction>
 
 =cut
 
