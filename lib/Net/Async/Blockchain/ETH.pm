@@ -490,9 +490,15 @@ async sub _check_contract_transaction {
             if ($decimals) {
                 # default size 64 + `0x`
                 next unless length($decimals) == 66;
-                $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($decimals));
+                my $bg_decimals = Math::BigInt->from_hex($decimals);
+                # decimal places can't go over 18
+                next unless $bg_decimals->ble(DEFAULT_DECIMAL_PLACES);
+                $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
+                undef $bg_decimals;
+                undef $decimals;
             } else {
                 $transaction_cp->{amount} = $amount;
+                undef $amount;
             }
 
             if (@topics > 1) {
