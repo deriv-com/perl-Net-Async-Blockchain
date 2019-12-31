@@ -93,7 +93,7 @@ returns a Future, the on_done response will be the accounts array.
 async sub accounts {
     my $self = shift;
     return $self->{accounts} //= do {
-        await $self->rpc_client->accounts();
+        await $self->get_hash_accounts();
     };
 }
 
@@ -110,9 +110,28 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        $self->{accounts} = await $self->rpc_client->accounts();
+        $self->{accounts} = await $self->get_hash_accounts();
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
+}
+
+=head2 get_hash_accounts
+
+Request the node accounts and convert it to a hash
+
+=over 4
+
+=back
+
+hash ref containing the accounts as keys
+
+=cut
+
+async sub get_hash_accounts {
+    my ($self) = @_;
+
+    my $accounts_response = await $self->rpc_client->accounts();
+    return +{map { lc($_) => 1 } $accounts_response->@*};
 }
 
 =head2 rpc_client
@@ -344,14 +363,13 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        my $transactions = await $self->_check_contract_transaction($transaction, $receipt);
+        my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
 
-        my @transactions;
-        unless ($transactions) {
+        unless (scalar @transactions) {
             @transactions = ($transaction);
         }
 
-        for my $tx ($transactions->@*) {
+        for my $tx (@transactions) {
             # set the type for each transaction
             # from and to => internal
             # to => received
@@ -395,11 +413,13 @@ async sub _set_transaction_type {
 
     return undef unless $transaction;
 
-    my @accounts = await $self->accounts;
-    return undef unless scalar @accounts;
+    my $accounts = await $self->accounts;
+    return undef unless $accounts;
 
-    my $from = first { lc $transaction->from eq lc $_ } @accounts;
-    my $to   = first { lc $transaction->to eq lc $_ } @accounts;
+    my %accounts = $accounts->%*;
+
+    my $from = $accounts{lc($transaction->from)};
+    my $to   = $accounts{lc($transaction->to)};
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
@@ -431,11 +451,11 @@ async sub _check_contract_transaction {
 
     my $logs = $receipt->{logs};
 
-    return undef unless @$logs;
+    return () unless @$logs;
 
     my @transactions;
 
-    return undef unless $receipt->{status} && hex($receipt->{status}) == 1;
+    return () unless $receipt->{status} && hex($receipt->{status}) == 1;
 
     for my $log ($logs->@*) {
         my @topics = $log->{topics}->@*;
@@ -482,7 +502,7 @@ async sub _check_contract_transaction {
         }
     }
 
-    return \@transactions;
+    return @transactions;
 }
 
 =head2 _remove_zeros
