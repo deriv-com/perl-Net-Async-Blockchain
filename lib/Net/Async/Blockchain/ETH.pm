@@ -109,7 +109,7 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        $self->{accounts} = await $self->get_hash_accounts();
+        await $self->get_hash_accounts();
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
 }
@@ -130,7 +130,11 @@ async sub get_hash_accounts {
     my ($self) = @_;
 
     my $accounts_response = await $self->rpc_client->accounts();
-    return +{map { lc($_) => 1 } $accounts_response->@*};
+    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    $self->{accounts} = \%accounts;
+    undef $accounts_response;
+    undef %accounts;
+    return $self->{accounts};
 }
 
 =head2 rpc_client
