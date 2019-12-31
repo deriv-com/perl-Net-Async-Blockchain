@@ -10,7 +10,6 @@ use Future::AsyncAwait;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::ETH;
 use Net::Async::Blockchain::Client::RPC::ETH;
-use Net::Async::Blockchain::Plugins::ETH::Utility;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 
 my $transaction = Net::Async::Blockchain::Transaction->new(
@@ -28,7 +27,6 @@ my $transaction = Net::Async::Blockchain::Transaction->new(
 );
 
 my $subscription_client = Net::Async::Blockchain::ETH->new();
-my $plugin_utility      = Net::Async::Blockchain::Plugins::ETH::Utility->new();
 
 my $mock_rpc = Test::MockModule->new("Net::Async::Blockchain::Client::RPC::ETH");
 my $mock_eth = Test::MockModule->new("Net::Async::Blockchain::ETH");
@@ -68,9 +66,9 @@ $mock_rpc->mock(
         return {logs => []};
     });
 
-is $plugin_utility->_remove_zeros("0x0f72a63496D0D5F17d3186750b65226201963716"), "0x0f72a63496D0D5F17d3186750b65226201963716",
+is $subscription_client->_remove_zeros("0x0f72a63496D0D5F17d3186750b65226201963716"), "0x0f72a63496D0D5F17d3186750b65226201963716",
     "no zeros to be removed";
-is $plugin_utility->_remove_zeros("0x000000000000000000000000000000000f72a63496D0D5F17d3186750b65226201963716"),
+is $subscription_client->_remove_zeros("0x000000000000000000000000000000000f72a63496D0D5F17d3186750b65226201963716"),
     "0x0f72a63496D0D5F17d3186750b65226201963716", "removes only not needed zeros";
 
 $transaction = Net::Async::Blockchain::Transaction->new(
@@ -97,7 +95,7 @@ my $receipt =
 $mock_rpc->mock(
     call => async sub {
         my ($self, $args) = @_;
-        if ($args->{data} eq Net::Async::Blockchain::Plugins::ETH::ERC20->SYMBOL_SIGNATURE) {
+        if ($args->{data} eq Net::Async::Blockchain::ETH->SYMBOL_SIGNATURE) {
             return
                 "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000035553420000000000000000000000000000000000000000000000000000000000";
         } else {
@@ -105,7 +103,7 @@ $mock_rpc->mock(
         }
     });
 
-my @received_transactions = $subscription_client->_check_plugins($transaction, $receipt->{result})->get;
+my @received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 1, "correct total transactions found";
 is $received_transactions[0]->{currency}, 'USB', 'correct contract symbol';
 is $received_transactions[0]->{to}, '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
@@ -116,12 +114,12 @@ $receipt = decode_json_utf8(
     '{"jsonrpc":"2.0","id":1,"result":{"blockHash":"0xf3284e85de5c9eb5199530d0c47b6006b5c480135975f72c352b4d12d16c9643","blockNumber":"0x897712","contractAddress":null,"cumulativeGasUsed":"0x7f613a","from":"0x65798e5c90a332bbfa37c793f8847c441df42d44","gasUsed":"0x5fb9","logs":[],"logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","status":"0x0","to":"0x72338b82800400f5488eca2b5a37270ba3b7a111","transactionHash":"0x1a7d89fcbba627f9c82ac8edcf93180c84a5ae754418589787a703ad4a974870","transactionIndex":"0x79"}}'
 );
 
-@received_transactions = $subscription_client->_check_plugins($transaction, $receipt->{result})->get;
+@received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 0, "invalid transaction filtered";
 
 $receipt->{result}->{status} = "0x1";
 
-@received_transactions = $subscription_client->_check_plugins($transaction, $receipt->{result})->get;
+@received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 0, "invalid transaction filtered even when the status is true";
 
 $receipt = decode_json_utf8(
@@ -131,7 +129,7 @@ $receipt = decode_json_utf8(
 $mock_rpc->mock(
     call => async sub {
         my ($self, $args) = @_;
-        if ($args->{data} eq Net::Async::Blockchain::Plugins::ETH::ERC20->SYMBOL_SIGNATURE) {
+        if ($args->{data} eq Net::Async::Blockchain::ETH->SYMBOL_SIGNATURE) {
             if ($args->{to} eq "0x61646f3bede9e1a24d387feb661888b4cc1587d8") {
                 return
                     "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000054555522d54000000000000000000000000000000000000000000000000000000";
@@ -152,7 +150,7 @@ $mock_rpc->mock(
             }
         }
     });
-@received_transactions = $subscription_client->_check_plugins($transaction, $receipt->{result})->get;
+@received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 3, "correct total transactions found";
 
 is $received_transactions[0]->{currency}, 'EUR-T', 'correct contract symbol';
