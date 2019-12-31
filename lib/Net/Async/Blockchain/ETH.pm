@@ -41,7 +41,6 @@ use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
-use List::Util qw(any first);
 use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
