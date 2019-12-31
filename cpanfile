@@ -13,7 +13,6 @@ requires 'Ryu::Async', '>= 0.011';
 requires 'Syntax::Keyword::Try', '>= 0.09';
 requires 'ZMQ::LibZMQ3', '>= 1.19';
 requires 'IO::Async::Timer::Periodic', '>= 0.72';
-requires 'Module::PluginFinder', '>= 0.04';
 
 on test => sub {
     requires 'Test::More', '>= 0.98';

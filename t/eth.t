@@ -35,8 +35,8 @@ my $mock_eth = Test::MockModule->new("Net::Async::Blockchain::ETH");
 
 $mock_eth->mock(
     accounts => async sub {
-        my %accounts = (lc "0x1D8b942384c41Be24f202d458e819640E6f0218a" => 1);
-        return \%accounts;
+        my @accounts = ("0x1D8b942384c41Be24f202d458e819640E6f0218a");
+        return @accounts;
     });
 
 my $received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
@@ -45,8 +45,8 @@ is $received_transaction->{type}, 'receive', "valid transaction type for `to` ad
 
 $mock_eth->mock(
     accounts => async sub {
-        my %accounts = (lc "0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F" => 1);
-        return \%accounts;
+        my @accounts = ("0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F");
+        return @accounts;
     });
 
 $received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
@@ -55,11 +55,8 @@ is $received_transaction->{type}, 'sent', "valid transaction type for `from` add
 
 $mock_eth->mock(
     accounts => async sub {
-        my %accounts = (
-            lc "0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F" => 1,
-            lc "0x1D8b942384c41Be24f202d458e819640E6f0218a" => 1
-        );
-        return \%accounts;
+        my @accounts = ("0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F", "0x1D8b942384c41Be24f202d458e819640E6f0218a",);
+        return @accounts;
     });
 
 $received_transaction = $subscription_client->_set_transaction_type($transaction)->get;

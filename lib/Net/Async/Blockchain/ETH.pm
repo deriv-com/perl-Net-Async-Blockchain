@@ -40,9 +40,9 @@ use Ryu::Async;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
-use List::Util qw(any);
+use Digest::Keccak qw(keccak_256_hex);
+use List::Util qw(any first);
 use Syntax::Keyword::Try;
-use Module::PluginFinder;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -51,17 +51,15 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    DEFAULT_CURRENCY       => 'ETH',
-    DEFAULT_DECIMAL_PLACES => 18,
-    UPDATE_ACCOUNTS        => 10,
+    TRANSFER_EVENT_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
+    SYMBOL_SIGNATURE         => '0x' . keccak_256_hex('symbol()'),
+    DECIMALS_SIGNATURE       => '0x' . keccak_256_hex('decimals()'),
+    DEFAULT_CURRENCY         => 'ETH',
+    DEFAULT_DECIMAL_PLACES   => 18,
+    UPDATE_ACCOUNTS          => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
-
-my $filter = Module::PluginFinder->new(
-    search_path => 'Net::Async::Blockchain::Plugins::ETH',
-    filter      => sub { },
-);
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
@@ -95,7 +93,7 @@ returns a Future, the on_done response will be the accounts array.
 async sub accounts {
     my $self = shift;
     return $self->{accounts} //= do {
-        await $self->get_hash_accounts();
+        await $self->rpc_client->accounts();
     };
 }
 
@@ -112,28 +110,9 @@ update the C<accounts> variable every 10 seconds
 async sub update_accounts {
     my $self = shift;
     while (1) {
-        $self->{accounts} = await $self->get_hash_accounts();
+        $self->{accounts} = await $self->rpc_client->accounts();
         await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
     }
-}
-
-=head2 get_hash_accounts
-
-Request the node accounts and convert it to a hash
-
-=over 4
-
-=back
-
-hash ref containing the accounts as keys
-
-=cut
-
-async sub get_hash_accounts {
-    my ($self) = @_;
-
-    my $accounts_response = await $self->rpc_client->accounts();
-    return +{map { lc($_) => 1 } $accounts_response->@*};
 }
 
 =head2 rpc_client
@@ -230,13 +209,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-            )->map(
+        )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-            )->ordered_futures->completed(),
+        )->ordered_futures->completed(),
         $self->recursive_search(),
-        )->on_fail(
+    )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
@@ -365,7 +344,7 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        my @transactions = await $self->_check_plugins($transaction, $receipt);
+        my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
 
         unless (scalar @transactions) {
             @transactions = ($transaction);
@@ -415,13 +394,11 @@ async sub _set_transaction_type {
 
     return undef unless $transaction;
 
-    my $accounts = await $self->accounts;
-    return undef unless $accounts;
+    my @accounts = await $self->accounts;
+    return undef unless scalar @accounts;
 
-    my %accounts = $accounts->%*;
-
-    my $from = $accounts{lc($transaction->from)};
-    my $to   = $accounts{lc($transaction->to)};
+    my $from = first { lc $transaction->from eq lc $_ } @accounts;
+    my $to   = first { lc $transaction->to eq lc $_ } @accounts;
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
@@ -434,7 +411,9 @@ async sub _set_transaction_type {
     return $transaction->type ? $transaction : undef;
 }
 
-=head2 _check_plugins
+=head2 _check_contract_transaction
+
+For now this method just check the ERC20 contracts
 
 =over 4
 
@@ -446,21 +425,135 @@ hashref from an array of L<Net::Async::Blockchain::Transaction>
 
 =cut
 
-async sub _check_plugins {
+async sub _check_contract_transaction {
     my ($self, $transaction, $receipt) = @_;
 
-    my @modules = $filter->modules();
+    my $logs = $receipt->{logs};
+
+    return undef unless @$logs;
+
     my @transactions;
 
-    for my $module (grep { $_->can("enabled") && $_->enabled } @modules) {
-        my @module_response = await $module->check($self, $transaction, $receipt);
-        push(@transactions, @module_response) if @module_response;
-        undef @module_response;
+    return undef unless $receipt->{status} && hex($receipt->{status}) == 1;
+
+    for my $log ($logs->@*) {
+        my @topics = $log->{topics}->@*;
+        if (@topics && $topics[0] eq TRANSFER_EVENT_SIGNATURE) {
+            my $transaction_cp = $transaction->clone();
+
+            my $address = $log->{address};
+            my $amount  = Math::BigFloat->from_hex($log->{data});
+
+            my $hex_symbol = await $self->rpc_client->call({
+                    data => SYMBOL_SIGNATURE,
+                    to   => $address
+                },
+                "latest"
+            );
+
+            my $symbol = $self->_to_string($hex_symbol);
+            next unless $symbol;
+
+            $transaction_cp->{currency} = $symbol;
+
+            my $decimals = await $self->rpc_client->call({
+                    data => DECIMALS_SIGNATURE,
+                    to   => $address
+                },
+                "latest"
+            );
+
+            if ($decimals) {
+                # default size 64 + `0x`
+                next unless length($decimals) == 66;
+                $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($decimals));
+            } else {
+                $transaction_cp->{amount} = $amount;
+            }
+
+            if (@topics > 1) {
+                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
+            }
+
+            $transaction_cp->{contract} = $address;
+
+            push(@transactions, $transaction_cp);
+        }
     }
 
-    undef @modules;
-
     return @transactions;
+}
+
+=head2 _remove_zeros
+
+The address on the topic logs is always a 32 bytes string so we will
+have addresses like: `000000000000000000000000c636d4c672b3d3760b2e759b8ad72546e3156ce9`
+
+We need to remove all the extra zeros and add the `0x`
+
+=over 4
+
+=item * C<trxn_topic> The log string
+
+=back
+
+string
+
+=cut
+
+sub _remove_zeros {
+    my ($self, $trxn_topic) = @_;
+
+    # get only the last 40 characters from the string (ETH address size).
+    my $address = substr($trxn_topic, -40, length($trxn_topic));
+
+    return "0x$address";
+}
+
+=head2 _to_string
+
+The response from the contract will be in the dynamic type format when we call the symbol, so we will
+have a response like: `0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003414c480000000000000000000000000000000000000000000000000000000000`
+
+This is basically:
+
+First 32 bytes: 0000000000000000000000000000000000000000000000000000000000000020 = 32 (offset to start of data part of second parameter)
+Second 32 bytes: 0000000000000000000000000000000000000000000000000000000000000003 = 3 (value size)
+Third 32 bytes: 414c480000000000000000000000000000000000000000000000000000000000 = ALH (padded left value)
+
+=over 4
+
+=item * C<trxn_topic> The log string
+
+=back
+
+string
+
+=cut
+
+sub _to_string {
+    my ($self, $response) = @_;
+
+    return undef unless $response;
+
+    $response = substr($response, 2) if $response =~ /^0x/;
+
+    # split every 32 bytes
+    my @chunks = $response =~ /(.{1,64})/g;
+
+    return undef unless scalar @chunks >= 3;
+
+    # position starting from the second item
+    my $position = Math::BigFloat->from_hex($chunks[0])->bdiv(32)->badd(1)->bint();
+
+    # size
+    my $size = Math::BigFloat->from_hex($chunks[1])->bint();
+
+    # hex string to string
+    my $packed_response = pack('H*', $chunks[$position]);
+
+    # substring by the data size
+    return substr($packed_response, 0, $size);
 }
 
 1;
