@@ -344,10 +344,11 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
+        my $transactions = await $self->_check_contract_transaction($transaction, $receipt);
 
-        unless (scalar @transactions) {
-            @transactions = ($transaction);
+        my @transactions;
+        unless ($transactions) {
+            @transactions = ($transaction->@*);
         }
 
         for my $tx (@transactions) {
@@ -481,7 +482,7 @@ async sub _check_contract_transaction {
         }
     }
 
-    return @transactions;
+    return \@transactions;
 }
 
 =head2 _remove_zeros
