@@ -209,13 +209,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-        )->map(
+            )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-        )->ordered_futures->completed(),
+            )->ordered_futures->completed(),
         $self->recursive_search(),
-    )->on_fail(
+        )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
