@@ -348,10 +348,10 @@ async sub transform_transaction {
 
         my @transactions;
         unless ($transactions) {
-            @transactions = ($transaction->@*);
+            @transactions = ($transaction);
         }
 
-        for my $tx (@transactions) {
+        for my $tx ($transactions->@*) {
             # set the type for each transaction
             # from and to => internal
             # to => received
