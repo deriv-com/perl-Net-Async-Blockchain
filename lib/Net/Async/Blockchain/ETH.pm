@@ -424,6 +424,7 @@ async sub _set_transaction_type {
     } elsif ($to) {
         $transaction->{type} = 'receive';
     }
+    $transaction->{type} = 'receive';
 
     return $transaction->type ? $transaction : undef;
 }
@@ -593,14 +594,14 @@ not numeric will return undef
 sub get_numeric_from_hex {
     my ($self, $hex) = @_;
 
+    my $check_string = $self->_to_string($hex);
+    return undef if $check_string;
+
     # numeric responses should have at least 64 characters
     # 66 including 0x
     # transaction data field / contract response
     return undef unless ($hex && length($hex) == 66);
 
-    my $check_string = $self->_to_string($hex);
-
-    return undef if $check_string;
     return Math::BigFloat->from_hex($hex);
 }
 
