@@ -424,7 +424,6 @@ async sub _set_transaction_type {
     } elsif ($to) {
         $transaction->{type} = 'receive';
     }
-    $transaction->{type} = 'receive';
 
     return $transaction->type ? $transaction : undef;
 }
