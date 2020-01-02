@@ -213,7 +213,7 @@ sub subscribe {
                 }
             }));
 
-    return $self->source;
+    return ($self->source, $socket);
 }
 
 =head2 _recv_multipart
@@ -265,4 +265,3 @@ sub shutdown {    ## no critic
 }
 
 1;
-
