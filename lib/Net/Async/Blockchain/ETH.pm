@@ -42,6 +42,7 @@ use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
+use Scalar::Util qw(looks_like_number);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -132,7 +133,6 @@ async sub get_hash_accounts {
     my $accounts_response = await $self->rpc_client->accounts();
     my %accounts = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
-    undef $accounts_response;
     return $self->{accounts};
 }
 
@@ -366,10 +366,7 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-
-        unless (scalar @transactions) {
-            @transactions = ($transaction);
-        }
+        push(@transactions, $transaction);
 
         for my $tx (@transactions) {
             # set the type for each transaction
@@ -463,7 +460,8 @@ async sub _check_contract_transaction {
             my $transaction_cp = $transaction->clone();
 
             my $address = $log->{address};
-            my $amount  = Math::BigFloat->from_hex($log->{data});
+            my $amount  = $self->get_numeric_from_hex($log->{data});
+            next unless $amount;
 
             my $hex_symbol = await $self->rpc_client->call({
                     data => SYMBOL_SIGNATURE,
@@ -485,17 +483,12 @@ async sub _check_contract_transaction {
             );
 
             if ($decimals) {
-                # default size 64 + `0x`
-                next unless length($decimals) == 66;
-                my $bg_decimals = Math::BigInt->from_hex($decimals);
-                # decimal places can't go over 18
-                next unless $bg_decimals->ble(DEFAULT_DECIMAL_PLACES);
+                my $bg_decimals = $self->get_numeric_from_hex($decimals);
+                # decimals can be 0 is that why we check by reference
+                next unless ref $bg_decimals eq 'Math::BigFloat';
                 $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
-                undef $bg_decimals;
-                undef $decimals;
             } else {
                 $transaction_cp->{amount} = $amount;
-                undef $amount;
             }
 
             if (@topics > 1) {
@@ -581,6 +574,37 @@ sub _to_string {
 
     # substring by the data size
     return substr($packed_response, 0, $size);
+}
+
+=head2 get_numeric_from_hex
+
+Check if the given hexadecimal is numeric and returns the based big number
+
+=over 4
+
+=item * C<hex> hexadecimal response from the blockchain client
+
+=back
+
+Returns a L<Math::BigFloat> value based on the given hexadecimal if it is numeric
+not numeric will return undef
+
+=cut
+
+sub get_numeric_from_hex {
+    my ($self, $hex) = @_;
+    use bigint;
+
+    my $check_string = $self->_to_string($hex);
+
+    return 0 if $check_string;
+
+    my $bigint = hex $hex;
+    if(looks_like_number($bigint)){
+        return Math::BigFloat->from_hex($hex);
+    }
+
+    return undef;
 }
 
 1;
