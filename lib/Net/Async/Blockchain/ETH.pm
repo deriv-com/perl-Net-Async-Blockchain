@@ -418,10 +418,8 @@ async sub _set_transaction_type {
     my $accounts = await $self->accounts;
     return undef unless $accounts;
 
-    my %accounts = $accounts->%*;
-
-    my $from = $accounts{lc($transaction->from)};
-    my $to   = $accounts{lc($transaction->to)};
+    my $from = $accounts->{lc($transaction->from)};
+    my $to   = $accounts->{lc($transaction->to)};
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
