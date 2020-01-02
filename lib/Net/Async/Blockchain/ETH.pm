@@ -42,7 +42,6 @@ use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
-use Scalar::Util qw(looks_like_number);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -593,18 +592,11 @@ not numeric will return undef
 
 sub get_numeric_from_hex {
     my ($self, $hex) = @_;
-    use bigint;
 
     my $check_string = $self->_to_string($hex);
 
-    return 0 if $check_string;
-
-    my $bigint = hex $hex;
-    if(looks_like_number($bigint)){
-        return Math::BigFloat->from_hex($hex);
-    }
-
-    return undef;
+    return undef if $check_string;
+    return Math::BigFloat->from_hex($hex);
 }
 
 1;
