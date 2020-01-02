@@ -133,7 +133,6 @@ async sub get_hash_accounts {
     my %accounts = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
     undef $accounts_response;
-    undef %accounts;
     return $self->{accounts};
 }
 

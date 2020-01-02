@@ -203,4 +203,29 @@ is $received_transactions[2]->{to}, '0x73e44092b5a886a37bea74bfc90911d0c98f6a15'
 is $received_transactions[2]->{amount}->bstr(), Math::BigFloat->new(4262)->bstr, 'correct amount';
 is $received_transactions[2]->{contract}, '0x535bfaeb50580f674bd2e076d6073adf28a46fa8', 'correct contract address';
 
+my @accounts = ("0xa823e6722006afe99e91c30ff5295052fe6b8e32", "0x61646f3bede9e1a24d387feb661888b4cc1587d8", "0x535bfaeb50580f674bd2e076d6073adf28a46fa8");
+
+$mock_eth->unmock_all();
+$mock_rpc->unmock_all();
+
+$mock_rpc->mock(
+    accounts => async sub {
+        my ($self, $args) = @_;
+        return \@accounts;
+    });
+
+$subscription_client->{accounts} = undef;
+my $received_accounts = $subscription_client->accounts()->get;
+
+my %account_hash = $received_accounts->%*;
+
+is scalar keys %account_hash, 3, "all accounts found in the hash";
+
+for my $account (@accounts) {
+    ok $account_hash{$account}, "account received ok: $account";
+    delete $account_hash{$account};
+}
+
+is scalar keys %account_hash, 0, "no accounts left in the hash";
+
 done_testing;
