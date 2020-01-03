@@ -115,7 +115,17 @@ async sub transform_transaction {
 
 =head2 _process_transaction
 
-This will fetch the required parameters from transaction to process further.
+Receives raw transactions and process it to a L<Net::Async::Blockchain::Transaction> object
+
+=over 4
+
+=item * C<omni_transaction> the raw transaction from the command `omni_gettransaction`
+
+=item * C<parent_transaction> the raw transaction from the command `gettransaction`
+
+=back
+
+Returns an array of transactions.
 
 =cut
 
@@ -140,7 +150,7 @@ async sub _process_transaction {
     # if categories has send and receive it means that is an internal transaction
     my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
-    return undef unless $transaction_type;
+    return () unless $transaction_type;
 
     if ($omni_transaction->{type} eq "Send All") {
 
@@ -187,13 +197,21 @@ async sub _process_transaction {
 
     return @transaction if @transaction;
     
-    return ;
+    return ();
 
 }
 
 =head2 mapping_address
 
-This will return from and to hash.
+Maps the FROM and TO addresses.
+
+=over 4
+
+=item * C<omni_transaction> the raw transaction from the command `omni_gettransaction`
+
+=back
+
+Returns hash of FROM and TO address 
 
 =cut
 
