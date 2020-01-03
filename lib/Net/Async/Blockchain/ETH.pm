@@ -484,7 +484,7 @@ async sub _check_contract_transaction {
             if ($decimals) {
                 my $bg_decimals = $self->get_numeric_from_hex($decimals);
                 # decimals can be 0 is that why we check by reference
-                next unless ref $bg_decimals eq 'Math::BigFloat';
+                next unless eval { $bg_decimals->isa('Math::BigFloat') };
                 $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
             } else {
                 $transaction_cp->{amount} = $amount;
