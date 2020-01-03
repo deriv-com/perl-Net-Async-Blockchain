@@ -108,10 +108,8 @@ async sub transform_transaction {
 
     my @transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
 
-    if (@transaction) {
-
-        for my $transaction (@transaction) { $self->source->emit($transaction); }
-    }
+    for my $transaction (@transaction) { $self->source->emit($transaction); }
+    
     return 1;
 }
 
@@ -188,6 +186,8 @@ async sub _process_transaction {
     }
 
     return @transaction if @transaction;
+    
+    return ;
 
 }
 
