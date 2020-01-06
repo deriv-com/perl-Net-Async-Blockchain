@@ -201,7 +201,7 @@ async sub _process_transaction {
 
 }
 
-=head2 transform_transaction
+=head2 mapping_address
 
 Maps the FROM and TO addresses.
 
