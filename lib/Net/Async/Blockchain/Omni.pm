@@ -109,7 +109,7 @@ async sub transform_transaction {
     my @transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
 
     for my $transaction (@transaction) { $self->source->emit($transaction); }
-    
+
     return 1;
 }
 
@@ -119,13 +119,13 @@ Receives raw transactions and process it to a L<Net::Async::Blockchain::Transact
 
 =over 4
 
-=item * C<omni_transaction> the raw transaction from the command `omni_gettransaction`
+=item * C<omni_transaction> the response from the command `omni_gettransaction`
 
-=item * C<parent_transaction> the raw transaction from the command `gettransaction`
+=item * C<parent_transaction> the response from the command `gettransaction`
 
 =back
 
-Returns an array of transactions.
+Return an array.
 
 =cut
 
@@ -160,7 +160,7 @@ async sub _process_transaction {
 
         for my $propertyid (keys %sendall) {
 
-             push @transaction , Net::Async::Blockchain::Transaction->new(
+            push @transaction, Net::Async::Blockchain::Transaction->new(
 
                 currency     => $self->currency_symbol,
                 hash         => $omni_transaction->{txid},
@@ -196,22 +196,22 @@ async sub _process_transaction {
     }
 
     return @transaction if @transaction;
-    
+
     return ();
 
 }
 
-=head2 mapping_address
+=head2 transform_transaction
 
 Maps the FROM and TO addresses.
 
 =over 4
 
-=item * C<omni_transaction> the raw transaction from the command `omni_gettransaction`
+=item * C<omni_transaction> the response from the command `omni_gettransaction`
 
 =back
 
-Returns hash of FROM and TO address 
+L<Future>
 
 =cut
 
