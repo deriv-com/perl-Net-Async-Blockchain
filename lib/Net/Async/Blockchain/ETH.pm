@@ -96,22 +96,21 @@ async sub accounts {
     };
 }
 
-=head2 update_accounts
+=head2 latest_accounts_update
 
-update the C<accounts> variable every 10 seconds
+stores the time of the latest account update
 
 =over 4
 
 =back
 
+Returns L<time> of the latest account update
+
 =cut
 
-async sub update_accounts {
-    my $self = shift;
-    while (1) {
-        await $self->get_hash_accounts();
-        await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
-    }
+sub latest_accounts_update : method {
+    my ($self) = @_;
+    return $self->{latest_accounts_update};
 }
 
 =head2 get_hash_accounts
@@ -129,6 +128,7 @@ hash ref containing the accounts as keys
 async sub get_hash_accounts {
     my ($self) = @_;
 
+    $self->{latest_accounts_update} = time;
     my $accounts_response = await $self->rpc_client->accounts();
     my %accounts = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
@@ -210,7 +210,7 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     Future->needs_all(
-        $self->update_accounts(),
+        $self->get_hash_accounts(),
         $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
@@ -229,13 +229,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-            )->map(
+        )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-            )->ordered_futures->completed(),
+        )->ordered_futures->completed(),
         $self->recursive_search(),
-        )->on_fail(
+    )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
@@ -366,6 +366,10 @@ async sub transform_transaction {
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push(@transactions, $transaction);
+
+        if ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time) {
+            await $self->get_hash_accounts();
+        }
 
         for my $tx (@transactions) {
             # set the type for each transaction
