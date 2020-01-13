@@ -151,7 +151,7 @@ sub subscribe {
     my $error_handler = sub {
         my $error = shift;
         $self->source->fail($error);
-        zmq_close($zmq_client_source->socket());
+        zmq_close($self->zmq_client->socket());
     };
 
     Future->needs_all(
