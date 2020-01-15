@@ -116,7 +116,7 @@ Integer time in seconds
 
 sub msg_timeout : method { shift->{msg_timeout} }
 
-=head2 socket
+=head2 socket_client
 
 ZMQ socket
 
@@ -128,7 +128,9 @@ return the socket for ZMQ L<zmq_socket>
 
 =cut
 
-sub socket : method { shift->{socket} }
+sub socket_client : method { 
+    shift->{socket_client} 
+}
 
 =head2 configure
 
@@ -196,7 +198,7 @@ sub subscribe {
     die "zmq_ctc_new failed with $!" unless $ctxt;
 
     my $socket = zmq_socket($ctxt, ZMQ_SUB);
-    $self->{socket} = $socket;
+    $self->{socket_client} = $socket;
 
     # zmq_setsockopt_string is not exported
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);

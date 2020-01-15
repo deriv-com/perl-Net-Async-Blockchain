@@ -74,7 +74,7 @@ sub rpc_client : method {
     };
 }
 
-=head2 new_zmq_client
+=head2 zmq_client
 
 Returns the current instance for L<Net::Async::Blockchain::Client::ZMQ> if not created
 create a new one.
