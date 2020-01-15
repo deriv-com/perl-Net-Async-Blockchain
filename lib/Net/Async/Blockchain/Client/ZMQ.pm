@@ -124,7 +124,7 @@ ZMQ socket
 
 =back
 
-return the socket for ZMQ L<ZMQ::LibZMQ3::zmq_socket>
+return the socket for ZMQ L<ZMQ::LibZMQ3>
 
 =cut
 
