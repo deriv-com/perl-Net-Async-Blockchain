@@ -5,7 +5,6 @@ use warnings;
 
 our $VERSION = '0.001';
 
-
 =head1 NAME
 
 Net::Async::Blockchain::BTC - Bitcoin based subscription.
@@ -88,12 +87,11 @@ L<Net::Async::Blockchain::Client::ZMQ>
 
 =cut
 
-
 sub zmq_client : method {
     my ($self) = @_;
     return $self->{zmq_client} //= do {
         $self->new_zmq_client();
-    }
+        }
 }
 
 =head2 new_zmq_client
@@ -154,8 +152,7 @@ sub subscribe {
         zmq_close($self->zmq_client->socket());
     };
 
-    Future->needs_all(
-        $zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
+    Future->needs_all($zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
         $self->recursive_search())->on_fail($error_handler)->retain;
 
     return $self->source;
@@ -267,7 +264,7 @@ async sub transform_transaction {
         my %categories;
         for my $detail (@details) {
             $amount->badd($detail->{amount});
-            $categories{ $detail->{category} } = 1;
+            $categories{$detail->{category}} = 1;
         }
 
         my @categories = keys %categories;
