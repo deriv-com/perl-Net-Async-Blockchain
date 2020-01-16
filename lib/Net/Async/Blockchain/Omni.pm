@@ -129,7 +129,6 @@ Return an array.
 
 =cut
 
-use Data::Dumper;
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
