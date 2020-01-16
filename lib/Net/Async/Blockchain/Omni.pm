@@ -129,10 +129,11 @@ Return an array.
 
 =cut
 
+use Data::Dumper;
 async sub _process_transaction {
     my ($self, $omni_transaction, $parent_transaction) = @_;
 
-    my (@transaction, %sendall, $amount);
+    my (@transaction, %sendall, $amount, $transaction_type);
 
     $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
     my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
@@ -140,15 +141,23 @@ async sub _process_transaction {
 
     my ($from, $to) = await mapping_address($self, $omni_transaction);
 
-    my %category;
-    for my $tx ($parent_transaction->{details}->@*) {
-        $category{$tx->{category}} = 1;
-    }
-    my @categories = keys %category;
+    my $count = 0;
+    my ($category, $to_response, $from_response);
 
-    # it can be receive, sent, internal
-    # if categories has send and receive it means that is an internal transaction
-    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
+    $from_response = await $self->rpc_client->list_by_addresses($from->{address});
+    if (@$from_response) {
+        $transaction_type = 'sent';
+        $count++;
+    }
+
+    $to_response = await $self->rpc_client->list_by_addresses($to->{address});
+    if (@$to_response) {
+        $transaction_type = 'receive';
+        $count++;
+    }
+    if ($count > 1) {
+        $transaction_type = 'internal';
+    }
 
     return () unless $transaction_type;
 
