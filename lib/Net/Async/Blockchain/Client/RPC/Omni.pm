@@ -62,7 +62,7 @@ sub get_detailed_transaction {
     return $self->_request('gettransaction', @params);
 }
 
-=head2 list_addresses
+=head2 list_by_addresses
 
 https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/listreceivedbyaddress/
 

@@ -92,11 +92,10 @@ async sub transform_transaction {
 
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
-    my ($omni_transaction, $parent_transaction);
+    my $omni_transaction;
 
     try {
         $omni_transaction   = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-        $parent_transaction = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
@@ -106,7 +105,7 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $omni_transaction && $omni_transaction->{ismine};
 
-    my @transaction = await _process_transaction($self, $omni_transaction, $parent_transaction);
+    my @transaction = await _process_transaction($self, $omni_transaction);
 
     for my $transaction (@transaction) { $self->source->emit($transaction); }
 
@@ -130,7 +129,7 @@ Return an array.
 =cut
 
 async sub _process_transaction {
-    my ($self, $omni_transaction, $parent_transaction) = @_;
+    my ($self, $omni_transaction) = @_;
 
     my (@transaction, %sendall, $amount, $transaction_type);
 
@@ -141,7 +140,7 @@ async sub _process_transaction {
     my ($from, $to) = await mapping_address($self, $omni_transaction);
 
     my $count = 0;
-    my ($category, $to_response, $from_response);
+    my ($to_response, $from_response);
 
     $from_response = await $self->rpc_client->list_by_addresses($from->{address});
     if (@$from_response) {
