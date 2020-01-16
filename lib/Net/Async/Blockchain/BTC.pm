@@ -149,7 +149,7 @@ sub subscribe {
     my $error_handler = sub {
         my $error = shift;
         $self->source->fail($error);
-        zmq_close($self->zmq_client->socket());
+        zmq_close($self->zmq_client->socket_client());
     };
 
     Future->needs_all($zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
