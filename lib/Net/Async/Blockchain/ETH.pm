@@ -89,11 +89,9 @@ returns a Future, the on_done response will be the accounts array.
 
 =cut
 
-async sub accounts {
+sub accounts {
     my $self = shift;
-    return $self->{accounts} //= do {
-        await $self->get_hash_accounts();
-    };
+    return $self->{accounts};
 }
 
 =head2 latest_accounts_update
@@ -450,7 +448,7 @@ async sub _check_contract_transaction {
 
     my $logs = $receipt->{logs};
 
-    return () unless @$logs;
+    return () unless $logs && @$logs;
 
     my @transactions;
 
