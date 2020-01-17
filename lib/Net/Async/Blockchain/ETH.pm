@@ -210,7 +210,6 @@ sub subscribe {
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
 
     Future->needs_all(
-        $self->get_hash_accounts(),
         $self->new_websocket_client()->eth_subscribe($subscription)
             # the first response from the node is the subscription id
             # once we received it we can start to listening the subscription.
@@ -367,7 +366,7 @@ async sub transform_transaction {
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push(@transactions, $transaction);
 
-        if ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time) {
+        if (!$self->{accounts} || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
         }
 
