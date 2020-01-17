@@ -32,7 +32,7 @@ my $mock_rpc = Test::MockModule->new("Net::Async::Blockchain::Client::RPC::ETH")
 my $mock_eth = Test::MockModule->new("Net::Async::Blockchain::ETH");
 
 $mock_eth->mock(
-    accounts => async sub {
+    accounts => sub {
         my %accounts = (lc "0x1D8b942384c41Be24f202d458e819640E6f0218a" => 1);
         return \%accounts;
     });
@@ -42,7 +42,7 @@ my $received_transaction = $subscription_client->_set_transaction_type($transact
 is $received_transaction->{type}, 'receive', "valid transaction type for `to` address";
 
 $mock_eth->mock(
-    accounts => async sub {
+    accounts => sub {
         my %accounts = (lc "0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F" => 1);
         return \%accounts;
     });
@@ -52,7 +52,7 @@ $received_transaction = $subscription_client->_set_transaction_type($transaction
 is $received_transaction->{type}, 'sent', "valid transaction type for `from` address";
 
 $mock_eth->mock(
-    accounts => async sub {
+    accounts => sub {
         my %accounts = (
             lc "0xe6c5De11DEc1aCda652BD7bF1E96fb56662E9f8F" => 1,
             lc "0x1D8b942384c41Be24f202d458e819640E6f0218a" => 1
@@ -204,7 +204,8 @@ $mock_rpc->mock(
     });
 
 $subscription_client->{accounts} = undef;
-my $received_accounts = $subscription_client->accounts()->get;
+$subscription_client->get_hash_accounts()->get;
+my $received_accounts = $subscription_client->accounts();
 
 my %account_hash = $received_accounts->%*;
 
