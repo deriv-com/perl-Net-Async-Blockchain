@@ -32,7 +32,6 @@ Omnicore based RPC calls
 no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC::BTC);
-use JSON;
 
 =head2 get_transaction
 
@@ -70,7 +69,7 @@ https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/listreceivedbyaddress/
 
 sub list_by_addresses {
     my ($self, $address) = @_;
-    return $self->_request("listreceivedbyaddress", 1, JSON->false, JSON->false, $address)->get();
+    return $self->_request("listreceivedbyaddress", 1, \0, \0, $address);
 }
 
 1;
