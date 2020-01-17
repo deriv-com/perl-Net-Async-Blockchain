@@ -141,7 +141,7 @@ async sub request {
 
     await $self->check_call_limit();
 
-    my $thirdparty_config = $self->config->{thirdparty_api};
+    my $thirdparty_config = $self->config->{ETH}->{thirdparty_api};
 
     # we could just use `keys $thridparty_config->%*` here but since we want this
     # in this specific order we are fixing the API names here, the etherscan API
