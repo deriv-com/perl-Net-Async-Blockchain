@@ -5,6 +5,9 @@ use warnings;
 use 5.014000;
 
 use ExtUtils::MakeMaker 6.48;
+use File::ShareDir::Install;
+
+install_share dist => 'share';
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "base for blockchain subscription clients.",
@@ -80,3 +83,6 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
   unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
 
 WriteMakefile(%WriteMakefileArgs);
+
+package MY;
+use File::ShareDir::Install 'postamble';
