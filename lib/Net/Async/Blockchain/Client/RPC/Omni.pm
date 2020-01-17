@@ -70,7 +70,7 @@ https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/listreceivedbyaddress/
 
 sub list_by_addresses {
     my ($self, $address) = @_;
-    return $self->_request("listreceivedbyaddress", 1, JSON->false, JSON->false, $address);
+    return $self->_request("listreceivedbyaddress", 1, JSON->false, JSON->false, $address)->get();
 }
 
 1;
