@@ -18,14 +18,29 @@ use File::ShareDir;
 
 use parent qw(IO::Async::Notifier);
 
-sub new {
-    my ($class, $args) = @_;
+=head2 configure
 
-    my $self = {
-        tp_api_config => $args->{tp_api_config}
-    };
+Any additional configuration that is not described on L<IO::Async::Notifier>
+must be included and removed here.
 
-    return bless $self, $class;
+=over 4
+
+=item * C<endpoint>
+
+=item * C<timeout> connection timeout (seconds)
+
+=back
+
+=cut
+
+sub configure {
+    my ($self, %params) = @_;
+
+    for my $k (qw(tp_api_config)) {
+        $self->{$k} = delete $params{$k} if exists $params{$k};
+    }
+
+    $self->SUPER::configure(%params);
 }
 
 =head2 http_client
