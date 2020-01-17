@@ -364,7 +364,7 @@ async sub transform_transaction {
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push(@transactions, $transaction);
 
-        if (!$self->{accounts} || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
+        if (!$self->accounts || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
         }
 
@@ -412,7 +412,7 @@ async sub _set_transaction_type {
 
     return undef unless $transaction;
 
-    my $accounts = await $self->accounts;
+    my $accounts = $self->accounts;
     return undef unless $accounts;
 
     my $from = $accounts->{lc($transaction->from)};
