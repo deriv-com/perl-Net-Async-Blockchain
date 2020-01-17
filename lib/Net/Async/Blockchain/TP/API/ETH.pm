@@ -21,9 +21,11 @@ use parent qw(IO::Async::Notifier);
 sub new {
     my ($class, $args) = @_;
 
-    $self->{tp_api_config} = $args->{tp_api_config};
-    
-    return $self;
+    my $self = {
+        tp_api_config => $args->{tp_api_config}
+    };
+
+    return bless $self, $class;
 }
 
 =head2 http_client
