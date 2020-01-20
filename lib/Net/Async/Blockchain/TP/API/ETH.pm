@@ -63,7 +63,10 @@ sub http_client : method {
 
 sub config : method {
     my $self = shift;
-    return $self->{tp_api_config} //= YAML::XS::LoadFile(File::ShareDir::dist_file('Net-Async-Blockchain', 'tp_api_config.yml'));
+    return $self->{tp_api_config} //= do {
+        my $tp_api_config = YAML::XS::LoadFile(File::ShareDir::dist_file('Net-Async-Blockchain', 'tp_api_config.yml'));
+        $tp_api_config->{ETH}->{thirdparty_api};
+    };
 }
 
 sub latest_call : method {
@@ -154,14 +157,12 @@ async sub request {
 
     await $self->check_call_limit();
 
-    my $thirdparty_config = $self->config->{ETH}->{thirdparty_api};
-
     # we could just use `keys $thridparty_config->%*` here but since we want this
     # in this specific order we are fixing the API names here, the etherscan API
     # generally answer faster than the blockscout, so better to leave blockscout as
     # the backup one.
     for my $thirdparty_api (qw(etherscan blockscout)) {
-        my $url = $self->create_url($address, $method, $thirdparty_config->{$thirdparty_api});
+        my $url = $self->create_url($address, $method, $self->config->{$thirdparty_api});
 
         my $response = await $self->http_client->GET($url);
         try {
