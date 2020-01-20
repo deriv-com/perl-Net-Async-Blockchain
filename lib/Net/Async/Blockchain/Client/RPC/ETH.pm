@@ -135,7 +135,6 @@ sub get_last_block {
     return $self->_request('eth_blockNumber');
 }
 
-
 =head2 get_code
 
 https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getcode

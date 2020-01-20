@@ -356,9 +356,9 @@ async sub transform_transaction {
     my $transaction;
 
     try {
-        my $gas     = $decoded_transaction->{gas};
-        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-        my $address_code = await $self->rpc_client->get_code($decoded_transaction->{to},'latest');
+        my $gas          = $decoded_transaction->{gas};
+        my $receipt      = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        my $address_code = await $self->rpc_client->get_code($decoded_transaction->{to}, 'latest');
 
         $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
 
@@ -384,8 +384,7 @@ async sub transform_transaction {
         );
 
         my @transactions;
-        if ($address_code ne '0x')
-        {
+        if ($address_code ne '0x') {
             my @contract_transaction = await $self->_check_contract_transaction($transaction, $receipt);
             my @internal_transaction = await $self->_check_internal_transaction($transaction);
             push(@transactions, @contract_transaction);
@@ -533,7 +532,6 @@ async sub _check_contract_transaction {
     return @transactions;
 }
 
-
 =head2 _check_internal_transaction
 
 For now this method just check the internal transactions
@@ -551,15 +549,15 @@ async sub _check_internal_transaction {
     for my $internal ($internal_transactions->@*) {
         next if $internal->{value} == 0 || $internal->{type} ne 'call' || $internal->{isError};
         my $transaction_cp = $transaction->clone();
-        $transaction_cp->{amount} = Math::BigFloat->new($internal->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
-        $transaction_cp->{to} = $internal->{to};
-        $transaction_cp->{from} = $internal->{from};
-        $transaction_cp->{block} = $internal->{blockNumber};
+        $transaction_cp->{amount}    = Math::BigFloat->new($internal->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
+        $transaction_cp->{to}        = $internal->{to};
+        $transaction_cp->{from}      = $internal->{from};
+        $transaction_cp->{block}     = $internal->{blockNumber};
         $transaction_cp->{timestamp} = $internal->{timeStamp};
-        $transaction_cp->{contract} = $inernal->{contractAddress};
-        $transaction_cp->{data} = $inernal->{input};
-        
-        push(@transactions,$transaction_cp);
+        $transaction_cp->{contract}  = $inernal->{contractAddress};
+        $transaction_cp->{data}      = $inernal->{input};
+
+        push(@transactions, $transaction_cp);
     }
 
     return @transactions;
