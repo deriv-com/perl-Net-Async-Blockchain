@@ -358,6 +358,7 @@ async sub transform_transaction {
     try {
         my $gas     = $decoded_transaction->{gas};
         my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        my $address_code = await $self->rpc_client->get_code($decoded_transaction->{to},'latest');
 
         $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
 
@@ -382,7 +383,11 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
+        my @transactions;
+        if ($address_code ne '0x')
+        {
+            @transactions = await $self->_check_contract_transaction($transaction, $receipt);
+        }
         push(@transactions, $transaction);
 
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
