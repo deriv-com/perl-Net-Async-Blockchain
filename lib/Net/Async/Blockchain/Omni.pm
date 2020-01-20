@@ -96,7 +96,7 @@ async sub transform_transaction {
     my $detailed_transaction;
     try {
         $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-        $detailed_transaction   = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
+        $detailed_transaction = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
