@@ -120,8 +120,6 @@ Receives raw transactions and process it to a L<Net::Async::Blockchain::Transact
 
 =item * C<omni_transaction> the response from the command `omni_gettransaction`
 
-=item * C<parent_transaction> the response from the command `gettransaction`
-
 =back
 
 Return an array.
