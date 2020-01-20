@@ -200,10 +200,7 @@ L<Net::Async::Blockchain::TP::API::ETH>
 sub tp_api : method {
     my ($self) = @_;
     return $self->{tp_api} //= do {
-        $self->add_child(
-            my $http_client = Net::Async::Blockchain::TP::API::ETH->new(
-                tp_api_config => $self->tp_api_config
-            ));
+        $self->add_child(my $http_client = Net::Async::Blockchain::TP::API::ETH->new(tp_api_config => $self->tp_api_config));
         $http_client;
     };
 }
@@ -250,13 +247,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-        )->map(
+            )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-        )->ordered_futures->completed(),
+            )->ordered_futures->completed(),
         $self->recursive_search(),
-    )->on_fail(
+        )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
