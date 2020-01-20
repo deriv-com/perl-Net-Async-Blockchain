@@ -554,8 +554,8 @@ async sub _check_internal_transaction {
         $transaction_cp->{from}      = $internal->{from};
         $transaction_cp->{block}     = $internal->{blockNumber};
         $transaction_cp->{timestamp} = $internal->{timeStamp};
-        $transaction_cp->{contract}  = $inernal->{contractAddress};
-        $transaction_cp->{data}      = $inernal->{input};
+        $transaction_cp->{contract}  = $internal->{contractAddress};
+        $transaction_cp->{data}      = $internal->{input};
 
         push(@transactions, $transaction_cp);
     }
