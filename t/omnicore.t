@@ -13,9 +13,6 @@ use Net::Async::Blockchain::Client::RPC::Omni;
 use IO::Async::Loop;
 use BOM::CTC::Currency;
 
-use Data::Dumper;
-
-
 subtest 'Test: Subroutines' => sub {
     my $currency = BOM::CTC::Currency->new(
         currency_code => 'UST',
