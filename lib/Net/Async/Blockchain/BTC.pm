@@ -5,7 +5,6 @@ use warnings;
 
 our $VERSION = '0.001';
 
-
 =head1 NAME
 
 Net::Async::Blockchain::BTC - Bitcoin based subscription.
@@ -75,6 +74,26 @@ sub rpc_client : method {
     };
 }
 
+=head2 zmq_client
+
+Returns the current instance for L<Net::Async::Blockchain::Client::ZMQ> if not created
+create a new one.
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::Client::ZMQ>
+
+=cut
+
+sub zmq_client : method {
+    my ($self) = @_;
+    return $self->{zmq_client} //= do {
+        $self->new_zmq_client();
+        }
+}
+
 =head2 new_zmq_client
 
 Create a new L<Net::Async::Blockchain::Client::ZMQ> instance.
@@ -90,7 +109,7 @@ L<Net::Async::Blockchain::Client::ZMQ>
 sub new_zmq_client {
     my ($self) = @_;
     $self->add_child(
-        my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
+        $self->{zmq_client} = Net::Async::Blockchain::Client::ZMQ->new(
             endpoint    => $self->subscription_url,
             timeout     => $self->subscription_timeout,
             msg_timeout => $self->subscription_msg_timeout,
@@ -100,7 +119,7 @@ sub new_zmq_client {
                 # finishes the final client source
                 $self->source->finish();
             }));
-    return $zmq_client;
+    return $self->{zmq_client};
 }
 
 =head2 subscribe
@@ -125,16 +144,15 @@ sub subscribe {
     $subscription = $subscription_dictionary{$subscription};
 
     die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    my ($zmq_client_source, $zmq_client_socket) = $self->new_zmq_client->subscribe($subscription);
+    my $zmq_client_source = $self->new_zmq_client->subscribe($subscription);
 
     my $error_handler = sub {
         my $error = shift;
         $self->source->fail($error);
-        zmq_close($zmq_client_socket);
+        zmq_close($self->zmq_client->socket_client());
     };
 
-    Future->needs_all(
-        $zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
+    Future->needs_all($zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
         $self->recursive_search())->on_fail($error_handler)->retain;
 
     return $self->source;
@@ -246,7 +264,7 @@ async sub transform_transaction {
         my %categories;
         for my $detail (@details) {
             $amount->badd($detail->{amount});
-            $categories{ $detail->{category} } = 1;
+            $categories{$detail->{category}} = 1;
         }
 
         my @categories = keys %categories;
