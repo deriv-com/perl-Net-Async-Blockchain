@@ -386,7 +386,10 @@ async sub transform_transaction {
         my @transactions;
         if ($address_code ne '0x')
         {
-            @transactions = await $self->_check_contract_transaction($transaction, $receipt);
+            my @contract_transaction = await $self->_check_contract_transaction($transaction, $receipt);
+            my @internal_transaction = await $self->_check_internal_transaction($transaction);
+            push(@transactions, @contract_transaction);
+            push(@transactions, @internal_transaction);
         }
         push(@transactions, $transaction);
 
@@ -526,6 +529,23 @@ async sub _check_contract_transaction {
             push(@transactions, $transaction_cp);
         }
     }
+
+    return @transactions;
+}
+
+
+=head2 _check_internal_transaction
+
+For now this method just check the internal transactions
+
+Returns an array of hashrefs with fields matching attributes in L<Net::Async::Blockchain::Transaction>
+
+=cut
+
+async sub _check_internal_transaction {
+    my ($self, $transaction) = @_;
+
+    my @transactions;
 
     return @transactions;
 }
