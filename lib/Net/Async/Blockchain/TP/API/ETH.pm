@@ -25,9 +25,7 @@ must be included and removed here.
 
 =over 4
 
-=item * C<endpoint>
-
-=item * C<timeout> connection timeout (seconds)
+=item * C<tp_api_config>
 
 =back
 
