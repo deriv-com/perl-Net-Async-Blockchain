@@ -63,6 +63,10 @@ sub http_client : method {
     };
 }
 
+=head2 config
+Return the third party api config
+=cut
+
 sub config : method {
     my $self = shift;
     return $self->{tp_api_config} //= do {
@@ -71,10 +75,18 @@ sub config : method {
     };
 }
 
+=head2 latest_call
+Return the last time we have called the third party api
+=cut
+
 sub latest_call : method {
     my $self = shift;
     return $self->{latest_call} //= time;
 }
+
+=head2 latest_counter
+Return the api calling counter value
+=cut
 
 sub latest_counter : method {
     my $self = shift;
@@ -105,6 +117,10 @@ async sub check_call_limit {
 
     return $status;
 }
+
+=head2 latest_counter
+Create 
+=cut
 
 sub create_url {
     my ($self, $tx_hash, $method, $api) = @_;
