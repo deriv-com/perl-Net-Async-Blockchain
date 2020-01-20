@@ -184,6 +184,30 @@ sub new_websocket_client {
     return $client;
 }
 
+=head2 tp_api
+
+Create an L<Net::Async::Blockchain::TP::API::ETH> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::Blockchain::TP::API::ETH>
+
+=cut
+
+sub tp_api : method {
+    my ($self) = @_;
+    return $self->{tp_api} //= do {
+        $self->add_child(
+            my $http_client = Net::Async::Blockchain::TP::API::ETH->new(
+                tp_api_config => $self->tp_api_config
+            ));
+        $http_client;
+    };
+}
+
 =head2 subscribe
 
 Connect to the websocket port and subscribe to the implemented subscription:
