@@ -546,13 +546,18 @@ async sub _check_internal_transaction {
     my ($self, $transaction) = @_;
 
     my @transactions;
-    my $internal_transactions = await $self->tp_api->get_internal_transactions($transaction->{to});
+    my $internal_transactions = await $self->tp_api->get_internal_transactions($transaction->{hash});
     return undef unless $internal_transactions;
     for my $internal ($internal_transactions->@*) {
-        next if $internal->{value} == 0 || $internal->{type} ne 'call';
+        next if $internal->{value} == 0 || $internal->{type} ne 'call' || $internal->{isError};
         my $transaction_cp = $transaction->clone();
-        my $transaction_hash = $internal->{hash} // $internal->{transactionHash};
-        $transaction_cp->{hash} = $transaction_hash;
+        $transaction_cp->{amount} = Math::BigFloat->new($internal->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
+        $transaction_cp->{to} = $internal->{to};
+        $transaction_cp->{from} = $internal->{from};
+        $transaction_cp->{block} = $internal->{blockNumber};
+        $transaction_cp->{timestamp} = $internal->{timeStamp};
+        $transaction_cp->{contract} = $inernal->{contractAddress};
+        $transaction_cp->{data} = $inernal->{input};
         
         push(@transactions,$transaction_cp);
     }

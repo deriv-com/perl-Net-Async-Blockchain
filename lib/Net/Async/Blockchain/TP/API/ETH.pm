@@ -9,6 +9,8 @@ use strict;
 use warnings;
 no indirect;
 
+our $VERSION = '0.001';
+
 use Future::AsyncAwait;
 use Net::Async::HTTP;
 use JSON::MaybeUTF8 qw(decode_json_utf8);
