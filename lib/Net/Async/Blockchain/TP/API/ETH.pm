@@ -105,12 +105,12 @@ async sub check_call_limit {
 }
 
 sub create_url {
-    my ($self, $address, $method, $api) = @_;
+    my ($self, $tx_hash, $method, $api) = @_;
 
     my $api_url = $api->{url};
     my $token   = $api->{token};
 
-    my $url = sprintf("%s?module=account&action=%s&address=%s&sort=asc&apikey=%s", $api_url, $method, $address, $token // "");
+    my $url = sprintf("%s?module=account&action=%s&txhash=%s&apikey=%s", $api_url, $method, $tx_hash, $token // "");
     return $url;
 }
 
@@ -118,29 +118,29 @@ sub create_url {
 Request from API using the address as parameter
 all the contract internal transactions for this address.
 =over4
-=item* C<$address> address to list the contract internal transactions
+=item* C<$tx_hash> the transaction hash
 =back
-Return an array reference containing all internal transactions for this address
+Return an array reference containing all internal transactions for this transaction hash
 =cut
 
 async sub get_internal_transactions {
-    my ($self, $address) = @_;
-    return await $self->request($address, "txlistinternal");
+    my ($self, $tx_hash) = @_;
+    return await $self->request($tx_hash, "txlistinternal");
 }
 
-=head2 get_normal_transactions
-Request from API using the address as parameter
-all the transactions for this address
-=over4
-=item* C<$address> address to list the address transactions
-=back
-Return an array reference containing all the transactions for this address
-=cut
+# =head2 get_normal_transactions
+# Request from API using the address as parameter
+# all the transactions for this address
+# =over4
+# =item* C<$address> address to list the address transactions
+# =back
+# Return an array reference containing all the transactions for this address
+# =cut
 
-async sub get_normal_transactions {
-    my ($self, $address) = @_;
-    return await $self->request($address, "txlist");
-}
+# async sub get_normal_transactions {
+#     my ($self, $address) = @_;
+#     return await $self->request($address, "txlist");
+# }
 
 =head2 request
 List all APIs available in the configuration file and do the request for each one them
