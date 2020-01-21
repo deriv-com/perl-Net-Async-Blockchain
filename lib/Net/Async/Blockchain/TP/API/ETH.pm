@@ -64,7 +64,7 @@ sub http_client : method {
 }
 
 =head2 config
-Return the third party api config
+Return the third party API config
 =cut
 
 sub config : method {
@@ -76,7 +76,7 @@ sub config : method {
 }
 
 =head2 latest_call
-Return the last time we have called the third party api
+Return the last time we have called the third party API
 =cut
 
 sub latest_call : method {
@@ -85,7 +85,7 @@ sub latest_call : method {
 }
 
 =head2 latest_counter
-Return the api calling counter value
+Return the API calling counter value
 =cut
 
 sub latest_counter : method {
