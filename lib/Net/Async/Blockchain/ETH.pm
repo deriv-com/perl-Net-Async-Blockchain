@@ -46,6 +46,7 @@ use Syntax::Keyword::Try;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
+use Net::Async::Blockchain::TP::API::ETH;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -200,8 +201,8 @@ L<Net::Async::Blockchain::TP::API::ETH>
 sub tp_api : method {
     my ($self) = @_;
     return $self->{tp_api} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::TP::API::ETH->new(tp_api_config => $self->tp_api_config));
-        $http_client;
+        $self->add_child(my $api_client = Net::Async::Blockchain::TP::API::ETH->new(tp_api_config => $self->{tp_api_config}));
+        $api_client;
     };
 }
 
