@@ -116,6 +116,22 @@ Integer time in seconds
 
 sub msg_timeout : method { shift->{msg_timeout} }
 
+=head2 socket_client
+
+ZMQ socket
+
+=over 4
+
+=back
+
+return the socket for ZMQ L<ZMQ::LibZMQ3>
+
+=cut
+
+sub socket_client : method { 
+    shift->{socket_client} 
+}
+
 =head2 configure
 
 Any additional configuration that is not described on L<IO::Async::Notifier>
@@ -182,6 +198,7 @@ sub subscribe {
     die "zmq_ctc_new failed with $!" unless $ctxt;
 
     my $socket = zmq_socket($ctxt, ZMQ_SUB);
+    $self->{socket_client} = $socket;
 
     # zmq_setsockopt_string is not exported
     ZMQ::LibZMQ3::zmq_setsockopt_string($socket, ZMQ_SUBSCRIBE, $subscription);
@@ -213,7 +230,7 @@ sub subscribe {
                 }
             }));
 
-    return ($self->source, $socket);
+    return $self->source;
 }
 
 =head2 _recv_multipart
