@@ -141,13 +141,13 @@ async sub _process_transaction {
     my ($to_response, $from_response);
 
     $from_response = await $self->rpc_client->list_by_addresses($from->{address});
-    if (@$from_response) {
+    if ($from_response && @$from_response) {
         $transaction_type = 'sent';
         $count++;
     }
 
     $to_response = await $self->rpc_client->list_by_addresses($to->{address});
-    if (@$to_response) {
+    if ($to_response && @$to_response) {
         $transaction_type = 'receive';
         $count++;
     }
