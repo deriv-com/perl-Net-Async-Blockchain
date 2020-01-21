@@ -65,7 +65,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
+    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number tp_api_config)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
