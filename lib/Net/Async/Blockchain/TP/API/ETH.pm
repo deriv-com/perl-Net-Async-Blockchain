@@ -118,8 +118,8 @@ async sub check_call_limit {
     return $status;
 }
 
-=head2 latest_counter
-Create 
+=head2 create_url
+Generate the URL based on the passed arguments.
 =cut
 
 sub create_url {
@@ -145,20 +145,6 @@ async sub get_internal_transactions {
     my ($self, $tx_hash) = @_;
     return await $self->request($tx_hash, "txlistinternal");
 }
-
-# =head2 get_normal_transactions
-# Request from API using the address as parameter
-# all the transactions for this address
-# =over4
-# =item* C<$address> address to list the address transactions
-# =back
-# Return an array reference containing all the transactions for this address
-# =cut
-
-# async sub get_normal_transactions {
-#     my ($self, $address) = @_;
-#     return await $self->request($address, "txlist");
-# }
 
 =head2 request
 List all APIs available in the configuration file and do the request for each one them
@@ -196,30 +182,6 @@ async sub request {
 
     $log->warnf("Can't get any response from third party APIs for the address: $address");
     return undef;
-}
-
-=head2 get amount_for_transaction
-Search for the specific transaction in the list internal transactions
-and get the amount for it.
-=over4
-=item* C<$address> address
-=item* C<$transaction> transaction to be used as filter
-=back
-Numeric transaction value
-=cut
-
-async sub get_amount_for_transaction {
-    my ($self, $address, $transaction) = @_;
-
-    my $internal_transactions = await $self->get_internal_transactions($address);
-    return 0 unless $internal_transactions;
-
-    for my $internal ($internal_transactions->@*) {
-        if (($internal->{hash} // $internal->{transactionHash}) eq $transaction) {
-            return $internal->{value};
-        }
-    }
-    return 0;
 }
 
 1;
