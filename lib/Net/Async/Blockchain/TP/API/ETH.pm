@@ -164,6 +164,7 @@ async sub get_amount_for_transaction {
 
     my $amount = 0;
     for my $internal ($internal_transactions->@*) {
+        next if $internal->{value} == 0 || $internal->{type} ne 'call' || $internal->{isError};
         if ($internal->{to} eq $address) {
             $amount += $internal->{value};
         }
