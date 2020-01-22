@@ -544,7 +544,7 @@ Returns an array of hashrefs with fields matching attributes in L<Net::Async::Bl
 async sub _check_internal_transaction {
     my ($self, $transaction) = @_;
 
-    my @transactions;
+    my %transactions;
     my $internal_transactions = await $self->tp_api->get_internal_transactions($transaction->{hash});
     return () unless $internal_transactions;
     for my $internal ($internal_transactions->@*) {
@@ -557,11 +557,17 @@ async sub _check_internal_transaction {
         $transaction_cp->{timestamp} = $internal->{timeStamp};
         $transaction_cp->{contract}  = $internal->{contractAddress};
         $transaction_cp->{data}      = $internal->{input};
+        
+        if($transactions{$internal->{to}})
+        {
+            $transactions{$internal->{to}}->{amount}->badd($transaction_cp->{amount});
+        } else {
+            $transactions{$internal->{to}} = $transaction_cp;
+        }
 
-        push(@transactions, $transaction_cp);
     }
 
-    return @transactions;
+    return values %transactions;
 }
 
 =head2 _remove_zeros
