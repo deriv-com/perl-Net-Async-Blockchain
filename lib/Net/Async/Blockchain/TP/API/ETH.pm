@@ -146,6 +146,31 @@ async sub get_internal_transactions {
     return await $self->request($tx_hash, "txlistinternal");
 }
 
+=head2 get amount_for_transaction
+Get the internal transactions by the parent transaction hash
+Then return the amount for the passed address
+=over4
+=item* C<$address> address
+=item* C<$transaction_hash> parent transaction hash
+=back
+Numeric transaction value
+=cut
+
+async sub get_amount_for_transaction {
+    my ($self, $address, $transaction_hash) = @_;
+
+    my $internal_transactions = await $self->get_internal_transactions($transaction_hash);
+    return 0 unless $internal_transactions;
+
+    my $amount = 0;
+    for my $internal ($internal_transactions->@*) {
+        if ($internal->{to} eq $address) {
+            $amount += $internal->{value};
+        }
+    }
+    return $amount;
+}
+
 =head2 request
 List all APIs available in the configuration file and do the request for each one them
 until receive the response.
