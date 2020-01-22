@@ -146,7 +146,7 @@ async sub get_internal_transactions {
     return await $self->request($tx_hash, "txlistinternal");
 }
 
-=head2 get amount_for_transaction
+=head2 get_amount_for_transaction
 Get the internal transactions by the parent transaction hash
 Then return the amount for the passed address
 =over4
