@@ -546,7 +546,7 @@ async sub _check_internal_transaction {
 
     my @transactions;
     my $internal_transactions = await $self->tp_api->get_internal_transactions($transaction->{hash});
-    return undef unless $internal_transactions;
+    return () unless $internal_transactions;
     for my $internal ($internal_transactions->@*) {
         next if $internal->{value} == 0 || $internal->{type} ne 'call' || $internal->{isError};
         my $transaction_cp = $transaction->clone();

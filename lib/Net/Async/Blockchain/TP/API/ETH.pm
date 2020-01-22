@@ -50,7 +50,7 @@ Return a L<Net::Async::HTTP> if already not declared otherwise
 return the same instance.
 =cut
 
-sub http_client : method {
+sub http_client {
     my ($self) = @_;
 
     return $self->{http_client} //= do {
@@ -67,7 +67,7 @@ sub http_client : method {
 Return the third party API config
 =cut
 
-sub config : method {
+sub config {
     my $self = shift;
     return $self->{tp_api_config} //= do {
         my $tp_api_config = YAML::XS::LoadFile(File::ShareDir::dist_file('Net-Async-Blockchain', 'tp_api_config.yml'));
@@ -79,7 +79,7 @@ sub config : method {
 Return the last time we have called the third party API
 =cut
 
-sub latest_call : method {
+sub latest_call {
     my $self = shift;
     return $self->{latest_call} //= time;
 }
@@ -88,7 +88,7 @@ sub latest_call : method {
 Return the API calling counter value
 =cut
 
-sub latest_counter : method {
+sub latest_counter {
     my $self = shift;
     return $self->{latest_counter} //= 0;
 }
