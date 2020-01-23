@@ -50,11 +50,10 @@ subtest "Ethereum memory test" => sub {
     } 'Subscription for ETH/ERC20 no memory growth for invalid transaction';
     no_growth {
         $eth_client->transform_transaction(decode_json('{"jsonrpc":"2.0","id":1,"result":{"blockHash":"0x3c41c39281a8509620644e90f013b24208b705069a00dd99b6b7b5389ece1fd1","blockNumber":"0x8e7926","from":"0x44e6fc81de0f718a3f23d266aa28c27069eff045","gas":"0x14229","gasPrice":"0x3b9aca00","hash":"0x67e16a265f3ae0ce0a0be05822c62bf246024ab70039a2cdbb60c112a3bcae24","input":"0x422f10430000000000000000000000000000000000000000000000000ca7e7d00003989700000000000000000000000000000000000000000000000000005cbd132894a6000000000000000000000000000000000000000000000000000000005e296b32","nonce":"0x67","to":"0x05cde89ccfa0ada8c88d5a23caaa79ef129e7883","transactionIndex":"0x16","value":"0x9616c79b534d08d","v":"0x26","r":"0x1f7a7187bd474cde0ad208a0c92f8b32c5305f882623ecde980d9473dc3125d","s":"0x601a80d2c17048b0ea6c2118fb400787fc67ee22f3f33649e9350badf87876a6"}}')->{result}, time);
-    } 'Subscription for ETH/ERC20 no memory gorwth for a valida contract transaction';
+    } 'Subscription for ETH/ERC20 no memory growth for a valida contract transaction';
     no_growth {
-        my $accounts_c = $eth_client->get_hash_accounts()->get;
-        is $accounts_c->%*, %accounts, "Accounts returned are fine";
-    }
+        $eth_client->get_hash_accounts()->get;
+    } 'No memory growth while loading accounts';
 };
 
 done_testing;
