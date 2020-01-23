@@ -60,7 +60,7 @@ use constant {
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
-sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
+sub currency_symbol { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
 =head2 subscription_id
 
@@ -106,7 +106,7 @@ Returns L<time> of the latest account update
 
 =cut
 
-sub latest_accounts_update : method {
+sub latest_accounts_update {
     my ($self) = @_;
     return $self->{latest_accounts_update};
 }
@@ -146,7 +146,7 @@ L<Net::Async::Blockchain::Client::RPC>
 
 =cut
 
-sub rpc_client : method {
+sub rpc_client {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
         $self->add_child(
@@ -362,7 +362,7 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-        push(@transactions, $transaction);
+        push @transactions, $transaction;
 
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
@@ -497,7 +497,7 @@ async sub _check_contract_transaction {
 
             $transaction_cp->{contract} = $address;
 
-            push(@transactions, $transaction_cp);
+            push @transactions, $transaction_cp;
         }
     }
 
@@ -597,8 +597,7 @@ sub get_numeric_from_hex {
     my $check_string = $self->_to_string($hex);
     return undef if $check_string;
 
-    # numeric responses should have at least 64 characters
-    # 66 including 0x
+    # numeric responses should have at least 64 + 2(0x) = 66 characters
     # transaction data field / contract response
     return undef unless ($hex && length($hex) == 66);
 
