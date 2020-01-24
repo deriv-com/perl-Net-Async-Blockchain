@@ -17,11 +17,11 @@ my $loop = IO::Async::Loop->new;
 my $module_rpc = Test::MockModule->new('Net::Async::Blockchain::Client::RPC::ETH');
 my $module_eth = Test::MockModule->new('Net::Async::Blockchain::ETH');
 
-my $accounts = [
-    "0x72338b82800400f5488eca2b5a37270ba3b7a111" x 10000,
-    "0x65798e5c90a332bbfa37c793f8847c441df42d44" x 10000,
-    "0x05cde89ccfa0ada8c88d5a23caaa79ef129e7883" x 10000
-];
+my $accounts =
+    [
+    ("0x72338b82800400f5488eca2b5a37270ba3b7a111", "0x65798e5c90a332bbfa37c793f8847c441df42d44", "0x05cde89ccfa0ada8c88d5a23caaa79ef129e7883") x 5000
+    ];
+
 my %accounts = map { lc($_) => 1 } $accounts->@*;
 
 $module_rpc->mock(
@@ -40,7 +40,14 @@ $module_rpc->mock(
     'accounts' => async sub {
         return $accounts;
     },
-);
+    'call' => async sub {
+        my $data = shift;
+        if ($data eq Net::Async::Blockchain::ETH::SYMBOL_SIGNATURE) {
+            return '0x0000000000000000000000000000000000000000000000000000000045544844';
+        } elsif ($data eq Net::Async::Blockchain::ETH::DECIMALS_SIGNATURE) {
+            return '0x0000000000000000000000000000000000000000000000000000000000000012';
+        }
+    });
 
 $module_eth->mock('UPDATE_ACCOUNTS' => 0.1);
 
@@ -70,7 +77,7 @@ subtest "Ethereum memory test" => sub {
             time
         );
     }
-    'Subscription for ETH/ERC20 no memory growth for a valida contract transaction';
+    'Subscription for ETH/ERC20 no memory growth for a valid contract transaction';
     no_growth {
         $eth_client->get_hash_accounts()->get;
     }
