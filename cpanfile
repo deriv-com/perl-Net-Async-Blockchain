@@ -17,6 +17,7 @@ requires 'IO::Async::Timer::Periodic', '>= 0.72';
 on test => sub {
     requires 'Test::More', '>= 0.98';
     requires 'Test::MockModule', 0;
+    requires 'Test::MemoryGrowth', >= 0.03;
 };
 
 on develop => sub {

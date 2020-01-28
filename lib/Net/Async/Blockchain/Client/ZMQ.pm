@@ -128,8 +128,8 @@ return the socket for ZMQ L<ZMQ::LibZMQ3>
 
 =cut
 
-sub socket_client : method { 
-    shift->{socket_client} 
+sub socket_client : method {
+    shift->{socket_client};
 }
 
 =head2 configure
