@@ -85,7 +85,7 @@ return the blockchain accounts, if is the first time will call eth_accounts.
 
 =back
 
-returns a Future, the on_done response will be the accounts array.
+returns the accounts hash reference.
 
 =cut
 
