@@ -16,6 +16,7 @@ my $loop = IO::Async::Loop->new;
 
 my $module_rpc = Test::MockModule->new('Net::Async::Blockchain::Client::RPC::ETH');
 my $module_eth = Test::MockModule->new('Net::Async::Blockchain::ETH');
+my $module_api = Test::MockModule->new('Net::Async::Blockchain::TP::API::ETH');
 
 my $accounts =
     [
@@ -47,9 +48,18 @@ $module_rpc->mock(
         } elsif ($data eq Net::Async::Blockchain::ETH::DECIMALS_SIGNATURE) {
             return '0x0000000000000000000000000000000000000000000000000000000000000012';
         }
-    });
+    },
+    'get_code' => async sub {
+        return "0x600160008035811a818181146012578301005b601b6001356025565b8060005260206000f25b600060078202905091905056";
+        });
 
 $module_eth->mock('UPDATE_ACCOUNTS' => 0.1);
+
+$module_api->mock(
+    get_internal_transactions => async sub {
+        return undef;
+    }
+    );
 
 $loop->add(
     my $eth_client = Net::Async::Blockchain::ETH->new(

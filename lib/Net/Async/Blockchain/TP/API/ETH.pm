@@ -17,6 +17,7 @@ use JSON::MaybeUTF8 qw(decode_json_utf8);
 use Syntax::Keyword::Try;
 use Log::Any qw($log);
 use File::ShareDir;
+use YAML::XS;
 
 use parent qw(IO::Async::Notifier);
 
