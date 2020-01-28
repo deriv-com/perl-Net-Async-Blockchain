@@ -557,9 +557,8 @@ async sub _check_internal_transaction {
         $transaction_cp->{timestamp} = $internal->{timeStamp};
         $transaction_cp->{contract}  = $internal->{contractAddress};
         $transaction_cp->{data}      = $internal->{input};
-        
-        if($transactions{$internal->{to}})
-        {
+
+        if ($transactions{$internal->{to}}) {
             $transactions{$internal->{to}}->{amount}->badd($transaction_cp->{amount});
         } else {
             $transactions{$internal->{to}} = $transaction_cp;
