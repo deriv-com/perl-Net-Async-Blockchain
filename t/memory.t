@@ -51,15 +51,14 @@ $module_rpc->mock(
     },
     'get_code' => async sub {
         return "0x600160008035811a818181146012578301005b601b6001356025565b8060005260206000f25b600060078202905091905056";
-        });
+    });
 
 $module_eth->mock('UPDATE_ACCOUNTS' => 0.1);
 
 $module_api->mock(
     get_internal_transactions => async sub {
         return undef;
-    }
-    );
+    });
 
 $loop->add(
     my $eth_client = Net::Async::Blockchain::ETH->new(
