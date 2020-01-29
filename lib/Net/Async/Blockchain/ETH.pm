@@ -563,7 +563,6 @@ async sub _check_internal_transaction {
         } else {
             $transactions{$internal->{to}} = $transaction_cp;
         }
-
     }
 
     return values %transactions;
