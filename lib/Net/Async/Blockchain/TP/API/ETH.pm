@@ -48,8 +48,6 @@ sub configure {
 
 Create a new L<Net::Async::HTTP> instance.
 
-=back
-
 Return a L<Net::Async::HTTP> if already not declared otherwise
 return the same instance.
 
@@ -109,8 +107,6 @@ sub latest_counter {
 Guarantee we are doing only 5 requests per second for the third
 party APIs
 
-=back
-
 Return 1 when is safe include one more request and 0 when no more requests
 can be added.
 
@@ -154,7 +150,7 @@ sub create_url {
 Request from API using the address as parameter
 all the contract internal transactions for this address.
 
-=over4
+=over 4
 
 =item* C<$tx_hash> the transaction hash
 
@@ -174,10 +170,9 @@ async sub get_internal_transactions {
 Get the internal transactions by the parent transaction hash
 Then return the amount for the passed address
 
-=over4
+=over 4
 
 =item* C<$address> address
-
 =item* C<$transaction_hash> parent transaction hash
 
 =back
@@ -205,10 +200,9 @@ async sub get_amount_for_transaction {
 List all APIs available in the configuration file and do the request for each one them
 until receive the response.
 
-=over4
+=over 4
 
 =item* C<$address> address
-
 =item* C<$method> API method
 
 =back
