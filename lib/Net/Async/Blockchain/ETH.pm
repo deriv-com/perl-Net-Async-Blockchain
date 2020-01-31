@@ -385,6 +385,9 @@ async sub transform_transaction {
         );
 
         my @transactions;
+
+        # if the address code is not 0x this mean the address is a contract
+        # if the address is a contract, we need check the ERC20 tokens and the internal trnsactions.
         if ($address_code ne '0x') {
             my @contract_transaction = await $self->_check_contract_transaction($transaction, $receipt);
             my @internal_transaction = await $self->_check_internal_transaction($transaction);

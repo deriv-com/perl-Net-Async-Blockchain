@@ -45,10 +45,14 @@ sub configure {
 }
 
 =head2 http_client
+
 Create a new L<Net::Async::HTTP> instance.
+
 =back
+
 Return a L<Net::Async::HTTP> if already not declared otherwise
 return the same instance.
+
 =cut
 
 sub http_client {
@@ -65,7 +69,9 @@ sub http_client {
 }
 
 =head2 config
+
 Return the third party API config
+
 =cut
 
 sub config {
@@ -77,7 +83,9 @@ sub config {
 }
 
 =head2 latest_call
+
 Return the last time we have called the third party API
+
 =cut
 
 sub latest_call {
@@ -86,7 +94,9 @@ sub latest_call {
 }
 
 =head2 latest_counter
+
 Return the API calling counter value
+
 =cut
 
 sub latest_counter {
@@ -95,11 +105,15 @@ sub latest_counter {
 }
 
 =head2 check_call_limit
+
 Guarantee we are doing only 5 requests per second for the third
 party APIs
+
 =back
+
 Return 1 when is safe include one more request and 0 when no more requests
 can be added.
+
 =cut
 
 async sub check_call_limit {
@@ -108,7 +122,7 @@ async sub check_call_limit {
     my $status = 1;
     if ($self->latest_call() == time) {
         $self->{latest_counter}++;
-        if ($self->latest_counter() == 5) {
+        if ($self->latest_counter() >= 5) {
             await $self->loop->delay_future(after => 1);
             $self->{latest_call}    = time;
             $self->{latest_counter} = 0;
@@ -120,7 +134,9 @@ async sub check_call_limit {
 }
 
 =head2 create_url
+
 Generate the URL based on the passed arguments.
+
 =cut
 
 sub create_url {
@@ -134,12 +150,18 @@ sub create_url {
 }
 
 =head2 get_internal_transactions
+
 Request from API using the address as parameter
 all the contract internal transactions for this address.
+
 =over4
+
 =item* C<$tx_hash> the transaction hash
+
 =back
+
 Return an array reference containing all internal transactions for this transaction hash
+
 =cut
 
 async sub get_internal_transactions {
@@ -148,13 +170,20 @@ async sub get_internal_transactions {
 }
 
 =head2 get_amount_for_transaction
+
 Get the internal transactions by the parent transaction hash
 Then return the amount for the passed address
+
 =over4
+
 =item* C<$address> address
+
 =item* C<$transaction_hash> parent transaction hash
+
 =back
+
 Numeric transaction value
+
 =cut
 
 async sub get_amount_for_transaction {
@@ -165,22 +194,27 @@ async sub get_amount_for_transaction {
 
     my $amount = 0;
     for my $internal ($internal_transactions->@*) {
-        next if $internal->{value} == 0 || $internal->{type} ne 'call' || $internal->{isError};
-        if ($internal->{to} eq $address) {
-            $amount += $internal->{value};
-        }
+        next if $internal->{value} <= 0 || $internal->{type} ne 'call' || $internal->{isError} || $internal->{to} ne $address;
+        $amount += $internal->{value};
     }
     return $amount;
 }
 
 =head2 request
+
 List all APIs available in the configuration file and do the request for each one them
 until receive the response.
+
 =over4
+
 =item* C<$address> address
+
 =item* C<$method> API method
+
 =back
+
 Returns the request response
+
 =cut
 
 async sub request {
@@ -188,7 +222,7 @@ async sub request {
 
     await $self->check_call_limit();
 
-    # we could just use `keys $thridparty_config->%*` here but since we want this
+    # we could just use `keys $self->config->%*` here but since we want this
     # in this specific order we are fixing the API names here, the etherscan API
     # generally answer faster than the blockscout, so better to leave blockscout as
     # the backup one.
@@ -203,7 +237,7 @@ async sub request {
             return undef;
         }
         catch {
-            $log->debugf("Can't get response from $method to the $thirdparty_api for $address");
+            $log->warnf("Can't get response from $method to the $thirdparty_api for $address");
         }
     }
 
