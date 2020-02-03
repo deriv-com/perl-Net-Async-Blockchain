@@ -25,9 +25,6 @@ jobs:
           name: Run smoke test
           command: dzil smoke --release --author
       - run:
-          name: Run coverage test
-          command: dzil cover -test -report codecov
-      - run:
           name: Run extended author test
           command: dzil xtest
 
