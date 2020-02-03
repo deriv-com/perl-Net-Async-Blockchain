@@ -48,6 +48,9 @@ $module_rpc->mock(
         } elsif ($data eq Net::Async::Blockchain::ETH::DECIMALS_SIGNATURE) {
             return '0x0000000000000000000000000000000000000000000000000000000000000012';
         }
+    },	
+    'get_code' => async sub {	
+        return "0x600160008035811a818181146012578301005b601b6001356025565b8060005260206000f25b600060078202905091905056";
     });
 
 $module_eth->mock('UPDATE_ACCOUNTS' => 0.1);
