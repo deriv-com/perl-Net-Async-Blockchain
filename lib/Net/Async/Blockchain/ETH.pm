@@ -41,7 +41,6 @@ use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
-use List::Util qw(any);
 use Syntax::Keyword::Try;
 
 use Net::Async::Blockchain::Transaction;
@@ -51,17 +50,17 @@ use Net::Async::Blockchain::Client::Websocket;
 use parent qw(Net::Async::Blockchain);
 
 use constant {
-    TRANSFER_SIGNATURE     => '0x' . keccak_256_hex('transfer(address,uint256)'),
-    SYMBOL_SIGNATURE       => '0x' . keccak_256_hex('symbol()'),
-    DECIMALS_SIGNATURE     => '0x' . keccak_256_hex('decimals()'),
-    DEFAULT_CURRENCY       => 'ETH',
-    DEFAULT_DECIMAL_PLACES => 18,
-    UPDATE_ACCOUNTS        => 10,
+    TRANSFER_EVENT_SIGNATURE => '0x' . keccak_256_hex('Transfer(address,address,uint256)'),
+    SYMBOL_SIGNATURE         => '0x' . keccak_256_hex('symbol()'),
+    DECIMALS_SIGNATURE       => '0x' . keccak_256_hex('decimals()'),
+    DEFAULT_CURRENCY         => 'ETH',
+    DEFAULT_DECIMAL_PLACES   => 18,
+    UPDATE_ACCOUNTS          => 10,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
-sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
+sub currency_symbol { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
 =head2 subscription_id
 
@@ -86,33 +85,52 @@ return the blockchain accounts, if is the first time will call eth_accounts.
 
 =back
 
-returns a Future, the on_done response will be the accounts array.
+returns the accounts hash reference.
 
 =cut
 
-async sub accounts {
+sub accounts {
     my $self = shift;
-    return $self->{accounts} //= do {
-        await $self->rpc_client->accounts();
-    };
+    return $self->{accounts};
 }
 
-=head2 update_accounts
+=head2 latest_accounts_update
 
-update the C<accounts> variable every 10 seconds
+stores the time of the latest account update
 
 =over 4
 
 =back
 
+Returns L<time> of the latest account update
+
 =cut
 
-async sub update_accounts {
-    my $self = shift;
-    while (1) {
-        await $self->loop->delay_future(after => UPDATE_ACCOUNTS);
-        $self->{accounts} = await $self->rpc_client->accounts();
-    }
+sub latest_accounts_update {
+    my ($self) = @_;
+    return $self->{latest_accounts_update};
+}
+
+=head2 get_hash_accounts
+
+Request the node accounts and convert it to a hash
+
+=over 4
+
+=back
+
+hash ref containing the accounts as keys
+
+=cut
+
+async sub get_hash_accounts {
+    my ($self) = @_;
+
+    $self->{latest_accounts_update} = time;
+    my $accounts_response = await $self->rpc_client->accounts();
+    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    $self->{accounts} = \%accounts;
+    return $self->{accounts};
 }
 
 =head2 rpc_client
@@ -128,7 +146,7 @@ L<Net::Async::Blockchain::Client::RPC>
 
 =cut
 
-sub rpc_client : method {
+sub rpc_client {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
         $self->add_child(
@@ -214,7 +232,6 @@ sub subscribe {
             }
             )->ordered_futures->completed(),
         $self->recursive_search(),
-        $self->update_accounts(),
         )->on_fail(
         sub {
             $self->source->fail(@_);
@@ -243,7 +260,8 @@ async sub recursive_search {
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
-    return undef unless $current_block;
+    # the node will return empty for the block number when it's not synced
+    die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
     while (1) {
         last unless $current_block->bgt($self->base_block_number);
@@ -317,12 +335,10 @@ async sub transform_transaction {
     my $transaction;
 
     try {
-        my $gas = $decoded_transaction->{gas};
-        # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
-            $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
-        }
+        my $gas     = $decoded_transaction->{gas};
+        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+
+        $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
 
         # if the gas is empty we don't proceed
         return 0 unless $gas && $decoded_transaction->{gasPrice};
@@ -345,28 +361,28 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
-        # if the input is not 0x we check the transaction searching by any
-        # transfer event to any contract, this can return more than 1 transaction.
-        # we need to do this before set the transaction type since the `to` address
-        # will change in case it be a contract.
-        # the node response for an empty input is 0x
-        if ($decoded_transaction->{input} ne '0x') {
-            $transaction = await $self->_check_contract_transaction($transaction) if $transaction;
+        my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
+        push @transactions, $transaction;
+
+        if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
+            await $self->get_hash_accounts();
         }
 
-        # set the type for each transaction
-        # from and to => internal
-        # to => received
-        # from => sent
-        $transaction = await $self->_set_transaction_type($transaction) if $transaction;
+        for my $tx (@transactions) {
+            # set the type for each transaction
+            # from and to => internal
+            # to => received
+            # from => sent
+            my $tx_type_response = await $self->_set_transaction_type($tx);
+            $self->source->emit($tx_type_response) if $tx_type_response;
+        }
+
     }
     catch {
         my $err = $@;
-        warn sprintf("Error processing transaction: %s, error: %s", $transaction->hash, $err);
+        warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
         return 0;
     }
-
-    $self->source->emit($transaction) if $transaction;
 
     return 1;
 }
@@ -396,14 +412,11 @@ async sub _set_transaction_type {
 
     return undef unless $transaction;
 
-    my $accounts = await $self->accounts;
+    my $accounts = $self->accounts();
     return undef unless $accounts;
 
-    my @accounts_response = $accounts->@*;
-    my %accounts = map { lc($_) => 1 } @accounts_response;
-
-    my $from = $accounts{lc($transaction->from)};
-    my $to   = $accounts{lc($transaction->to)};
+    my $from = $accounts->{lc($transaction->from)};
+    my $to   = $accounts->{lc($transaction->to)};
 
     if ($from && $to) {
         $transaction->{type} = 'internal';
@@ -418,73 +431,77 @@ async sub _set_transaction_type {
 
 =head2 _check_contract_transaction
 
-We need to identify what are the transactions that have a contract as
-destination, once we found we change:
-
-currency => the contract symbol
-amount => tokens
-to => address that will receive the tokens
-contract => the contract address
+For now this method just check the ERC20 contracts
 
 =over 4
 
-=item * L<Net::Async::Blockchain::Transaction>
+=item * C<$client> - a L<Net::Async::Blockchain::ETH> instance
 
 =back
 
-hashref from an array of L<Net::Async::Blockchain::Transaction>
+Returns an array of hashrefs with fields matching attributes in L<Net::Async::Blockchain::Transaction>
 
 =cut
 
 async sub _check_contract_transaction {
-    my ($self, $transaction) = @_;
+    my ($self, $transaction, $receipt) = @_;
 
-    # ERC20 transfer
-    # transfer(address _to, uint256 _value)
-    # signature = 4 bytes
-    # address = 32 bytes
-    # amount = 32 bytes
-    # total = 68 bytes, characters = 136
-    # including "0x" = 138
-    if (length($transaction->data) >= 138 && substr($transaction->data, 0, 10) eq substr(TRANSFER_SIGNATURE, 0, 10)) {
-        my $address = substr($transaction->data, 10, 64);
-        my $amount  = substr($transaction->data, 74, 64);
+    my $logs = $receipt->{logs};
 
-        return undef unless $address && $amount;
+    return () unless $logs && @$logs;
 
-        my $contract_address = $transaction->to;
+    my @transactions;
 
-        my $hex_symbol = await $self->rpc_client->call({
-                data => SYMBOL_SIGNATURE,
-                to   => $contract_address
-            },
-            "latest"
-        );
+    return () unless $receipt->{status} && hex($receipt->{status}) == 1;
 
-        my $symbol = $self->_to_string($hex_symbol);
-        return undef unless $symbol;
+    for my $log ($logs->@*) {
+        my @topics = $log->{topics}->@*;
+        if (@topics && $topics[0] eq TRANSFER_EVENT_SIGNATURE) {
+            my $transaction_cp = $transaction->clone();
 
-        my $decimals = await $self->rpc_client->call({
-                data => DECIMALS_SIGNATURE,
-                to   => $contract_address
-            },
-            "latest"
-        );
+            my $address = $log->{address};
+            my $amount  = $self->get_numeric_from_hex($log->{data});
+            next unless $amount;
 
-        if ($decimals) {
-            $transaction->{amount} = Math::BigFloat->from_hex($amount)->bdiv(Math::BigInt->new(10)->bpow($decimals))->bround(hex $decimals);
-        } else {
-            $transaction->{amount} = Math::BigFloat->from_hex($amount);
+            my $hex_symbol = await $self->rpc_client->call({
+                    data => SYMBOL_SIGNATURE,
+                    to   => $address
+                },
+                "latest"
+            );
+
+            my $symbol = $self->_to_string($hex_symbol);
+            next unless $symbol;
+
+            $transaction_cp->{currency} = $symbol;
+
+            my $decimals = await $self->rpc_client->call({
+                    data => DECIMALS_SIGNATURE,
+                    to   => $address
+                },
+                "latest"
+            );
+
+            if ($decimals) {
+                my $bg_decimals = $self->get_numeric_from_hex($decimals);
+                # decimals can be 0 is that why we check by reference
+                next unless eval { $bg_decimals->isa('Math::BigFloat') };
+                $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
+            } else {
+                $transaction_cp->{amount} = $amount;
+            }
+
+            if (@topics > 1) {
+                $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
+            }
+
+            $transaction_cp->{contract} = $address;
+
+            push @transactions, $transaction_cp;
         }
-
-        $transaction->{currency} = $symbol;
-        $transaction->{contract} = $contract_address;
-        $transaction->{to}       = $self->_remove_zeros($address);
-
-        return $transaction;
     }
 
-    return undef;
+    return @transactions;
 }
 
 =head2 _remove_zeros
@@ -557,6 +574,34 @@ sub _to_string {
 
     # substring by the data size
     return substr($packed_response, 0, $size);
+}
+
+=head2 get_numeric_from_hex
+
+Check if the given hexadecimal is numeric and returns the based big number
+
+=over 4
+
+=item * C<hex> hexadecimal response from the blockchain client
+
+=back
+
+Returns a L<Math::BigFloat> value based on the given hexadecimal if it is numeric
+not numeric will return undef
+
+=cut
+
+sub get_numeric_from_hex {
+    my ($self, $hex) = @_;
+
+    my $check_string = $self->_to_string($hex);
+    return undef if $check_string;
+
+    # numeric responses should have at least 64 + 2(0x) = 66 characters
+    # transaction data field / contract response
+    return undef unless ($hex && length($hex) == 66);
+
+    return Math::BigFloat->from_hex($hex);
 }
 
 1;
