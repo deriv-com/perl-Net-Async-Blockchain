@@ -105,7 +105,7 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $omni_transaction && $omni_transaction->{ismine};
 
-    my @transaction = await _process_transaction($self, $omni_transaction);
+    my @transaction = await $self->_process_transaction($omni_transaction);
 
     for my $transaction (@transaction) { $self->source->emit($transaction); }
 
@@ -135,7 +135,7 @@ async sub _process_transaction {
     my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
     my $block = Math::BigInt->new($omni_transaction->{block});
 
-    my ($from, $to) = await mapping_address($self, $omni_transaction);
+    my ($from, $to) = await $self->mapping_address($omni_transaction);
 
     my $count = 0;
     my ($to_response, $from_response);
