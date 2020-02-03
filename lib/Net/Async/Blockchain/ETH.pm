@@ -97,12 +97,6 @@ sub accounts {
 
 =head2 latest_accounts_update
 
-stores the time of the latest account update
-
-=over 4
-
-=back
-
 Returns L<time> of the latest account update
 
 =cut
@@ -463,7 +457,7 @@ async sub _set_transaction_type {
 
 =head2 _check_contract_transaction
 
-For now this method just check the ERC20 contracts
+For now this method just checks the ERC20 contracts
 
 =over 4
 
@@ -480,11 +474,13 @@ async sub _check_contract_transaction {
 
     my $logs = $receipt->{logs};
 
-    return () unless $logs && @$logs;
+    return ()
+        unless $logs
+        && @$logs
+        && $receipt->{status}
+        && hex($receipt->{status}) == 1;
 
     my @transactions;
-
-    return () unless $receipt->{status} && hex($receipt->{status}) == 1;
 
     for my $log ($logs->@*) {
         my @topics = $log->{topics}->@*;
