@@ -1,17 +1,39 @@
 package Net::Async::Blockchain::TP::API::ETH;
 
-=head1 Net::Async::Blockchain::TP::API::ETH
-
-This class is responsible to check and request transactions from
-third party APIs, actually this supports etherscan and blockscout
-
-=cut
-
 use strict;
 use warnings;
 no indirect;
 
 our $VERSION = '0.001';
+
+=head1 NAME
+
+Net::Async::Blockchain::TP::API::ETH - Ethereum Third-Party API.
+
+=head1 SYNOPSIS
+
+    my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
+
+    my $loop = IO::Async::Loop->new;
+
+    $loop->add(
+        my $eth_client = Net::Async::Blockchain::ETH->new(
+            config => $eth_args
+        )
+    );
+
+    $eth_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
+
+=head1 DESCRIPTION
+
+This class is responsible to check and request transactions from
+third party APIs, actually this supports etherscan and blockscout
+
+=over 4
+
+=back
+
+=cut
 
 use Future::AsyncAwait;
 use Net::Async::HTTP;

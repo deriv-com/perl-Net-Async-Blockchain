@@ -1,0 +1,7 @@
+ETH:
+    thirdparty_api:
+        etherscan:
+            url: http://api.etherscan.io/api
+            token: YourApiKeyToken
+        blockscout:
+            url: https://blockscout.com/eth/mainnet/api
