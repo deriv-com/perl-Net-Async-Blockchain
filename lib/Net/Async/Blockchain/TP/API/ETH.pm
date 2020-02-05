@@ -12,26 +12,18 @@ Net::Async::Blockchain::TP::API::ETH - Ethereum Third-Party API.
 
 =head1 SYNOPSIS
 
-    my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
-
     my $loop = IO::Async::Loop->new;
 
     $loop->add(
-        my $eth_client = Net::Async::Blockchain::ETH->new(
-            config => $eth_args
-        )
+        my $eth_tp_api = Net::Async::Blockchain::TP::API::ETH->new()
     );
 
-    $eth_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
+    $eth_tp_api->get_internal_transactions_by_txn_hash($txn_hash)->get;
 
 =head1 DESCRIPTION
 
 This class is responsible to check and request transactions from
 third party APIs, actually this supports etherscan and blockscout
-
-=over 4
-
-=back
 
 =cut
 
@@ -188,7 +180,7 @@ Return an array reference containing all internal transactions for this address
 
 async sub get_internal_transactions_by_address {
     my ($self, $address, $start_block, $end_block) = @_;
-    my $api_args = sprintf("action=txlistinternal&address=%s&startblock=%s&endblock=$s&sort=asc", $address, $start_block, $end_block);
+    my $api_args = sprintf("action=txlistinternal&address=%s&startblock=%s&endblock=%s&sort=asc", $address, $start_block, $end_block);
     return await $self->request($api_args);
 }
 
@@ -278,11 +270,11 @@ async sub request {
             return undef;
         }
         catch {
-            $log->warnf("Can't get response from $method to the $thirdparty_api for $address");
+            $log->warnf("Can't get response from $thirdparty_api for args: $api_args");
         }
     }
 
-    $log->warnf("Can't get any response from third party APIs for the address: $address");
+    $log->warnf("Can't get any response from third party APIs for args: $api_args");
     return undef;
 }
 
