@@ -18,12 +18,16 @@ Net::Async::Blockchain::TP::API::ETH - Ethereum Third-Party API.
         my $eth_tp_api = Net::Async::Blockchain::TP::API::ETH->new()
     );
 
-    $eth_tp_api->get_internal_transactions_by_txn_hash($txn_hash)->get;
+    $eth_tp_api->get_internal_transactions_by_txn_hash('0x29c07411945874fd300b69f514253671fc5d0de5b12546b569a0968c8e41370a')->get;
 
 =head1 DESCRIPTION
 
 This class is responsible to check and request transactions from
 third party APIs, actually this supports etherscan and blockscout
+
+=over 4
+
+=back
 
 =cut
 
