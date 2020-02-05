@@ -183,8 +183,8 @@ Return an array reference containing all internal transactions for this address
 =cut
 
 async sub get_internal_transactions_by_address {
-    my ($self, $address, $start_block, $end_block) = @_;
-    my $api_args = sprintf("action=txlistinternal&address=%s&startblock=%s&endblock=%s&sort=asc", $address, $start_block, $end_block);
+    my ($self, $address) = @_;
+    my $api_args = sprintf("action=txlistinternal&address=%s&sort=asc", $address);
     return await $self->request($api_args);
 }
 
