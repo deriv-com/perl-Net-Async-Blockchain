@@ -135,5 +135,23 @@ sub get_last_block {
     return $self->_request('eth_blockNumber');
 }
 
+=head2 get_balance
+
+https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getbalance
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_balance {
+    my ($self, $address) = @_;
+    return $self->_request('eth_getBalance', $address, 'latest');
+}
+
+
 1;
 
