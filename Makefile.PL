@@ -4,11 +4,6 @@ use warnings;
 
 use 5.014000;
 
-use ExtUtils::MakeMaker 6.48;
-use File::ShareDir::Install;
-
-install_share dist => 'share';
-
 my %WriteMakefileArgs = (
   "ABSTRACT" => "base for blockchain subscription clients.",
   "AUTHOR" => "binary.com <BINARY\@cpan.org>",
@@ -32,9 +27,7 @@ my %WriteMakefileArgs = (
     "Ryu::Async" => "0.011",
     "Syntax::Keyword::Try" => "0.09",
     "ZMQ::LibZMQ3" => "1.19",
-    "indirect" => "0.37",
-    "YAML::XS" => 0,
-    "File::ShareDir" => 0
+    "indirect" => "0.37"
   },
   "TEST_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0,
@@ -71,9 +64,7 @@ my %FallbackPrereqs = (
   "Test::CheckDeps" => "0.010",
   "Test::More" => "0.98",
   "ZMQ::LibZMQ3" => "1.19",
-  "indirect" => "0.37",
-  "YAML::XS" => 0,
-  "File::ShareDir" => 0
+  "indirect" => "0.37"
 );
 
 
@@ -87,6 +78,3 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
   unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
 
 WriteMakefile(%WriteMakefileArgs);
-
-package MY;
-use File::ShareDir::Install 'postamble';
