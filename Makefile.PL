@@ -4,6 +4,8 @@ use warnings;
 
 use 5.014000;
 
+use ExtUtils::MakeMaker 6.48;
+
 my %WriteMakefileArgs = (
   "ABSTRACT" => "base for blockchain subscription clients.",
   "AUTHOR" => "binary.com <BINARY\@cpan.org>",
