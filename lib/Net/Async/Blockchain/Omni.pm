@@ -92,11 +92,10 @@ async sub transform_transaction {
 
     # the command listtransactions will guarantee that this transactions is from or to one
     # of the node addresses.
-    my $received_transaction;
-    my $detailed_transaction;
+    my $omni_transaction;
+
     try {
-        $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-        $detailed_transaction = await $self->rpc_client->get_detailed_transaction($decoded_raw_transaction->{txid});
+        $omni_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
     }
     catch {
         # transaction not found
@@ -104,44 +103,127 @@ async sub transform_transaction {
     }
 
     # transaction not found, just ignore.
-    return undef unless $received_transaction && $received_transaction->{ismine};
+    return undef unless $omni_transaction && $omni_transaction->{ismine};
 
-    my $amount = Math::BigFloat->new($received_transaction->{amount});
-    my $fee    = Math::BigFloat->new($received_transaction->{fee} // 0);
-    my $block  = Math::BigInt->new($received_transaction->{block});
-    my ($from, $to) =
-        await Future->needs_all(map { $self->rpc_client->validate_address($received_transaction->{$_}) } qw(sendingaddress referenceaddress));
+    my @transaction = await $self->_process_transaction($omni_transaction);
 
-    my %category;
-
-    for my $tx ($detailed_transaction->{details}->@*) {
-        $category{$tx->{category}} = 1;
-    }
-    my @categories = keys %category;
-
-    # it can be receive, sent, internal
-    # if categories has send and receive it means that is an internal transaction
-    my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
-
-    return undef unless $transaction_type;
-
-    my $transaction = Net::Async::Blockchain::Transaction->new(
-        currency     => $self->currency_symbol,
-        hash         => $decoded_raw_transaction->{txid},
-        block        => $block,
-        from         => $from->{address},
-        to           => $to->{address},
-        amount       => $amount,
-        fee          => $fee,
-        fee_currency => FEE_CURRENCY,
-        type         => $transaction_type,
-        property_id  => $received_transaction->{propertyid},
-        timestamp    => $received_transaction->{blocktime},
-    );
-
-    $self->source->emit($transaction) if $transaction;
+    for my $transaction (@transaction) { $self->source->emit($transaction); }
 
     return 1;
+}
+
+=head2 _process_transaction
+
+Receives raw transactions and process it to a L<Net::Async::Blockchain::Transaction> object
+
+=over 4
+
+=item * C<omni_transaction> the response from the command `omni_gettransaction`
+
+=back
+
+Return an array.
+
+=cut
+
+async sub _process_transaction {
+    my ($self, $omni_transaction) = @_;
+
+    my (@transaction, %sendall, $amount, $transaction_type);
+
+    $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
+    my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
+    my $block = Math::BigInt->new($omni_transaction->{block});
+
+    my ($from, $to) = await $self->mapping_address($omni_transaction);
+
+    my $count = 0;
+    my ($to_response, $from_response);
+
+    $from_response = await $self->rpc_client->list_by_addresses($from->{address});
+    if ($from_response && @$from_response) {
+        $transaction_type = 'sent';
+        $count++;
+    }
+
+    $to_response = await $self->rpc_client->list_by_addresses($to->{address});
+    if ($to_response && @$to_response) {
+        $transaction_type = 'receive';
+        $count++;
+    }
+    if ($count > 1) {
+        $transaction_type = 'internal';
+    }
+
+    return () unless $transaction_type;
+
+    if ($omni_transaction->{type} eq "Send All") {
+
+        for my $data ($omni_transaction->{subsends}->@*) {
+            $sendall{$data->{propertyid}} = $data->{amount};
+        }
+
+        for my $propertyid (keys %sendall) {
+
+            push @transaction, Net::Async::Blockchain::Transaction->new(
+
+                currency     => $self->currency_symbol,
+                hash         => $omni_transaction->{txid},
+                block        => $block,
+                from         => $from->{address},
+                to           => $to->{address},
+                amount       => Math::BigFloat->new($sendall{$propertyid}),
+                fee          => $fee,
+                fee_currency => FEE_CURRENCY,
+                type         => $transaction_type,
+                property_id  => $propertyid,
+                timestamp    => $omni_transaction->{blocktime},
+            );
+        }
+    }
+
+    else {
+
+        @transaction = Net::Async::Blockchain::Transaction->new(
+
+            currency     => $self->currency_symbol,
+            hash         => $omni_transaction->{txid},
+            block        => $block,
+            from         => $from->{address},
+            to           => $to->{address},
+            amount       => $amount,
+            fee          => $fee,
+            fee_currency => FEE_CURRENCY,
+            type         => $transaction_type,
+            property_id  => $omni_transaction->{propertyid},
+            timestamp    => $omni_transaction->{blocktime},
+        );
+    }
+
+    return @transaction if @transaction;
+
+    return ();
+
+}
+
+=head2 mapping_address
+
+Maps the FROM and TO addresses.
+
+=over 4
+
+=item * C<omni_transaction> the response from the command `omni_gettransaction`
+
+=back
+
+L<Future>
+
+=cut
+
+sub mapping_address {
+
+    my ($self, $omni_transaction) = @_;
+    return Future->needs_all(map { $self->rpc_client->validate_address($omni_transaction->{$_}) } qw(sendingaddress referenceaddress));
 }
 
 1;
