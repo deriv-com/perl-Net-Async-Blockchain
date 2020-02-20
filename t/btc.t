@@ -13,6 +13,7 @@ use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::BTC;
 
 my $mock_rpc = Test::MockModule->new("Net::Async::Blockchain::Client::RPC::BTC");
+my $mock_btc = Test::MockModule->new("Net::Async::Blockchain::BTC");
 
 my $loop = IO::Async::Loop->new();
 
@@ -347,6 +348,40 @@ subtest "recursive_search _ last block number is undefined" => sub {
     my $value = $blockchain_btc->recursive_search->get;
     is $value, undef, "Correct response";
     is $blockchain_btc->{base_block_number}, 499, "base block number has not increased";
+    $mock_rpc->unmock_all();
+};
+
+subtest "recursive_search _ break the while loop" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 500));
+    $mock_rpc->mock(
+        get_last_block => async sub {
+            return 499;
+        });
+    my $value = $blockchain_btc->recursive_search->get;
+    is $value, undef, "Correct response";
+    is $blockchain_btc->{base_block_number}, 500, "base block number has not increased";
+    $mock_rpc->unmock_all();
+};
+
+subtest "recursive_search" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 499));
+    $mock_rpc->mock(
+        get_last_block => async sub {
+            return 500;
+        },
+        get_block_hash => async sub {
+            return '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834';
+        });
+
+    $mock_btc->mock(
+        hashblock => async sub {
+            return undef;
+        });
+
+    $blockchain_btc->recursive_search->get;
+    is $blockchain_btc->{base_block_number}, 500, "base block number has been increased";
     $mock_rpc->unmock_all();
 };
 
