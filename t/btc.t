@@ -5,9 +5,10 @@ use warnings;
 
 use Test::More;
 use Test::MockModule;
+use Test::Exception;
 use Future::AsyncAwait;
-use Math::BigFloat;
 use IO::Async::Loop;
+use Math::BigFloat;
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::BTC;
@@ -383,6 +384,12 @@ subtest "recursive_search" => sub {
     $blockchain_btc->recursive_search->get;
     is $blockchain_btc->{base_block_number}, 500, "base block number has increased";
     $mock_rpc->unmock_all();
+};
+
+subtest "subscribe _ wrong subscription type" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
+    dies_ok { $blockchain_btc->subscribe('dummy') } 'expecting to die due to wrong subscription type';
 };
 
 done_testing;
