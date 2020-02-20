@@ -328,4 +328,26 @@ subtest "Transaction with category send" => sub {
     $mock_rpc->unmock_all();
 };
 
+subtest "recursive_search _ base block number is undefined" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
+    my $value = $blockchain_btc->recursive_search->get;
+    is $value, undef, "Correct response";
+    is $blockchain_btc->{base_block_number}, undef, "base block number is not passed";
+    $mock_rpc->unmock_all();
+};
+
+subtest "recursive_search _ last block number is undefined" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 499));
+    $mock_rpc->mock(
+        get_last_block => async sub {
+            return undef;
+        });
+    my $value = $blockchain_btc->recursive_search->get;
+    is $value, undef, "Correct response";
+    is $blockchain_btc->{base_block_number}, 499, "base block number has not increased";
+    $mock_rpc->unmock_all();
+};
+
 done_testing;
