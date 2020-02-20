@@ -381,7 +381,7 @@ subtest "recursive_search" => sub {
         });
 
     $blockchain_btc->recursive_search->get;
-    is $blockchain_btc->{base_block_number}, 500, "base block number has been increased";
+    is $blockchain_btc->{base_block_number}, 500, "base block number has increased";
     $mock_rpc->unmock_all();
 };
 
