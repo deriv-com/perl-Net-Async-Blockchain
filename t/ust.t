@@ -13,8 +13,6 @@ use Net::Async::Blockchain::Client::RPC::Omni;
 my $loop          = IO::Async::Loop->new();
 my $currency_code = 'UST';
 
-$loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
-
 my $mocked_omni     = Test::MockModule->new('Net::Async::Blockchain::Omni');
 my $mocked_rpc_omni = Test::MockModule->new('Net::Async::Blockchain::Client::RPC::Omni');
 
