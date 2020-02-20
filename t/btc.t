@@ -196,4 +196,79 @@ subtest "Transaction with category receive _ two outputs" => sub {
     $mock_rpc->unmock_all();
 };
 
+subtest "Transaction with category internal" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
+
+    $mock_rpc->mock(
+        get_block => async sub {
+
+            my $get_block_value_cp = $get_block_value;
+            my $new_vout           = [{
+                    'scriptPubKey' => {
+                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
+                        'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
+                        'reqSigs'   => 1,
+                        'type'      => 'scripthash'
+                    },
+                    'n'     => 0,
+                    'value' => '0.01'
+                },
+                {
+                    'scriptPubKey' => {
+                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
+                        'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
+                        'reqSigs'   => 1,
+                        'type'      => 'scripthash'
+                    },
+                    'n'     => 1,
+                    'value' => '-0.01'
+                }];
+
+            $get_block_value_cp->{tx}->[0]->{vout} = $new_vout;
+            return $get_block_value_cp;
+        },
+        get_transaction => async sub {
+
+            my $get_transaction_value_cp = $get_transaction_value;
+            my $new_details              = [{
+                    'category' => 'receive',
+                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'amount'   => '0.01',
+                    'label'    => 'dummy',
+                    'vout'     => 0
+                },
+                {
+                    'category' => 'send',
+                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'amount'   => '-0.01',
+                    'label'    => 'dummy',
+                    'vout'     => 1,
+                    'fee'      => '-2.56e-06'
+                }];
+            $get_transaction_value_cp->{details} = $new_details;
+            $get_transaction_value_cp->{fee}     = '-2.56e-06';
+            return $get_transaction_value_cp;
+        });
+
+    my $blockchain_btc_source = $blockchain_btc->source;
+    $blockchain_btc_source->each(
+        sub {
+            my $emitted_transaction     = shift;
+            my $expected_transaction_cp = $expected_transaction;
+            $expected_transaction_cp->{amount} = Math::BigFloat->new(0);
+            $expected_transaction_cp->{type}   = 'internal';
+            $expected_transaction_cp->{fee}    = Math::BigFloat->new('-2.56e-06');
+            is_deeply $emitted_transaction, $expected_transaction_cp, "Correct emitted trasnaction";
+            $blockchain_btc_source->finish();
+        });
+
+    $blockchain_btc->hashblock('00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834')->get;
+    $blockchain_btc_source->get;
+
+    $mock_rpc->unmock_all();
+};
+
 done_testing;
