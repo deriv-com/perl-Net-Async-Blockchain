@@ -24,7 +24,6 @@ subtest "Omni Send " => sub {
     $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
 
     my $expected_transaction = Net::Async::Blockchain::Transaction->new(
-
         currency     => $currency_code,
         hash         => '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7',
         block        => '1666276',
@@ -55,20 +54,14 @@ subtest "Omni Send " => sub {
             my $result;
             if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr') {
                 $result = [{
-                        txids   => ['19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7'],
+                        txids   => ['1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7'],
                         address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
-                    }
-
-                ];
-            }
+                    }];}
 
             else { $result = []; }
-
+            
             return Future->done($result);
-
-        });
-
-    $mocked_rpc_omni->mock(
+        },
         get_transaction => sub {
             my ($self, @params) = @_;
             my $omni_gettransaction = {
@@ -92,7 +85,6 @@ subtest "Omni Send " => sub {
             };
 
             return Future->done($omni_gettransaction);
-
         });
 
     my $decode_txn = {
@@ -108,6 +100,9 @@ subtest "Omni Send " => sub {
     $subscription_source->each(
         sub {
             my $transaction = shift;
+            is $transaction->{currency}, 'UST',       'Currency code is correct';
+            is $transaction->{amount},        "21",   'Amount is correct';
+            is $transaction->{type},       'sent',   'Transaction Type is correct';
             is_deeply $transaction, $expected_transaction, "$currency_code Omni-Send Transaction is emitted correctly.";
             $subscription_source->finish();
         });
@@ -120,7 +115,6 @@ subtest "Omni Send " => sub {
 };
 
 subtest "Omni Send ALL" => sub {
-
     $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
 
     my $expected_transaction = Net::Async::Blockchain::Transaction->new(
@@ -155,19 +149,13 @@ subtest "Omni Send ALL" => sub {
             if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr') {
                 $result = [{
                         txids   => ['19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7'],
-                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
-                    }
-
-                ];
-            }
+                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'}
+                ]; }
 
             else { $result = []; }
 
             return Future->done($result);
-
-        });
-
-    $mocked_rpc_omni->mock(
+        },
         get_transaction => sub {
             my ($self, @params) = @_;
             my $omni_gettransaction = {
@@ -193,9 +181,8 @@ subtest "Omni Send ALL" => sub {
                 'blockhash'        => '0000000027072628ae58009d904e586cce12f2c68d3a501cbb0a781555bcb5d2',
                 'txid'             => '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7'
             };
-
+            
             return Future->done($omni_gettransaction);
-
         });
 
     my $decode_txn = {
@@ -215,6 +202,9 @@ subtest "Omni Send ALL" => sub {
     $subscription_source->each(
         sub {
             my $transaction = shift;
+            is $transaction->{currency}, 'UST',       'Currency code is correct';
+            is $transaction->{amount},        "56",   'Amount is correct';
+            is $transaction->{type},       'receive',   'Transaction Type is correct';
             is_deeply $transaction, $expected_transaction, "$currency_code Omni-Send All Transaction is emitted correctly.";
             $subscription_source->finish();
         });
@@ -223,8 +213,6 @@ subtest "Omni Send ALL" => sub {
 
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
-
 };
 
 done_testing();
-
