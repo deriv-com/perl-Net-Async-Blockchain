@@ -21,6 +21,9 @@ my $mock_btc = Test::MockModule->new("Net::Async::Blockchain::BTC");
 
 my $loop = IO::Async::Loop->new();
 
+my $transaction_hash = 'e7cc12f01de0860e867043ea877744f989e6f6d769c4cb5004c5a2475cc7c393';
+my $address          = '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW';
+
 my $get_block_value = {
     'confirmations'     => 2,
     'difficulty'        => 1,
@@ -45,7 +48,7 @@ my $get_block_value = {
             'locktime' => 0,
             'vout'     => [{
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -55,7 +58,7 @@ my $get_block_value = {
                     'value' => '0.01050212'
                 }
             ],
-            'txid' => 'e7cc12f01de0860e867043ea877744f989e6f6d769c4cb5004c5a2475cc7c393',
+            'txid' => $transaction_hash,
             'vin'  => [{
                     'sequence' => 4294967295,
                     'coinbase' => '03b06c19'
@@ -77,7 +80,7 @@ my $get_transaction_value = {
     'confirmations'      => 138,
     'details'            => [{
             'category' => 'receive',
-            'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+            'address'  => $address,
             'amount'   => '0.01050212',
             'label'    => 'CR90000002',
             'vout'     => 0
@@ -85,7 +88,7 @@ my $get_transaction_value = {
     ],
     'time'         => 1582001792,
     'blockhash'    => '000000000038c85a491a62fff3257f02a57c571d10fbe6740d0fe4a6921461fc',
-    'txid'         => 'e7cc12f01de0860e867043ea877744f989e6f6d769c4cb5004c5a2475cc7c393',
+    'txid'         => $transaction_hash,
     'timereceived' => 1582001792,
     'hex' =>
         '02000000000101e20ef9d1d70903c8b2512461c2ece0db3c35378321988361d2e815e8f058420a0000000017160014aa14a6d3604846f2b6aeb887050fb1f7554dd947f ffffff02640610000000000017a914d11cdb2d8a8e43ca376dc81147896d6fd548706f8723b31a2c0000000017a914d1a74745adc1aed7d82ac430f2792124ad74665387024730440220300c9093b73157dc27d050c00c44dfa77be3279fff7f8de063b56f573fee41db02201723c112c07a8cfa37d23ae8fde8934540885213aff3f687db57530eb16dbb2b0121022bba14e339da55000e1d616a4d3ac6561543deca956621b0d89a7e015ace845e586c1900'
@@ -93,10 +96,10 @@ my $get_transaction_value = {
 
 my $expected_transaction = Net::Async::Blockchain::Transaction->new(
     currency     => 'BTC',
-    hash         => 'e7cc12f01de0860e867043ea877744f989e6f6d769c4cb5004c5a2475cc7c393',
+    hash         => $transaction_hash,
     block        => Math::BigInt->new(1666224),
     from         => '',
-    to           => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+    to           => $address,
     amount       => Math::BigFloat->new(0.01050212),
     fee          => Math::BigFloat->new(0),
     fee_currency => 'BTC',
@@ -140,7 +143,7 @@ subtest "Transaction with category receive _ two outputs" => sub {
             my $get_block_value_cp = $get_block_value;
             my $new_vout           = [{
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -151,7 +154,7 @@ subtest "Transaction with category receive _ two outputs" => sub {
                 },
                 {
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -169,14 +172,14 @@ subtest "Transaction with category receive _ two outputs" => sub {
             my $get_transaction_value_cp = $get_transaction_value;
             my $new_details              = [{
                     'category' => 'receive',
-                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'address'  => $address,
                     'amount'   => '0.01050212',
                     'label'    => 'CR90000002',
                     'vout'     => 0
                 },
                 {
                     'category' => 'receive',
-                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'address'  => $address,
                     'amount'   => '0.01',
                     'label'    => 'CR90000002',
                     'vout'     => 1
@@ -211,7 +214,7 @@ subtest "Transaction with category internal" => sub {
             my $get_block_value_cp = $get_block_value;
             my $new_vout           = [{
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -222,7 +225,7 @@ subtest "Transaction with category internal" => sub {
                 },
                 {
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -240,14 +243,14 @@ subtest "Transaction with category internal" => sub {
             my $get_transaction_value_cp = $get_transaction_value;
             my $new_details              = [{
                     'category' => 'receive',
-                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'address'  => $address,
                     'amount'   => '0.01',
                     'label'    => 'dummy',
                     'vout'     => 0
                 },
                 {
                     'category' => 'send',
-                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'address'  => $address,
                     'amount'   => '-0.01',
                     'label'    => 'dummy',
                     'vout'     => 1,
@@ -286,7 +289,7 @@ subtest "Transaction with category send" => sub {
             my $get_block_value_cp = $get_block_value;
             my $new_vout           = [{
                     'scriptPubKey' => {
-                        'addresses' => ['2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW'],
+                        'addresses' => [$address],
                         'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
                         'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
                         'reqSigs'   => 1,
@@ -304,7 +307,7 @@ subtest "Transaction with category send" => sub {
             my $get_transaction_value_cp = $get_transaction_value;
             my $new_details              = [{
                     'category' => 'send',
-                    'address'  => '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW',
+                    'address'  => $address,
                     'amount'   => '-0.01',
                     'label'    => 'dummy',
                     'vout'     => 0,
