@@ -134,9 +134,9 @@ subtest "Omni Send " => sub {
     $subscription_source->each(
         sub {
             my $transaction = shift;
-            is $transaction->{currency}, 'UST',  'Currency code is correct';
-            is $transaction->{amount},   "21",   'Amount is correct';
-            is $transaction->{type},     'sent', 'Transaction Type is correct';
+            is $transaction->{currency}, 'UST',  "Currency code: $transaction->{currency} is correct";
+            is $transaction->{amount},   "21",   "Amount is correct";
+            is $transaction->{type},     'sent', "Transaction Type: $transaction->{type} is correct";
             is_deeply $transaction, $expected_transaction, "$currency_code Omni-Send Transaction is emitted correctly.";
             $subscription_source->finish();
         });
@@ -259,9 +259,9 @@ subtest "Omni Send ALL" => sub {
     $subscription_source->each(
         sub {
             my $transaction = shift;
-            is $transaction->{currency}, 'UST',     'Currency code is correct';
-            is $transaction->{amount},   "56",      'Amount is correct';
-            is $transaction->{type},     'receive', 'Transaction Type is correct';
+            is $transaction->{currency}, 'UST',     "Currency code: $transaction->{currency} is correct";
+            is $transaction->{amount},   "56",      "Amount is correct";
+            is $transaction->{type},     'receive', "Transaction Type: $transaction->{type} is correct";
             is_deeply $transaction, $expected_transaction, "$currency_code Omni-Send All Transaction is emitted correctly.";
             $subscription_source->finish();
         });
@@ -270,6 +270,86 @@ subtest "Omni Send ALL" => sub {
 
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
+};
+
+subtest "Transaction Type Internal" => sub {
+    $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
+
+    my $expected_transaction = Net::Async::Blockchain::Transaction->new(
+        currency     => $currency_code,
+        hash         => '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f',
+        block        => '1666357',
+        from         => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+        to           => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ',
+        amount       => Math::BigFloat->new(14),
+        fee          => Math::BigFloat->new(0.00000401),
+        fee_currency => 'BTC',
+        type         => 'internal',
+        property_id  => 2147484941,
+        timestamp    => 1582255733
+    );
+
+    $mocked_omni->mock(
+        mapping_address => sub {
+            my ($self, $omni_transaction) = @_;
+            my ($from, $to);
+
+            $from->{address} = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
+            $to->{address}   = '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ';
+
+            return Future->done(($from, $to));
+        });
+
+    $mocked_rpc_omni->mock(
+        list_by_addresses => sub {
+            my ($self, $address) = @_;
+            my $result;
+            if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr' || $address eq '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ') {
+                $result = [{
+                        txids   => ['8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f'],
+                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
+                    },
+                    {
+                        txids   => ['8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f'],
+                        address => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ'
+                    }];
+            }
+
+            else { $result = []; }
+
+            return Future->done($result);
+        });
+
+    my $omni_transaction = {
+        'block'            => 1666357,
+        'valid'            => 1,
+        'txid'             => '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f',
+        'referenceaddress' => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ',
+        'sendingaddress'   => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+        'ismine'           => 1,
+        'type'             => 'Simple Send',
+        'blocktime'        => 1582255733,
+        'version'          => 0,
+        'divisible'        => 1,
+        'positioninblock'  => 393,
+        'confirmations'    => 2,
+        'blockhash'        => '00000000000576932a3548713e7aee959beed84e5bb91b38bf603b94d8777b38',
+        'propertyid'       => 2147484941,
+        'amount'           => '14.00000000',
+        'fee'              => '0.00000401',
+        'type_int'         => 0
+    };
+
+    my $transaction = $subscription_client->_process_transaction($omni_transaction)->get;
+
+    is $transaction->{currency}, 'UST',      "Currency code: $transaction->{currency} is correct";
+    is $transaction->{amount},   "14",       "Amount is correct";
+    is $transaction->{type},     'internal', "Transaction Type: $transaction->{type} is correct";
+    is_deeply $transaction, $expected_transaction, "$currency_code Omni-Send Transaction is emitted correctly.";
+
+    $mocked_omni->unmock_all();
+    $mocked_rpc_omni->unmock_all();
+
 };
 
 done_testing();
