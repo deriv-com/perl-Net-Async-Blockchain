@@ -386,6 +386,7 @@ subtest "recursive_search" => sub {
     $blockchain_btc->recursive_search->get;
     is $blockchain_btc->{base_block_number}, 500, "base block number has increased";
     $mock_rpc->unmock_all();
+    $mock_btc->unmock_all();
 };
 
 subtest "subscribe _ wrong subscription type" => sub {
@@ -441,12 +442,9 @@ subtest "subscribe" => sub {
             my $emitted_transaction = shift;
             is_deeply $emitted_transaction, $expected_transaction, "Correct emitted trasnaction";
             $btc_subscribe->finish();
-            zmq_close($btc_subscribe->zmq_client->socket_client());
-        })->completed->on_fail(
-        sub {
-            warn 'Subscription failed for currency';
         })->get;
 
+    zmq_close($blockchain_btc->zmq_client->socket_client());
     $mock_rpc->unmock_all();
     $mock_btc->unmock_all();
 };
