@@ -18,13 +18,17 @@ my $mocked_rpc_omni = Test::MockModule->new('Net::Async::Blockchain::Client::RPC
 
 subtest "Omni Send " => sub {
     $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
-
+    my $from = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
+    my $to = 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469';
+    my $hash = '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7';
+    my $blockhash = '00000000000b031f58f9761fd1e0219ef5178481f274b4f54d30c5142b97571f';
+    
     my $expected_transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $currency_code,
-        hash         => '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7',
+        hash         => $hash,
         block        => '1666276',
-        from         => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
-        to           => 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469',
+        from         => $from,
+        to           => $to,
         amount       => Math::BigFloat->new(21),
         fee          => Math::BigFloat->new(0.00000256),
         fee_currency => 'BTC',
@@ -36,12 +40,12 @@ subtest "Omni Send " => sub {
     $mocked_omni->mock(
         mapping_address => sub {
             my ($self, $omni_transaction) = @_;
-            my ($from, $to);
+            my ($from_detail, $to_detail);
 
-            $from->{address} = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
-            $to->{address}   = 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469';
+            $from_detail->{address} = $from;
+            $to_detail->{address}   = $to;
 
-            return Future->done(($from, $to));
+            return Future->done(($from_detail, $to_detail));
         });
 
     $mocked_rpc_omni->mock(
@@ -55,7 +59,7 @@ subtest "Omni Send " => sub {
                 'nextblockhash'     => '000000005a804cb26e24bf2dd6ca0e4b7cbee1f42e3e3137a5bf83c88aad052d',
                 'merkleroot'        => '3938838ee1d737923264ab996d27196d8706ab2b8c551f95ce2c8ddf4375d65c',
                 'strippedsize'      => 62009,
-                'hash'              => '00000000000b031f58f9761fd1e0219ef5178481f274b4f54d30c5142b97571f',
+                'hash'              => $blockhash,
                 'versionHex'        => '20000000',
                 'previousblockhash' => '0000000000018d4e1629e4f9e138bc796bca82beb64373bc1a146344796571f0',
                 'difficulty'        => 1,
@@ -65,14 +69,14 @@ subtest "Omni Send " => sub {
                 'weight'            => 292336,
                 'nTx'               => 355,
                 'tx'                => [{
-                        'txid' => '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7',
+                        'txid' => $hash,
                         'hex' =>
                             '0200000001582f14b201f7d54d57d440692d88195c49da305622e31a2ea814af325ddb15d0020000006a47304402204bf7f5712a74cf31e95b5bc6960d18dc8b5e90adbd05a69a7f63c859535b718202201deefe687d8dc73f51ad948926e220e3045ad354200d1cc88ad1f37b3dad364a012103e46ec48919aa92158f06a4a3e637424627db9ab14175fcc3625e8e7dc01b08cafeffffff030000000000000000166a146f6d6e69000000008000050d000000007d2b7500a0640100000000001976a9140ac7dc8728750a012754efe24cfc0e5166eab99388ac22020000000000001976a914a52c818037aac5aa436a4bb6b8bf3c2bf710c45788ace36c1900',
                         'vsize'    => 256,
                         'size'     => 256,
                         'version'  => 2,
                         'locktime' => 1666275,
-                        'hash'     => '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7'
+                        'hash'     => $hash
                     },
                     {
                         'txid'     => 'abd322cee71dbd9adbd8b200df4c69a7870251f73ec6e04a3eb5e9aa2b065bdf',
@@ -94,10 +98,10 @@ subtest "Omni Send " => sub {
         list_by_addresses => sub {
             my ($self, $address) = @_;
             my $result;
-            if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr') {
+            if ($address eq $from) {
                 $result = [{
-                        txids   => ['1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7'],
-                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
+                        txids   => [$hash],
+                        address => $from
                     }];
             }
 
@@ -110,19 +114,19 @@ subtest "Omni Send " => sub {
             my $omni_gettransaction = {
                 blocktime        => 1582166123,
                 confirmations    => 1,
-                blockhash        => '00000000000b031f58f9761fd1e0219ef5178481f274b4f54d30c5142b97571f',
+                blockhash        => $blockhash,
                 block            => 1666276,
                 type             => 'Simple Send',
                 amount           => '21.00000000',
                 divisible        => 1,
                 fee              => '0.00000256',
                 positioninblock  => 352,
-                sendingaddress   => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+                sendingaddress   => $from,
                 ismine           => 1,
                 version          => 0,
-                txid             => '19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7',
+                txid             => $hash,
                 type_int         => 0,
-                referenceaddress => 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469',
+                referenceaddress => $to,
                 propertyid       => 2147484941,
                 valid            => 1
             };
@@ -141,7 +145,7 @@ subtest "Omni Send " => sub {
             $subscription_source->finish();
         });
 
-    my $emitted_transaction = $subscription_client->hashblock('00000000000b031f58f9761fd1e0219ef5178481f274b4f54d30c5142b97571f')->get;
+    my $emitted_transaction = $subscription_client->hashblock($blockhash)->get;
 
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
@@ -150,13 +154,17 @@ subtest "Omni Send " => sub {
 
 subtest "Omni Send ALL" => sub {
     $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
+    my $to = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
+    my $from = 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469';
+    my $hash = '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7';
+    my $blockhash = '0000000027072628ae58009d904e586cce12f2c68d3a501cbb0a781555bcb5d2';
 
     my $expected_transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $currency_code,
-        hash         => '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7',
+        hash         => $hash,
         block        => Math::BigInt->new('1666293'),
-        to           => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
-        from         => 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469',
+        to           => $to,
+        from         => $from,
         amount       => Math::BigFloat->new(56),
         fee          => Math::BigFloat->new(0.00000245),
         fee_currency => 'BTC',
@@ -168,12 +176,12 @@ subtest "Omni Send ALL" => sub {
     $mocked_omni->mock(
         mapping_address => sub {
             my ($self, $omni_transaction) = @_;
-            my ($from, $to);
+            my ($from_detail, $to_detail);
 
-            $to->{address}   = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
-            $from->{address} = 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469';
+            $to_detail->{address}   = $to;
+            $from_detail->{address} = $from;
 
-            return Future->done(($from, $to));
+            return Future->done(($from_detail, $to_detail));
         });
 
     $mocked_rpc_omni->mock(
@@ -184,15 +192,15 @@ subtest "Omni Send ALL" => sub {
                 'version'    => 536870912,
                 'bits'       => '1d00ffff',
                 'merkleroot' => '6f5bb0cbcb7fbe18cc32811b405d092f5e2ff57fbb5cb8e8123b7423b0dd2fc2',
-                'hash'       => '0000000027072628ae58009d904e586cce12f2c68d3a501cbb0a781555bcb5d2',
+                'hash'       => $blockhash,
                 'weight'     => 48876,
                 'height'     => 1666293,
                 'time'       => 1582186008,
                 'tx'         => [{
-                        'txid'     => '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7',
+                        'txid'     => $hash,
                         'weight'   => 980,
                         'locktime' => 1666291,
-                        'hash'     => '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7'
+                        'hash'     => $hash
                     },
                     {
                         'txid'   => '056de597456300a4139f42ad4d8f7f2dd662ded515f314a29480af2e547b2bf5',
@@ -215,10 +223,10 @@ subtest "Omni Send ALL" => sub {
         list_by_addresses => sub {
             my ($self, $address) = @_;
             my $result;
-            if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr') {
+            if ($address eq $to) {
                 $result = [{
-                        txids   => ['19e5bda81d0a588cbf46072fb6da01685a51082d4b94428e09f491ad8a111bc7'],
-                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
+                        txids   => [$hash],
+                        address => $to
                     }];
             }
 
@@ -241,15 +249,15 @@ subtest "Omni Send ALL" => sub {
                 'ecosystem'        => 'test',
                 'positioninblock'  => 36,
                 'type'             => 'Send All',
-                'referenceaddress' => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+                'referenceaddress' => $to,
                 'ismine'           => 1,
                 'block'            => 1666293,
                 'fee'              => '0.00000245',
                 'valid'            => 1,
                 'blocktime'        => 1582186008,
-                'sendingaddress'   => 'mvaK72Z5EVYJtptWrD2nCSZd1nqEx5B469',
-                'blockhash'        => '0000000027072628ae58009d904e586cce12f2c68d3a501cbb0a781555bcb5d2',
-                'txid'             => '1b007afef8d271861dccd5b6bfe2f7e45a481c9a2f39b9f063e43e7d26375ec7'
+                'sendingaddress'   => $from,
+                'blockhash'        => $blockhash,
+                'txid'             => $hash
             };
 
             return Future->done($omni_gettransaction);
@@ -266,7 +274,7 @@ subtest "Omni Send ALL" => sub {
             $subscription_source->finish();
         });
 
-    my $emitted_transaction = $subscription_client->hashblock('0000000027072628ae58009d904e586cce12f2c68d3a501cbb0a781555bcb5d2')->get;
+    my $emitted_transaction = $subscription_client->hashblock($blockhash)->get;
 
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
@@ -274,13 +282,16 @@ subtest "Omni Send ALL" => sub {
 
 subtest "Transaction Type Internal" => sub {
     $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
+    my $to = '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ';
+    my $from = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
+    my $hash = '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f';
 
     my $expected_transaction = Net::Async::Blockchain::Transaction->new(
         currency     => $currency_code,
-        hash         => '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f',
+        hash         => $hash,
         block        => '1666357',
-        from         => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
-        to           => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ',
+        from         => $from,
+        to           => $to,
         amount       => Math::BigFloat->new(14),
         fee          => Math::BigFloat->new(0.00000401),
         fee_currency => 'BTC',
@@ -292,26 +303,26 @@ subtest "Transaction Type Internal" => sub {
     $mocked_omni->mock(
         mapping_address => sub {
             my ($self, $omni_transaction) = @_;
-            my ($from, $to);
+            my ($from_detail, $to_detail);
 
-            $from->{address} = 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr';
-            $to->{address}   = '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ';
+            $from_detail->{address} = $from;
+            $to_detail->{address}   = $to;
 
-            return Future->done(($from, $to));
+            return Future->done(($from_detail, $to_detail));
         });
 
     $mocked_rpc_omni->mock(
         list_by_addresses => sub {
             my ($self, $address) = @_;
             my $result;
-            if ($address eq 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr' || $address eq '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ') {
+            if ($address eq $from || $address eq $to) {
                 $result = [{
-                        txids   => ['8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f'],
-                        address => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr'
+                        txids   => [$hash],
+                        address => $from
                     },
                     {
-                        txids   => ['8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f'],
-                        address => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ'
+                        txids   => [$hash],
+                        address => $to
                     }];
             }
 
@@ -323,9 +334,9 @@ subtest "Transaction Type Internal" => sub {
     my $omni_transaction = {
         'block'            => 1666357,
         'valid'            => 1,
-        'txid'             => '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f',
-        'referenceaddress' => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ',
-        'sendingaddress'   => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+        'txid'             => $hash,
+        'referenceaddress' => $to,
+        'sendingaddress'   => $from,
         'ismine'           => 1,
         'type'             => 'Simple Send',
         'blocktime'        => 1582255733,
