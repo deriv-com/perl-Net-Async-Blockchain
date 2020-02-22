@@ -147,6 +147,8 @@ subtest "Omni Send " => sub {
 
     my $emitted_transaction = $subscription_client->hashblock($blockhash)->get;
 
+    $subscription_source->get;
+    
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
 
@@ -275,7 +277,9 @@ subtest "Omni Send ALL" => sub {
         });
 
     my $emitted_transaction = $subscription_client->hashblock($blockhash)->get;
-
+    
+    $subscription_source->get;
+    
     $mocked_omni->unmock_all();
     $mocked_rpc_omni->unmock_all();
 };
