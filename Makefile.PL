@@ -38,7 +38,8 @@ my %WriteMakefileArgs = (
     "IPC::Open3" => 0,
     "Test::CheckDeps" => "0.010",
     "Test::MockModule" => 0,
-    "Test::More" => "0.98"
+    "Test::More" => "0.98",
+    "Test::Exception" => 0
   },
   "VERSION" => "0.001",
   "test" => {
