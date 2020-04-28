@@ -152,6 +152,5 @@ sub get_balance {
     return $self->_request('eth_getBalance', $address, 'latest');
 }
 
-
 1;
 

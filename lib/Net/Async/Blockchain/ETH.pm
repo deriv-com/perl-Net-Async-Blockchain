@@ -421,7 +421,7 @@ async sub _set_transaction_type {
     if ($from && $to) {
         $transaction->{type} = 'internal';
     } elsif ($from) {
-        $transaction->{type} = 'sent';
+        $transaction->{type} = 'send';
     } elsif ($to) {
         $transaction->{type} = 'receive';
     }

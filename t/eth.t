@@ -49,7 +49,7 @@ $mock_eth->mock(
 
 $received_transaction = $subscription_client->_set_transaction_type($transaction)->get;
 
-is $received_transaction->{type}, 'sent', "valid transaction type for `from` address";
+is $received_transaction->{type}, 'send', "valid transaction type for `from` address";
 
 $mock_eth->mock(
     accounts => sub {
