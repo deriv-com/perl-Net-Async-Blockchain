@@ -485,7 +485,8 @@ async sub _check_contract_transaction {
             if ($decimals) {
                 my $bg_decimals = $self->get_numeric_from_hex($decimals);
                 # decimals can be 0 is that why we check by reference
-                next unless eval { $bg_decimals->isa('Math::BigFloat') };
+                # we also block the decimals bigger than the default amount of 18 decimal places
+                next unless eval { $bg_decimals->isa('Math::BigFloat') } && $bg_decimals->ble(DEFAULT_DECIMAL_PLACES);
                 $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
             } else {
                 $transaction_cp->{amount} = $amount;

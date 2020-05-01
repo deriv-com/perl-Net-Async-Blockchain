@@ -228,4 +228,78 @@ is $subscription_client->get_numeric_from_hex("0x0000000000000000000000000000000
 is $subscription_client->get_numeric_from_hex("0x0000000000000000000000000000000000000000000000000000000000000000"), Math::BigFloat->new(0),
     "Zero ok";
 
+my $decoded_transaction = {
+    'value'     => '0x0',
+    'blockHash' => '0x50d00d90de21af946d7f22ed8709650835a33fdc4ad7bd13301e828a63959fc1',
+    'gas'       => '0x8fd0',
+    'to'        => '0xb0399c2fb7958d8d0fde93ec58c4efa1ba501375',
+    'input' =>
+        '0xa9059cbb0000000000000000000000000e0b9d8c9930e7cff062dd4a2b26bce95a0defeeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    'transactionIndex' => '0xd5',
+    'r'                => '0xe78ad76ab429385d008aec23c56c3939cd375177a8e978e5484ac85a4d14af8e',
+    'nonce'            => '0x126',
+    's'                => '0x19b311a70300d546d65289a8f6073e8ba1b4b8bdfa088445ad1a4543501f3537',
+    'hash'             => '0x480e83579318c5ab25d3bc6e9a9d89de9117e8c862d30779337c48bc8108f5b4',
+    'blockNumber'      => '0x9831d1',
+    'gasPrice'         => '0x4e3b29200',
+    'from'             => '0x0e0b9d8c9930e7cff062dd4a2b26bce95a0defee',
+    'v'                => '0x26'
+};
+
+my $amount = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**18)->bround(18);
+my $block  = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
+
+$transaction = Net::Async::Blockchain::Transaction->new(
+    currency     => "ETH",
+    hash         => $decoded_transaction->{hash},
+    block        => $block,
+    from         => $decoded_transaction->{from},
+    to           => $decoded_transaction->{to},
+    contract     => '',
+    amount       => $amount,
+    fee          => 0.00021,
+    fee_currency => "ETH",
+    type         => '',
+    data         => $decoded_transaction->{input},
+    timestamp    => 0,
+);
+
+$receipt = decode_json_utf8(
+    '{"jsonrpc":"2.0","id":1,"result":{"blockHash":"0x50d00d90de21af946d7f22ed8709650835a33fdc4ad7bd13301e828a63959fc1","blockNumber":"0x9831d1","contractAddress":null,"cumulativeGasUsed":"0x8bdf44","from":"0x0e0b9d8c9930e7cff062dd4a2b26bce95a0defee","gasUsed":"0x5fe0","logs":[{"address":"0xb0399c2fb7958d8d0fde93ec58c4efa1ba501375","blockHash":"0x50d00d90de21af946d7f22ed8709650835a33fdc4ad7bd13301e828a63959fc1","blockNumber":"0x9831d1","data":"0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","logIndex":"0xa0","removed":false,"topics":["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef","0x0000000000000000000000000e0b9d8c9930e7cff062dd4a2b26bce95a0defee","0x0000000000000000000000000e0b9d8c9930e7cff062dd4a2b26bce95a0defee"],"transactionHash":"0x480e83579318c5ab25d3bc6e9a9d89de9117e8c862d30779337c48bc8108f5b4","transactionIndex":"0xd5"}],"logsBloom":"0x00000000000000000000000000000000000000000000000000000008000000000000000000000000000000008000000080000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008002000000000000000000000000000000000000800000000000000000000200000000000000000000000000000000000000000000000000000000000000","status":"0x1","to":"0xb0399c2fb7958d8d0fde93ec58c4efa1ba501375","transactionHash":"0x480e83579318c5ab25d3bc6e9a9d89de9117e8c862d30779337c48bc8108f5b4","transactionIndex":"0xd5"}}'
+);
+
+$mock_rpc->mock(
+    call => async sub {
+        my ($self, $args) = @_;
+        if ($args->{data} eq Net::Async::Blockchain::ETH->SYMBOL_SIGNATURE) {
+            return
+                "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000034e45550000000000000000000000000000000000000000000000000    000000000";
+        } else {
+            return "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        }
+    });
+
+my $result = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
+is $result, undef;
+
+$mock_rpc->mock(
+    call => async sub {
+        my ($self, $args) = @_;
+        if ($args->{data} eq Net::Async::Blockchain::ETH->SYMBOL_SIGNATURE) {
+            return
+                "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000034e45550000000000000000000000000000000000000000000000000    000000000";
+        } else {
+            return "0x0000000000000000000000000000000000000000000000000000000000000012";
+        }
+    });
+
+@received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
+is scalar @received_transactions, 1, "correct total transactions found";
+
+is $received_transactions[0]->{to}, '0x0e0b9d8c9930e7cff062dd4a2b26bce95a0defee', 'correct address `to`';
+is $received_transactions[0]->{amount}->bstr(),
+    Math::BigFloat->new("115792089237316195423570985008687907853269984665640564039457584007913129639935")->bdiv(Math::BigInt->new(10)->bpow(18))
+    ->bstr, 'correct amount converted to 18 decimal places';
+is $received_transactions[0]->{contract}, '0xb0399c2fb7958d8d0fde93ec58c4efa1ba501375', 'correct contract address';
+
 done_testing;
