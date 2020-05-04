@@ -356,8 +356,6 @@ subtest "Transaction Type Internal" => sub {
     };
 
     my $transaction = $subscription_client->_process_transaction($omni_transaction)->get;
-    use Data::Dumper;
-    warn Dumper $transaction;
 
     is $transaction->{currency}, 'UST',      "Currency code: $transaction->{currency} is correct";
     is $transaction->{amount},   "14",       "Amount is correct";
