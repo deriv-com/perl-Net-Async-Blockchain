@@ -600,7 +600,8 @@ sub get_numeric_from_hex {
 
     # numeric responses should have at least 64 + 2(0x) = 66 characters
     # transaction data field / contract response
-    return undef unless ($hex && length($hex) == 66);
+    return undef
+        unless ($hex && $hex =~ /^0x[0-9a-fA-F]{64}$/);
 
     return Math::BigFloat->from_hex($hex);
 }
