@@ -482,7 +482,7 @@ async sub _check_contract_transaction {
                 "latest"
             );
 
-            my $bg_decimals = $self->check_decimal_places_limit($decimals);
+            my $bg_decimals = $self->get_valid_decimal_places($decimals);
             return unless $bg_decimals;
 
             $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
