@@ -460,7 +460,7 @@ async sub _check_contract_transaction {
             my $transaction_cp = $transaction->clone();
 
             my $address = $log->{address};
-            my $amount  = $self->get_numeric_from_hex($log->{data});
+            my $amount  = $self->get_valid_amount($log->{data});
             next unless $amount;
 
             my $hex_symbol = await $self->rpc_client->call({
@@ -482,15 +482,10 @@ async sub _check_contract_transaction {
                 "latest"
             );
 
-            if ($decimals) {
-                my $bg_decimals = $self->get_numeric_from_hex($decimals);
-                # decimals can be 0 is that why we check by reference
-                # we also block the decimals bigger than the default amount of 18 decimal places
-                next unless eval { $bg_decimals->isa('Math::BigFloat') } && $bg_decimals->ble(DEFAULT_DECIMAL_PLACES);
-                $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
-            } else {
-                $transaction_cp->{amount} = $amount;
-            }
+            my $bg_decimals = $self->check_decimal_places_limit($decimals);
+            return unless $bg_decimals;
+
+            $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
 
             if (@topics > 1) {
                 $transaction_cp->{to} = $self->_remove_zeros($topics[2]);
@@ -606,4 +601,59 @@ sub get_numeric_from_hex {
     return Math::BigFloat->from_hex($hex);
 }
 
+=head2 get_valid_decimal_places
+
+Check the given decimal places contract response following the steps:
+- hex is valid
+- hex is a numeric value
+- is a valid Math::BigFloat not 0
+- is between the limit of 18 decimal places
+
+=over 4
+
+=item * C<decimal_places> contract decimal places
+
+=back
+
+If the hex is valid returns a L<Math::BigFloat> object
+
+=cut
+
+sub get_valid_decimal_places {
+    my ($self, $decimal_places) = @_;
+
+    my $float = $self->get_numeric_from_hex($decimal_places);
+    # decimal places can be 0
+    $float = Math::BigFloat->bzero() unless $float && eval { $float->isa('Math::BigFloat') };
+    return undef unless $float && $float->ble(DEFAULT_DECIMAL_PLACES);
+    return $float;
+}
+
+=head2 get_valid_amount
+
+Check the given amount contract response following the steps:
+- hex is valid
+- hex is a numeric value
+- is a valid Math::BigFloat not 0
+- is not 0
+
+=over 4
+
+=item * C<decimal_places> contract decimal places
+
+=back
+
+If the hex is valid returns a L<Math::BigFloat> object
+
+=cut
+
+sub get_valid_amount {
+    my ($self, $amount) = @_;
+
+    my $float = $self->get_numeric_from_hex($amount);
+    #checking the reference here because we don't want 0 amount since it
+    #will be 0 instead of L<Math::BigFloat>
+    return undef unless $float && eval { $float->isa('Math::BigFloat') };
+    return $float;
+}
 1;
