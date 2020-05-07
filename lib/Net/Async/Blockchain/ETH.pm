@@ -640,7 +640,7 @@ Check the given amount contract response following the steps:
 
 =over 4
 
-=item * C<decimal_places> contract decimal places
+=item * C<amount> transaction amount
 
 =back
 
