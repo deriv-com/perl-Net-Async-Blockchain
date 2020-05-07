@@ -608,12 +608,11 @@ sub get_numeric_from_hex {
 Check the given decimal places contract response following the steps:
 - hex is valid
 - hex is a numeric value
-- is a valid Math::BigFloat not 0
-- is between the limit of 18 decimal places
+- is between the limit of 0 and 18 decimal places
 
 =over 4
 
-=item * C<decimal_places> contract decimal places
+=item * C<hex_decimal_places> contract decimal places in hexadecimal format
 
 =back
 
@@ -622,9 +621,9 @@ If the hex is valid returns a L<Math::BigFloat> object
 =cut
 
 sub get_valid_decimal_places {
-    my ($self, $decimal_places) = @_;
+    my ($self, $hex_decimal_places) = @_;
 
-    my $float = $self->get_numeric_from_hex($decimal_places);
+    my $float = $self->get_numeric_from_hex($hex_decimal_places);
     # decimal places can be 0 and should follow the limit of 18 decimal places
     return undef unless eval { $float->isa('Math::BigFloat') } && $float->ble(DEFAULT_DECIMAL_PLACES);
     return $float;
@@ -635,12 +634,11 @@ sub get_valid_decimal_places {
 Check the given amount contract response following the steps:
 - hex is valid
 - hex is a numeric value
-- is a valid Math::BigFloat not 0
 - is not 0
 
 =over 4
 
-=item * C<amount> transaction amount
+=item * C<hex_amount> transaction amount in hexadecimal format
 
 =back
 
@@ -649,11 +647,12 @@ If the hex is valid returns a L<Math::BigFloat> object
 =cut
 
 sub get_valid_amount {
-    my ($self, $amount) = @_;
+    my ($self, $hex_amount) = @_;
 
-    my $float = $self->get_numeric_from_hex($amount);
+    my $float = $self->get_numeric_from_hex($hex_amount);
     # We don't want 0 amount since it will be 0 instead of L<Math::BigFloat>
     return undef unless $float;
     return $float;
 }
+
 1;
