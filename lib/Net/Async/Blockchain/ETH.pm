@@ -483,7 +483,9 @@ async sub _check_contract_transaction {
             );
 
             my $bg_decimals = $self->get_valid_decimal_places($decimals);
-            return unless $bg_decimals;
+            # we still needs to check the reference here since the variable
+            # check will return false if the numeric is 0
+            next unless $bg_decimals || eval { $bg_decimals->isa('Math::BigFloat') };
 
             $transaction_cp->{amount} = $amount->bdiv(Math::BigInt->new(10)->bpow($bg_decimals));
 
@@ -623,9 +625,8 @@ sub get_valid_decimal_places {
     my ($self, $decimal_places) = @_;
 
     my $float = $self->get_numeric_from_hex($decimal_places);
-    # decimal places can be 0
-    $float = Math::BigFloat->bzero() unless $float && eval { $float->isa('Math::BigFloat') };
-    return undef unless $float && $float->ble(DEFAULT_DECIMAL_PLACES);
+    # decimal places can be 0 and should follow the limit of 18 decimal places
+    return undef unless eval { $float->isa('Math::BigFloat') } && $float->ble(DEFAULT_DECIMAL_PLACES);
     return $float;
 }
 
@@ -651,9 +652,8 @@ sub get_valid_amount {
     my ($self, $amount) = @_;
 
     my $float = $self->get_numeric_from_hex($amount);
-    #checking the reference here because we don't want 0 amount since it
-    #will be 0 instead of L<Math::BigFloat>
-    return undef unless $float && eval { $float->isa('Math::BigFloat') };
+    # We don't want 0 amount since it will be 0 instead of L<Math::BigFloat>
+    return undef unless $float;
     return $float;
 }
 1;
