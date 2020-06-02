@@ -327,8 +327,8 @@ async sub transform_transaction {
 
     # - received: `0x49f0421a52800`
     # - hex conversion: 1300740000000000
-    # - 1300740000000000 * 10**18 = 0.0013007400000000000
-    my $amount        = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES)->bround(DEFAULT_DECIMAL_PLACES);
+    # - 1300740000000000 / 10**18 = 0.00130074
+    my $amount        = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES);
     my $block         = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
     my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
 
