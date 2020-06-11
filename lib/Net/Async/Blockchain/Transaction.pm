@@ -25,6 +25,7 @@ Transaction abstraction
 
 no indirect;
 
+sub message_type : method { 'transaction' }
 sub currency : method     { shift->{currency} }
 sub hash : method         { shift->{hash} }
 sub block : method        { shift->{block} }

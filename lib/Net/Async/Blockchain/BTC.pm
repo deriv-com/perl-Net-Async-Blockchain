@@ -184,8 +184,18 @@ async sub recursive_search {
         last unless $current_block > $self->base_block_number;
         my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
         await $self->hashblock($block_hash) if $block_hash;
+        $self->source->emit(
+            Net::Async::Blockchain::Block->new(
+                number   => $self->base_block_number,
+                currency => $self->currency_symbol
+            ));
         $self->{base_block_number}++;
     }
+    $self->source->emit(
+        Net::Async::Blockchain::Block->new(
+            number   => $self->base_block_number,
+            currency => $self->currency_symbol
+        ));
 }
 
 =head2 hashblock

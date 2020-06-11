@@ -266,18 +266,18 @@ async sub recursive_search {
     while (1) {
         last unless $current_block->bgt($self->base_block_number);
         await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
-        $self->source->emit({
-            message_type => 'block',
-            block        => $self->{base_block_number},
-            currency     => $self->currency_symbol
-        });
+        $self->source->emit(
+            Net::Async::Blockchain::Block->new(
+                number   => $self->base_block_number,
+                currency => $self->currency_symbol
+            ));
         $self->{base_block_number}++;
     }
-    $self->source->emit({
-        message_type => 'block',
-        block        => undef,
-        currency     => $self->currency_symbol
-    });
+    $self->source->emit(
+        Net::Async::Blockchain::Block->new(
+            number   => $self->base_block_number,
+            currency => $self->currency_symbol
+        ));
 }
 
 =head2 newHeads
@@ -357,7 +357,6 @@ async sub transform_transaction {
         my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
 
         $transaction = Net::Async::Blockchain::Transaction->new(
-            message_type => 'transaction',
             currency     => $self->currency_symbol,
             hash         => $decoded_transaction->{hash},
             block        => $block,
