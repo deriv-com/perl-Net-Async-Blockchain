@@ -349,7 +349,7 @@ async sub transform_transaction {
         my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
 
         $transaction = Net::Async::Blockchain::Transaction->new(
-            message_type => 'transation'
+            message_type => 'transation',
             currency     => $self->currency_symbol,
             hash         => $decoded_transaction->{hash},
             block        => $block,
