@@ -41,6 +41,7 @@ use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
 
+use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;

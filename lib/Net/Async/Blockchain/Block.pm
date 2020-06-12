@@ -1,4 +1,4 @@
-package Net::Async::Blockchain::Transaction;
+package Net::Async::Blockchain::Block;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ our $VERSION = '0.001';
 
 =head1 NAME
 
-Net::Async::Blockchain::Transaction - Transaction abstraction.
+Net::Async::Blockchain::Block - Block abstraction.
 
 =head1 SYNOPSIS
 
@@ -15,7 +15,7 @@ Objects of this type would not normally be constructed directly.
 
 =head1 DESCRIPTION
 
-Transaction abstraction
+Block abstraction
 
 =over 4
 
@@ -31,7 +31,7 @@ sub number : method       { shift->{number} }
 
 =head2 new
 
-Create a new L<Net::Async::Blockchain::Transaction> instance
+Create a new L<Net::Async::Blockchain::Block> instance
 
 =over 4
 

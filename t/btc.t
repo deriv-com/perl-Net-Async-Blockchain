@@ -365,7 +365,6 @@ subtest "recursive_search _ break the while loop" => sub {
             return 499;
         });
     my $value = $blockchain_btc->recursive_search->get;
-    is $value, undef, "Correct response";
     is $blockchain_btc->{base_block_number}, 500, "base block number has not increased";
     $mock_rpc->unmock_all();
 };

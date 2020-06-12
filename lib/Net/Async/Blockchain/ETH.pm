@@ -43,6 +43,7 @@ use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
 
+use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
