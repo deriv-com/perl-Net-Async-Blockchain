@@ -25,7 +25,7 @@ Transaction abstraction
 
 no indirect;
 
-sub message_type : method { 'transaction' }
+sub message_type : method { shift->{message_type} }
 sub currency : method     { shift->{currency} }
 sub hash : method         { shift->{hash} }
 sub block : method        { shift->{block} }
@@ -73,6 +73,8 @@ sub new {
     foreach (qw(currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
+
+    $self->{message_type} = 'transaction';
 
     die "Invalid transaction parameters" if keys %params;
     return $self;

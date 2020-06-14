@@ -25,7 +25,7 @@ Block abstraction
 
 no indirect;
 
-sub message_type : method { 'block' }
+sub message_type : method { shift->{message_type} }
 sub currency : method     { shift->{currency} }
 sub number : method       { shift->{number} }
 
@@ -52,6 +52,8 @@ sub new {
     foreach (qw(number currency)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
+
+    $self->{message_type} = 'block';
 
     die "Invalid block parameters" if keys %params;
     return $self;
