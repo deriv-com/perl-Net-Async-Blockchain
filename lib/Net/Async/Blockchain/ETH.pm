@@ -274,9 +274,10 @@ async sub recursive_search {
             ));
         $self->{base_block_number}++;
     }
+    # set block number as undef to inform the recursive search has ended.
     $self->source->emit(
         Net::Async::Blockchain::Block->new(
-            number   => $self->base_block_number,
+            number   => undef,
             currency => $self->currency_symbol
         ));
 }
