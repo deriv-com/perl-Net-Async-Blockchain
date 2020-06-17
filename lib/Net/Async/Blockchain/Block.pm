@@ -73,9 +73,7 @@ new L<Net::Async::Blockchain::Block> based on self
 
 sub clone {
     my ($self) = @_;
-    my $clone = Net::Async::Blockchain::Block->new();
-    @{$clone}{keys %$self} = values %$self;
-    return $clone;
+    return Net::Async::Blockchain::Block->new(%$self);
 }
 
 =head2 up

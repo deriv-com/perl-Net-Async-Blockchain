@@ -95,9 +95,7 @@ new L<Net::Async::Blockchain::Transaction> based on self
 
 sub clone {
     my ($self) = @_;
-    my $clone = Net::Async::Blockchain::Transaction->new();
-    @{$clone}{keys %$self} = values %$self;
-    return $clone;
+    return Net::Async::Blockchain::Transaction->new(%$self);
 }
 
 1;
