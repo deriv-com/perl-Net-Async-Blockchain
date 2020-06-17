@@ -46,6 +46,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 
 =over 4
 
+=item * C<message_type> Message Type (Default: transaction)
 =item * C<currency> Currency symbol
 =item * C<hash> Transaction hash
 =item * C<block> Block where the transaction is included
@@ -70,11 +71,11 @@ sub new {
     my ($class, %params) = @_;
     my $self = bless {}, $class;
 
-    foreach (qw(currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {
+    $self->{message_type} = 'transaction';
+
+    foreach (qw(message_type currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
-
-    $self->{message_type} = 'transaction';
 
     die "Invalid transaction parameters" if keys %params;
     return $self;

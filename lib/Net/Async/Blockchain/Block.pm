@@ -35,9 +35,9 @@ Create a new L<Net::Async::Blockchain::Block> instance
 
 =over 4
 
-=item * C<currency> Currency symbol
-
-=item * C<number> block number
+=item * C<message_type> Message Type
+=item * C<currency> Currency Symbol
+=item * C<number> Block Number
 
 =back
 
@@ -49,11 +49,11 @@ sub new {
     my ($class, %params) = @_;
     my $self = bless {}, $class;
 
-    foreach (qw(number currency)) {
+    $self->{message_type} = 'block';
+
+    foreach (qw(message_typpe number currency)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
-
-    $self->{message_type} = 'block';
 
     die "Invalid block parameters" if keys %params;
     return $self;
