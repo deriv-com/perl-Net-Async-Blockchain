@@ -78,4 +78,40 @@ sub clone {
     return $clone;
 }
 
+=head2 up
+
+Add +1 to the block number
+
+=over 4
+
+=back
+
+Returns self L<Net::Async::Blockchain::Block>
+
+=cut
+
+sub up {
+    my ($self) = @_;
+    $self->{number}++;
+    return $self;
+}
+
+=head2 empty
+
+set block number to empty
+
+=over 4
+
+=back
+
+Returns self L<Net::Async::Blockchain::Block>
+
+=cut
+
+sub empty {
+    my ($self) = @_;
+    $self->{number} = undef;
+    return $self;
+}
+
 1;

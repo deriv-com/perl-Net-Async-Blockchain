@@ -257,7 +257,7 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->base_block_number;
+    return undef unless $self->block->number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
@@ -265,21 +265,12 @@ async sub recursive_search {
     die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
     while (1) {
-        last unless $current_block->bgt($self->base_block_number);
-        await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->base_block_number)}}});
-        $self->source->emit(
-            Net::Async::Blockchain::Block->new(
-                number   => $self->base_block_number,
-                currency => $self->currency_symbol
-            ));
-        $self->{base_block_number}++;
+        last unless $current_block->bgt($self->block->number);
+        await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->block->number)}}});
+        $self->source->emit($self->block->up());
     }
     # set block number as undef to inform the recursive search has ended.
-    $self->source->emit(
-        Net::Async::Blockchain::Block->new(
-            number   => undef,
-            currency => $self->currency_symbol
-        ));
+    $self->source->emit($self->block->empty());
 }
 
 =head2 newHeads
