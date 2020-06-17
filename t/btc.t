@@ -362,7 +362,7 @@ subtest "recursive_search _ break the while loop" => sub {
     $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 500));
     $mock_rpc->mock(
         get_last_block => async sub {
-            return Math::BigInt->new(499);
+            return 499;
         });
     my $value = $blockchain_btc->recursive_search->get;
     is $blockchain_btc->{base_block_number}, 500, "base block number has not increased";
@@ -374,7 +374,7 @@ subtest "recursive_search" => sub {
     $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 499));
     $mock_rpc->mock(
         get_last_block => async sub {
-            return Math::BigInt->new(500);
+            return 500;
         },
         get_block_hash => async sub {
             return '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834';

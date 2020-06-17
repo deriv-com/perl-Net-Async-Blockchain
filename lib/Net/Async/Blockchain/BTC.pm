@@ -182,7 +182,7 @@ async sub recursive_search {
     return undef unless $current_block;
 
     while (1) {
-        last unless $current_block->bgt($self->block->number);
+        last unless $current_block > $self->block->number;
         my $block_hash = await $self->rpc_client->get_block_hash($self->block->number + 0);
         await $self->hashblock($block_hash) if $block_hash;
         $self->source->emit($self->block->up());
