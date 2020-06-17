@@ -51,7 +51,7 @@ sub new {
 
     $self->{message_type} = 'block';
 
-    foreach (qw(message_typpe number currency)) {
+    foreach (qw(message_type number currency)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
 
