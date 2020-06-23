@@ -25,9 +25,9 @@ Block abstraction
 
 no indirect;
 
-sub message_type : method { shift->{message_type} }
-sub currency : method     { shift->{currency} }
-sub number : method       { shift->{number} }
+sub message_type { shift->{message_type} }
+sub currency     { shift->{currency} }
+sub number       { shift->{number} }
 
 =head2 new
 
