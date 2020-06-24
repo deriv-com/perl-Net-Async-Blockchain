@@ -266,8 +266,9 @@ async sub recursive_search {
 
     while (1) {
         last unless $current_block->bgt($self->block->number);
-        $self->source->emit($self->block->up());
+        $self->source->emit($self->block);
         await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->block->number)}}});
+        $self->block->up();
     }
     # set block number as undef to inform the recursive search has ended.
     $self->source->emit($self->block->empty());
