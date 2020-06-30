@@ -41,6 +41,7 @@ use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
 
+use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;
@@ -174,18 +175,21 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->base_block_number;
+    return undef unless $self->block->number;
 
     my $current_block = await $self->rpc_client->get_last_block();
 
     return undef unless $current_block;
 
     while (1) {
-        last unless $current_block > $self->base_block_number;
-        my $block_hash = await $self->rpc_client->get_block_hash($self->base_block_number + 0);
+        last unless $current_block > $self->block->number;
+        $self->source->emit($self->block);
+        my $block_hash = await $self->rpc_client->get_block_hash($self->block->number + 0);
         await $self->hashblock($block_hash) if $block_hash;
-        $self->{base_block_number}++;
+        $self->block->up();
     }
+    # set block number as undef to inform the recursive search has ended.
+    $self->source->emit($self->block->empty());
 }
 
 =head2 hashblock
