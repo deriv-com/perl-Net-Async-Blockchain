@@ -114,7 +114,7 @@ sub block {
             number   => $self->base_block_number,
             currency => $self->currency_symbol
         );
-    }
+        }
 }
 
 1;

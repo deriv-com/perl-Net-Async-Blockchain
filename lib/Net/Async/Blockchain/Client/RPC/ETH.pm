@@ -152,5 +152,22 @@ sub get_balance {
     return $self->_request('eth_getBalance', $address, 'latest');
 }
 
+=head2 syncing
+
+https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_syncing
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub syncing {
+    my ($self) = @_;
+    return $self->_request('eth_syncing');
+}
+
 1;
 

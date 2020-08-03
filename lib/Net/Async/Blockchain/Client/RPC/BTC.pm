@@ -137,5 +137,22 @@ sub get_block_hash {
     return $self->_request('getblockhash', @params);
 }
 
+=head2 get_blockchain_info
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getblockchaininfo/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_blockchain_info {
+    my ($self) = @_;
+    return $self->_request('getblockchaininfo');
+}
+
 1;
 
