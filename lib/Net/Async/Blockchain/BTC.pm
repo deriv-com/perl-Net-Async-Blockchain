@@ -17,6 +17,8 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
         my $btc_client = Net::Async::Blockchain::BTC->new(
             subscription_url => "tcp://127.0.0.1:28332",
             rpc_url => 'http://test:test@127.0.0.1:8332',
+            rpc_user => user,
+            rpc_password => password,
             rpc_timeout => 100,
         )
     );

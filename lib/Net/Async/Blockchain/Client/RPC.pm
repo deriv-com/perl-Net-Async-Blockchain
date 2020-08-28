@@ -82,6 +82,10 @@ must be included and removed here.
 
 =item * C<timeout> connection timeout (seconds)
 
+=item * C<rpc_user> RPC user. For ETH its not needed
+
+=item * C<rpc_password> RPC password. For ETH its not needed
+
 =back
 
 =cut
