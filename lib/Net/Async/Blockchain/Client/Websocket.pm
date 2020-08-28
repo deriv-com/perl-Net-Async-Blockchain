@@ -176,11 +176,11 @@ sub _request {
     $self->websocket_client->connect(
         url => $self->endpoint,
         req => Protocol::WebSocket::Request->new(origin => $url->host),
-        )->then(
+    )->then(
         sub {
             return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
         }
-        )->on_fail(
+    )->on_fail(
         sub {
             $self->shutdown("Can't connect to node websocket");
         })->retain();

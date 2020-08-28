@@ -96,8 +96,7 @@ async sub transform_transaction {
 
     try {
         $omni_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-    }
-    catch {
+    } catch {
         # transaction not found
         return undef;
     }
@@ -132,7 +131,7 @@ async sub _process_transaction {
     my (@transaction, %sendall, $amount, $transaction_type);
 
     $amount = Math::BigFloat->new($omni_transaction->{amount}) if ($omni_transaction->{amount});
-    my $fee = Math::BigFloat->new($omni_transaction->{fee} // 0);
+    my $fee   = Math::BigFloat->new($omni_transaction->{fee} // 0);
     my $block = Math::BigInt->new($omni_transaction->{block});
 
     my ($from, $to) = await $self->mapping_address($omni_transaction);
@@ -180,9 +179,8 @@ async sub _process_transaction {
                 timestamp    => $omni_transaction->{blocktime},
             );
         }
-    }
 
-    else {
+    } else {
 
         @transaction = Net::Async::Blockchain::Transaction->new(
 

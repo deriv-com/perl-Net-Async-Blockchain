@@ -64,7 +64,7 @@ subtest "Ethereum memory test" => sub {
         $eth_client->transform_transaction(
             decode_json_utf8(
                 '{"jsonrpc":"2.0","id":1,"result":{"blockHash":"0xf3284e85de5c9eb5199530d0c47b6006b5c480135975f72c352b4d12d16c9643","blockNumber":"0x897712","from":"0x65798e5c90a332bbfa37c793f8847c441df42d44","gas":"0x186a0","gasPrice":"0x17d784000","hash":"0x1a7d89fcbba627f9c82ac8edcf93180c84a5ae754418589787a703ad4a974870","input":"0xa9059cbb0000000000000000000000002f3593fb5a2b151f1586c77dd687b045fe4e79cc08c379a000000000000000000000000000000000000000000000000000000000","nonce":"0xac","to":"0x72338b82800400f5488eca2b5a37270ba3b7a111","transactionIndex":"0x79","value":"0x0","v":"0x26","r":"0x55461307a793df6a357da442074a5bc463c0e687d069d391a60d9c56f4fcf6a7","s":"0x505ade41db5a0962eb90fc1233bba93f85fe1d74a955aa9621759a6e9762991b"}}'
-                )->{result},
+            )->{result},
             time
         );
     }
@@ -73,7 +73,7 @@ subtest "Ethereum memory test" => sub {
         $eth_client->transform_transaction(
             decode_json_utf8(
                 '{"jsonrpc":"2.0","id":1,"result":{"blockHash":"0x3c41c39281a8509620644e90f013b24208b705069a00dd99b6b7b5389ece1fd1","blockNumber":"0x8e7926","from":"0x44e6fc81de0f718a3f23d266aa28c27069eff045","gas":"0x14229","gasPrice":"0x3b9aca00","hash":"0x67e16a265f3ae0ce0a0be05822c62bf246024ab70039a2cdbb60c112a3bcae24","input":"0x422f10430000000000000000000000000000000000000000000000000ca7e7d00003989700000000000000000000000000000000000000000000000000005cbd132894a6000000000000000000000000000000000000000000000000000000005e296b32","nonce":"0x67","to":"0x05cde89ccfa0ada8c88d5a23caaa79ef129e7883","transactionIndex":"0x16","value":"0x9616c79b534d08d","v":"0x26","r":"0x1f7a7187bd474cde0ad208a0c92f8b32c5305f882623ecde980d9473dc3125d","s":"0x601a80d2c17048b0ea6c2118fb400787fc67ee22f3f33649e9350badf87876a6"}}'
-                )->{result},
+            )->{result},
             time
         );
     }

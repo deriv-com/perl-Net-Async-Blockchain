@@ -37,7 +37,7 @@ $loop->add($server);
 my $ws_client;
 $server->listen(
     service => 0,
-    )->on_done(
+)->on_done(
     sub {
         my ($listener) = @_;
         my $socket = $listener->read_handle;

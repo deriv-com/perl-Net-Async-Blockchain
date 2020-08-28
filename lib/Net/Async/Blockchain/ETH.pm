@@ -129,7 +129,7 @@ async sub get_hash_accounts {
 
     $self->{latest_accounts_update} = time;
     my $accounts_response = await $self->rpc_client->accounts();
-    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    my %accounts          = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
     return $self->{accounts};
 }
@@ -227,13 +227,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-            )->map(
+        )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-            )->ordered_futures->completed(),
+        )->ordered_futures->completed(),
         $self->recursive_search(),
-        )->on_fail(
+    )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
@@ -336,19 +336,25 @@ async sub transform_transaction {
     my $block         = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
     my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
 
-    my $transaction;
+    my ($transaction, $gas, $txn_hash, $gas_price);
+    $txn_hash  = $decoded_transaction->{hash};
+    $gas_price = $decoded_transaction->{gasPrice};
 
     try {
-        my $gas     = $decoded_transaction->{gas};
+
         my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
 
-        $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
+        unless ($receipt) {
+            $loop->delay_future(after => '2');
+            $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+            return 0 unless $receipt;
 
-        # if the gas is empty we don't proceed
-        return 0 unless $gas && $decoded_transaction->{gasPrice};
+        }
+
+        $gas = $receipt->{gasUsed} if $receipt->{gasUsed};
 
         # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
+        my $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
 
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
@@ -358,7 +364,7 @@ async sub transform_transaction {
             to           => $decoded_transaction->{to},
             contract     => '',
             amount       => $amount,
-            fee          => $fee,
+            fee          => $fee // undef,
             fee_currency => $self->currency_symbol,
             type         => '',
             data         => $decoded_transaction->{input},
@@ -381,8 +387,7 @@ async sub transform_transaction {
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
 
-    }
-    catch {
+    } catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
         return 0;
