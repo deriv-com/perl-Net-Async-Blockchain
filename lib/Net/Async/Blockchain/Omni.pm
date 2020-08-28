@@ -68,7 +68,9 @@ L<Net::Async::Blockchain::Client::RPC>
 sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::Omni->new(endpoint => $self->rpc_url));
+        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::Omni->new(endpoint => $self->rpc_url,
+                                            rpc_user => $self->rpc_user,
+                                            rpc_password => $self->rpc_password));
         $http_client;
     };
 }

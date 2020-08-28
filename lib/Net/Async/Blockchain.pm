@@ -38,6 +38,8 @@ use parent qw(IO::Async::Notifier);
 
 sub rpc_url : method                  { shift->{rpc_url} }
 sub rpc_timeout : method              { shift->{rpc_timeout} }
+sub rpc_user : method { shift->{rpc_user} // '' }
+sub rpc_password : method { shift->{rpc_password} // '' }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
@@ -66,7 +68,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
+    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
