@@ -37,6 +37,8 @@ no indirect;
 
 use Future::AsyncAwait;
 use Ryu::Async;
+use IO::Async::Loop;
+
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
@@ -58,6 +60,8 @@ use constant {
     DEFAULT_DECIMAL_PLACES   => 18,
     UPDATE_ACCOUNTS          => 10,
 };
+
+my $loop = IO::Async::Loop->new;
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
