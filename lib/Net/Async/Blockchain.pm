@@ -55,8 +55,8 @@ must be included and removed here.
 
 =item * C<rpc_url> RPC complete URL
 =item * C<rpc_timeout> RPC timeout
-=item * C<rpc_user> RPC user. For ETH its not needed
-=item * C<rpc_password> RPC password. For ETH its not needed
+=item * C<rpc_user> RPC user. (optional, default: undef)
+=item * C<rpc_password> RPC password. (optional, default: undef)
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
