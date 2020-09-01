@@ -11,12 +11,12 @@ my $loop = IO::Async::Loop->new;
 $loop->add(
 	my $btc_client = Net::Async::Blockchain::BTC->new(
 		subscription_url => "tcp://127.0.0.1:28332",
-		rpc_url => 'http://test:test@127.0.0.1:8332',
-		rpc_user => 'user',
-		rpc_password => 'password',
-		subscription_timeout => 100,
+		rpc_url                  => 'http://127.0.0.1:8332',
+		rpc_user                 => 'test',
+		rpc_password             => 'test',
+		subscription_timeout     => 100,
 		subscription_msg_timeout => 3600000,
-		rpc_timeout => 100));
+		rpc_timeout              => 100));
 
 $btc_client->subscribe("transactions")->each(sub { print shift->{hash})->get;
 ```
