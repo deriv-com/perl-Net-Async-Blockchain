@@ -329,6 +329,7 @@ once converted it emits all transactions to the client source.
 
 async sub transform_transaction {
     my ($self, $decoded_transaction, $timestamp) = @_;
+    my ($transaction, $gas, $fee);
 
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
@@ -339,18 +340,15 @@ async sub transform_transaction {
     my $amount        = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES);
     my $block         = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
     my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
-
-    my ($transaction, $gas, $txn_hash, $gas_price);
-    $txn_hash  = $decoded_transaction->{hash};
-    $gas_price = $decoded_transaction->{gasPrice};
+    my $txn_hash      = $decoded_transaction->{hash};
+    my $gas_price     = $decoded_transaction->{gasPrice};
 
     try {
-
-        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        my $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
 
         unless ($receipt) {
             $loop->delay_future(after => '2');
-            $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+            $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
             return 0 unless $receipt;
 
         }
@@ -358,11 +356,11 @@ async sub transform_transaction {
         $gas = $receipt->{gasUsed} if $receipt->{gasUsed};
 
         # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
+        $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
 
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
-            hash         => $decoded_transaction->{hash},
+            hash         => $txn_hash,
             block        => $block,
             from         => $decoded_transaction->{from},
             to           => $decoded_transaction->{to},
@@ -393,7 +391,7 @@ async sub transform_transaction {
 
     } catch {
         my $err = $@;
-        warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
+        warn sprintf("Error processing transaction: %s, error: %s", $txn_hash, $err);
         return 0;
     }
 
