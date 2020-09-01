@@ -36,8 +36,8 @@ use parent qw(IO::Async::Notifier);
 use constant DEFAULT_TIMEOUT => 100;
 
 sub endpoint : method { shift->{endpoint} }
-sub rpc_user : method { shift->{rpc_user} // '' }
-sub rpc_password : method { shift->{rpc_password} // '' }
+sub rpc_user : method { shift->{rpc_user} // undef }
+sub rpc_password : method { shift->{rpc_password} // undef }
 
 # this value will be set on the _init method, if not set will use the
 # DEFAULT_TIMEOUT constant.
@@ -125,7 +125,7 @@ async sub _request {
         params => [@params],
     };
     my @post_params = ($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
-    # for ETH (based) we dont send user+password. So better dont send useless params.
+    # for ETH based, we don't require user+password. Check to send user+password if exists.
     push @post_params, (user => $self->rpc_user) if $self->rpc_user;
     push @post_params, (pass => $self->rpc_password) if $self->rpc_password;
 

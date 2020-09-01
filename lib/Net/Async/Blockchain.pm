@@ -38,8 +38,8 @@ use parent qw(IO::Async::Notifier);
 
 sub rpc_url : method                  { shift->{rpc_url} }
 sub rpc_timeout : method              { shift->{rpc_timeout} }
-sub rpc_user : method { shift->{rpc_user} // '' }
-sub rpc_password : method { shift->{rpc_password} // '' }
+sub rpc_user : method                 { shift->{rpc_user} // undef }
+sub rpc_password : method             { shift->{rpc_password} // undef }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
