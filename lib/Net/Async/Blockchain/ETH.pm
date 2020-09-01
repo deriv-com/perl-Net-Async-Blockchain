@@ -371,6 +371,7 @@ async sub transform_transaction {
             type         => '',
             data         => $decoded_transaction->{input},
             timestamp    => $int_timestamp,
+            gas_price    => $gas_price,
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
