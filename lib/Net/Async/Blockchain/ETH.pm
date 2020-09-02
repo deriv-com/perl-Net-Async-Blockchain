@@ -37,7 +37,6 @@ no indirect;
 
 use Future::AsyncAwait;
 use Ryu::Async;
-# use IO::Async::Loop;
 
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
@@ -61,8 +60,6 @@ use constant {
     UPDATE_ACCOUNTS          => 10,
 };
 
-# my $loop = IO::Async::Loop->new;
-# Array of transaction hash not processed due to missing eth transaction receipt
 my @unprocessed_transaction;
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
