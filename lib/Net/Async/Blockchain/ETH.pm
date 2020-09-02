@@ -333,7 +333,7 @@ once converted it emits all transactions to the client source.
 async sub transform_transaction {
     my ($self, $decoded_transaction, $timestamp) = @_;
     my ($transaction, $gas, $fee);
-use Data::Dumper;
+
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
 
@@ -350,15 +350,10 @@ use Data::Dumper;
         my $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
 
         unless ($receipt) {
-            # $loop->delay_future(after => '2');
-            # $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
-            # return 0 unless $receipt;
-            
-            
-            # add transaction in array_ref to process later 
+            # add transaction to unprocessed transaction array so that we can process later
             $decoded_transaction->{timestamp} = $timestamp;
-            push (@unprocessed_transaction, $decoded_transaction);
-
+            push(@unprocessed_transaction, $decoded_transaction);
+            return 0;
         }
 
         $gas = $receipt->{gasUsed} if $receipt->{gasUsed};
@@ -380,7 +375,7 @@ use Data::Dumper;
             data         => $decoded_transaction->{input},
             timestamp    => $int_timestamp,
         );
-warn Dumper $transaction ;
+
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push @transactions, $transaction;
 
@@ -394,7 +389,6 @@ warn Dumper $transaction ;
             # to => received
             # from => sent
             my $tx_type_response = await $self->_set_transaction_type($tx);
-            warn Dumper $tx;
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
 
@@ -407,31 +401,21 @@ warn Dumper $transaction ;
     return 1;
 }
 
-=head2 _set_transaction_type
+=head2 _transform_unprocessed_transactions
 
-
-
-=over 4
-
-=item * array of L<Net::Async::Blockchain::Transaction>
-
-=back
-
-hashref from an array of L<Net::Async::Blockchain::Transaction>
+To send the unprocessed transaction to transacform_transaction sub to process.
 
 =cut
 
 async sub _transform_unprocessed_transactions {
     my ($self) = @_;
-    
+
+    my $count = 0;
     for my $transaction (@unprocessed_transaction) {
-    #  delete
+        delete $unprocessed_transaction[$count];
         await $self->transform_transaction($transaction, $transaction->{timestamp});
+        $count++;
     }
-    
-    
-    
-    
 }
 
 =head2 _set_transaction_type
