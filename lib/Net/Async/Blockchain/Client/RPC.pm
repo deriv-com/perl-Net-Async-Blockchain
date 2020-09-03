@@ -36,8 +36,8 @@ use parent qw(IO::Async::Notifier);
 use constant DEFAULT_TIMEOUT => 100;
 
 sub endpoint : method { shift->{endpoint} }
-sub rpc_user : method { shift->{rpc_user} // undef }
-sub rpc_password : method { shift->{rpc_password} // undef }
+sub rpc_user : method { shift->{rpc_user} || undef }
+sub rpc_password : method { shift->{rpc_password} || undef }
 
 # this value will be set on the _init method, if not set will use the
 # DEFAULT_TIMEOUT constant.
