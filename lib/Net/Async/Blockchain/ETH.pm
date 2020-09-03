@@ -347,9 +347,12 @@ async sub transform_transaction {
         my $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
 
         unless ($receipt) {
+            my $flag = 1;
             # add transaction to unprocessed transaction array so that we can process later
             $decoded_transaction->{timestamp} = $timestamp;
-            push(@unprocessed_transaction, $decoded_transaction);
+            $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
+
+            push(@unprocessed_transaction, $decoded_transaction) if ($decoded_transaction->{flag} && $decoded_transaction->{flag} > 5);
             return 0;
         }
 
