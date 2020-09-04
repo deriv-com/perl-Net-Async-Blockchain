@@ -15,7 +15,7 @@ $loop->add(
     my $btc_client = Net::Async::Blockchain::BTC->new(
         subscription_url         => 'tcp://127.0.0.1:28332',
         rpc_url                  => 'http:/127.0.0.1:8332',
-        rpc_user                 => 'tet',
+        rpc_user                 => 'test',
         rpc_password             => 'test',
         # Timeout time for connection (seconds)
         subscription_timeout     => 100,
