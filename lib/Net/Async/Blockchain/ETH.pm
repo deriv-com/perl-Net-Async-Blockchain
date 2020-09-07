@@ -352,7 +352,7 @@ async sub transform_transaction {
             $decoded_transaction->{timestamp} = $timestamp;
             $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
 
-            push(@unprocessed_transaction, $decoded_transaction) if ($decoded_transaction->{flag} && $decoded_transaction->{flag} > 5);
+            push(@unprocessed_transaction, $decoded_transaction) if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
             return 0;
         }
 
