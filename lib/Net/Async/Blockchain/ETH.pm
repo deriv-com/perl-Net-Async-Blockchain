@@ -386,8 +386,8 @@ async sub transform_transaction {
         for my $tx (@transactions) {
             # set the type for each transaction
             # from and to => internal
-            # to => received
-            # from => sent
+            # to => receive
+            # from => send
             my $tx_type_response = await $self->_set_transaction_type($tx);
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
@@ -426,7 +426,7 @@ the result will be:
 
 if to and from found: internal
 if to found: receive
-if from found: sent
+if from found: send
 
 =over 4
 
