@@ -14,7 +14,7 @@ Net::Async::Blockchain::Client::RPC::Omni - Async Omnicore RPC Client.
     my $loop = IO::Async::Loop->new();
 
     $loop->add(
-        my $http_client = Net::Async::Blockchain::Client::RPC::Omni->new(endpoint => 'http://127.0.0.1:8332', timeout => 100)
+        my $http_client = Net::Async::Blockchain::Client::RPC::Omni->new(endpoint => 'http://127.0.0.1:8332', timeout => 100, rpc_user => 'test', rpc_password => 'test')
     );
 
     my $response = $http_client->get_transaction('txid...')->get;
