@@ -16,7 +16,9 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
     $loop->add(
         my $btc_client = Net::Async::Blockchain::BTC->new(
             subscription_url => "tcp://127.0.0.1:28332",
-            rpc_url => 'http://test:test@127.0.0.1:8332',
+            rpc_url => 'http://127.0.0.1:8332',
+            rpc_user => 'test',
+            rpc_password => 'test',
             rpc_timeout => 100,
         )
     );
@@ -70,7 +72,12 @@ L<Net::Async::Blockchain::Client::RPC>
 sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(endpoint => $self->rpc_url));
+        $self->add_child(
+            my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(
+                endpoint     => $self->rpc_url,
+                rpc_user     => $self->rpc_user,
+                rpc_password => $self->rpc_password
+            ));
         $http_client;
     };
 }
