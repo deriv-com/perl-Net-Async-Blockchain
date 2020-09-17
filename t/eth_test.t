@@ -15,6 +15,7 @@ use Math::BigInt;
 use Math::BigFloat;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::ETH;
+use Net::Async::Redis;
 
 no indirect;
 use Ryu::Async;

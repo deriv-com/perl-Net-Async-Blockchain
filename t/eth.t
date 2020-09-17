@@ -11,6 +11,7 @@ use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::ETH;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
+use Net::Async::Redis;
 
 my $transaction = Net::Async::Blockchain::Transaction->new(
     currency     => 'ETH',
