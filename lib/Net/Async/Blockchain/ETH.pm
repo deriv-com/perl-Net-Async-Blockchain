@@ -48,6 +48,7 @@ use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
+use Net::Async::Redis;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -60,7 +61,7 @@ use constant {
     UPDATE_ACCOUNTS          => 10,
 };
 
-my @unprocessed_transaction;
+my $redis_key = "unprocessed_transaction";
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
@@ -135,6 +136,31 @@ async sub get_hash_accounts {
     my %accounts          = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
     return $self->{accounts};
+}
+
+=head2 redis_client
+
+Create the L<Net::Async::Redis> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::Redis>
+
+=cut
+
+sub redis_client {
+    my ($self) = @_;
+    return $self->{redis_client} //= do {
+        $self->add_child(
+            my $redis_client = Net::Async::Redis->new(
+                uri  => "redis://$self->redis_host:$self->redis_port",
+                auth => $self->redis_auth
+            ));
+        $redis_client;
+    };
 }
 
 =head2 rpc_client
@@ -352,7 +378,10 @@ async sub transform_transaction {
             $decoded_transaction->{timestamp} = $timestamp;
             $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
 
-            push(@unprocessed_transaction, $decoded_transaction) if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
+            # add the transaction to redis to be processed
+            $self->redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))
+                if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
+
             return 0;
         }
 
@@ -410,12 +439,9 @@ To send the unprocessed transaction to transacform_transaction sub to process.
 async sub _transform_unprocessed_transactions {
     my ($self) = @_;
 
-    my $count = 0;
-    for my $transaction (@unprocessed_transaction) {
-        delete $unprocessed_transaction[$count];
-        await $self->transform_transaction($transaction, $transaction->{timestamp});
-        $count++;
-    }
+    # get unprocessed transaction from redis
+    my $transaction = decode_json_utf8($self->redis_client->rpop($redis_key));
+    await $self->transform_transaction($transaction, $transaction->{timestamp});
 }
 
 =head2 _set_transaction_type
