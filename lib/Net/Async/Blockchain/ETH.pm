@@ -438,10 +438,12 @@ To send the unprocessed transaction to transacform_transaction sub to process.
 
 async sub _transform_unprocessed_transactions {
     my ($self) = @_;
+    my ($response, $transaction);
 
     # get unprocessed transaction from redis
-    my $transaction = decode_json_utf8($self->redis_client->rpop($redis_key));
-    await $self->transform_transaction($transaction, $transaction->{timestamp});
+    $response    = $self->redis_client->rpop($redis_key);
+    $transaction = decode_json_utf8($response) if $response;
+    await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
 }
 
 =head2 _set_transaction_type
