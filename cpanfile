@@ -13,7 +13,7 @@ requires 'Ryu::Async', '>= 0.011';
 requires 'Syntax::Keyword::Try', '>= 0.09';
 requires 'ZMQ::LibZMQ3', '>= 1.19';
 requires 'IO::Async::Timer::Periodic', '>= 0.72';
-requires 'Net::Async::Redis','>=3.00';
+requires 'Net::Async::Redis','>= 1.012';
 
 on test => sub {
     requires 'Test::More', '>= 0.98';
