@@ -155,8 +155,9 @@ sub redis_client {
     my ($self) = @_;
     return $self->{redis_client} //= do {
         $self->add_child(
+            my $uri          = "redis://$self->redis_host:$self->redis_port";
             my $redis_client = Net::Async::Redis->new(
-                uri  => "redis://$self->redis_host:$self->redis_port",
+                uri  => $uri,
                 auth => $self->redis_auth
             ));
         $redis_client;
@@ -379,7 +380,8 @@ async sub transform_transaction {
             $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
 
             # add the transaction to redis to be processed
-            $self->redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))
+            await $self->redis_client->connect;
+            await $self->redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))
                 if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
 
             return 0;
@@ -441,7 +443,8 @@ async sub _transform_unprocessed_transactions {
     my ($response, $transaction);
 
     # get unprocessed transaction from redis
-    $response    = $self->redis_client->rpop($redis_key);
+    await $self->redis_client->connect;
+    await $response = $self->redis_client->rpop($redis_key);
     $transaction = decode_json_utf8($response) if $response;
     await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
 }
