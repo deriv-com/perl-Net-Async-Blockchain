@@ -155,9 +155,8 @@ sub redis_client {
     my ($self) = @_;
     return $self->{redis_client} //= do {
         $self->add_child(
-
             my $redis_client = Net::Async::Redis->new(
-                uri  => "redis://$self->redis_host:$self->redis_port",
+                uri  => sprintf('redis://%s:%s', $self->redis_host, $self->redis_port),
                 auth => $self->redis_auth
             ));
         $redis_client;
