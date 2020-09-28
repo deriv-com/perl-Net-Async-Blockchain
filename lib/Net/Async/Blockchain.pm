@@ -47,7 +47,7 @@ sub currency_symbol : method          { shift->{currency_symbol} }
 sub base_block_number : method        { shift->{base_block_number} }
 sub redis_host : method               { shift->{redis_host} || '127.0.0.1' }
 sub redis_port : method               { shift->{redis_port} || '6379' }
-sub redis_auth : method               { shift->{redis_auth} || '' }
+sub redis_auth : method               { shift->{redis_auth} }
 
 =head2 configure
 
