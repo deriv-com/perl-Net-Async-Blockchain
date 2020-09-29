@@ -356,7 +356,7 @@ once converted it emits all transactions to the client source.
 async sub transform_transaction {
     my ($self, $decoded_transaction, $timestamp) = @_;
     my ($transaction, $gas, $fee);
-
+    warn '1';
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
 
@@ -368,7 +368,7 @@ async sub transform_transaction {
     my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
     my $txn_hash      = $decoded_transaction->{hash};
     my $gas_price     = $decoded_transaction->{gasPrice};
-
+    warn '2';
     try {
         my $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
 
@@ -377,20 +377,20 @@ async sub transform_transaction {
             # add transaction to unprocessed transaction array so that we can process later
             $decoded_transaction->{timestamp} = $timestamp;
             $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
-
+            warn '3';
             # add the transaction to redis to be processed
             await $self->redis_client->connect;
             await $self->redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))
                 if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
-
+            warn '4';
             return 0;
         }
-
+        warn '5';
         $gas = $receipt->{gasUsed} if $receipt->{gasUsed};
 
         # fee = gas * gasPrice
         $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
-
+        warn '6';
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
             hash         => $txn_hash,
@@ -408,9 +408,10 @@ async sub transform_transaction {
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push @transactions, $transaction;
-
+        warn '7';
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
+            warn '8';
         }
 
         for my $tx (@transactions) {
@@ -419,11 +420,14 @@ async sub transform_transaction {
             # to => receive
             # from => send
             my $tx_type_response = await $self->_set_transaction_type($tx);
+            warn '9';
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
 
     } catch {
         my $err = $@;
+        use Data::Dumper;
+        warn Dumper $decoded_transaction;
         warn sprintf("Error processing transaction: %s, error: %s", $txn_hash, $err);
         return 0;
     }
