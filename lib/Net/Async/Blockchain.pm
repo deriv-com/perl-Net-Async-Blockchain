@@ -67,7 +67,7 @@ must be included and removed here.
 =item * C<base_block_number> Block number where the subscription must apply the recursive search from
 =item * C<redis_host> Redis host. (optional, default: '127.0.0.1')
 =item * C<redis_port> Redis port. (optional, default: '6379')
-=item * C<redis_auth> Redis password. (optional, default: '')
+=item * C<redis_auth> Redis password. (optional, default: undef)
 
 =back
 

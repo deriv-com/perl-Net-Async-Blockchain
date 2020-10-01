@@ -433,7 +433,7 @@ async sub transform_transaction {
 
 =head2 _transform_unprocessed_transactions
 
-To send the unprocessed transaction to transacform_transaction sub to process.
+To send the unprocessed transaction to transform_transaction sub to process.
 
 =cut
 
