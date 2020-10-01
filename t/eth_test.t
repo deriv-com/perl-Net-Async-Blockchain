@@ -29,7 +29,7 @@ $loop->add(my $blockchain_eth = Net::Async::Blockchain::ETH->new());
 my $transaction_hash = '0x418aeca12f07c7010109b03d5d012f3c93f922ab520e831efb29075ae4903489';
 my $address          = '0x8295507db4b0d6a18f6c69be7d5484d5dac3ed9d';
 
-my $get_block_by_number = {
+my $sample_get_block_by_number = {
     'transactionsRoot' => '0xdf3c11f1b2cbb05ca53eeb3445aa848b05c4f0ccce00e55e735bdeb276a77341',
     'number'           => '0x6d56f',
     'hash'             => '0x1285db1573a082bbad24475599762f9460eccc49868884a944527605efede14d',
@@ -72,7 +72,7 @@ my $get_block_by_number = {
 
 subtest "Test Case - to check transacform_transaction WITH Receipt" => sub {
 
-    my $get_transaction_receipt = {
+    my $sample_get_transaction_receipt = {
         'transactionIndex' => '0x0',
         'status'           => '0x1',
         'to'               => '0x8295507db4b0d6a18f6c69be7d5484d5dac3ed9d',
@@ -107,10 +107,10 @@ subtest "Test Case - to check transacform_transaction WITH Receipt" => sub {
 
     $mock_rpc->mock(
         get_block_by_number => async sub {
-            return $get_block_by_number;
+            return $sample_get_block_by_number;
         },
         get_transaction_receipt => async sub {
-            return $get_transaction_receipt;
+            return $sample_get_transaction_receipt;
         });
 
     $mock_eth->mock(
@@ -172,7 +172,7 @@ subtest "Test Case - to check transacform_transaction WITHOUT Receipt" => sub {
             return undef;
         });
 
-    my $response = $blockchain_eth->transform_transaction($decoded_transaction, '0x5f571645')->get;
+    my $response = $blockchain_eth->transform_transaction($decoded_transaction, $sample_get_block_by_number->{timestamp})->get;
     is $response, 0, "Correct response for transaction without receipt";
 
     $mock_rpc->unmock_all();
