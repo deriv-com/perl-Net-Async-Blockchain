@@ -61,7 +61,7 @@ use constant {
     UPDATE_ACCOUNTS          => 10,
 };
 
-my $redis_key = "unprocessed_transaction";
+my $redis_key = "eth::subscription::unprocessed_transaction";
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
@@ -386,7 +386,7 @@ async sub transform_transaction {
             return 0;
         }
 
-        $gas = $receipt->{gasUsed} if $receipt->{gasUsed};
+        $gas = $receipt->{gasUsed};
 
         # fee = gas * gasPrice
         $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
@@ -441,11 +441,13 @@ async sub _transform_unprocessed_transactions {
     my ($self) = @_;
     my ($response, $transaction);
 
-    # get unprocessed transaction from redis
-    await $self->redis_client->connect;
-    $response = await $self->redis_client->rpop($redis_key);
-    $transaction = decode_json_utf8($response) if $response;
-    await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
+    while (1) {
+        # get eth::subscription::unprocessed_transaction from redis
+        await $self->redis_client->connected;
+        $response    = await $self->redis_client->rpop($redis_key);
+        $transaction = decode_json_utf8($response) if $response;
+        await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
+    }
 }
 
 =head2 _set_transaction_type
