@@ -59,9 +59,8 @@ use constant {
     DEFAULT_CURRENCY         => 'ETH',
     DEFAULT_DECIMAL_PLACES   => 18,
     UPDATE_ACCOUNTS          => 10,
+    ETH_UNPROCESSED_TXN      => "eth::subscription::unprocessed_transaction",
 };
-
-my $redis_key = "eth::subscription::unprocessed_transaction";
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
 
@@ -379,9 +378,10 @@ async sub transform_transaction {
             $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
 
             # add the transaction to redis to be processed
-            await $self->redis_client->connect;
-            await $self->redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))
-                if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5);
+            if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5) {
+                await $self->redis_client->connected;
+                await $self->redis_client->rpush(ETH_UNPROCESSED_TXN => encode_json_utf8($decoded_transaction));
+            }
 
             return 0;
         }
@@ -444,7 +444,7 @@ async sub _transform_unprocessed_transactions {
     while (1) {
         # get eth::subscription::unprocessed_transaction from redis
         await $self->redis_client->connected;
-        $response    = await $self->redis_client->rpop($redis_key);
+        $response    = await $self->redis_client->rpop(ETH_UNPROCESSED_TXN);
         $transaction = decode_json_utf8($response) if $response;
         await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
     }

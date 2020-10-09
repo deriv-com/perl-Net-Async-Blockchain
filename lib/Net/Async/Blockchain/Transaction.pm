@@ -39,7 +39,6 @@ sub type : method         { shift->{type} }
 sub data : method         { shift->{data} }
 sub property_id : method  { shift->{property_id} }
 sub timestamp : method    { shift->{timestamp} }
-sub gas_price : method    { shift->{gas_price} }
 
 =head2 new
 
@@ -75,7 +74,7 @@ sub new {
 
     $self->{message_type} = 'transaction';
 
-    foreach (qw(message_type currency hash block from to contract amount fee fee_currency type data property_id timestamp gas_price)) {
+    foreach (qw(message_type currency hash block from to contract amount fee fee_currency type data property_id timestamp)) {
         $self->{$_} = delete $params{$_} if exists $params{$_};
     }
 
