@@ -59,7 +59,7 @@ use constant {
     DEFAULT_CURRENCY         => 'ETH',
     DEFAULT_DECIMAL_PLACES   => 18,
     UPDATE_ACCOUNTS          => 10,
-    ETH_UNPROCESSED_TXN      => "eth::subscription::unprocessed_transaction",
+    ETH_UNPROCESSED_TXN      => 'eth::subscription::unprocessed_transaction',
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -383,6 +383,7 @@ async sub transform_transaction {
                 await $self->redis_client->rpush(ETH_UNPROCESSED_TXN => encode_json_utf8($decoded_transaction));
             }
 
+            $self->_transform_unprocessed_transactions();
             return 0;
         }
 
@@ -447,6 +448,7 @@ async sub _transform_unprocessed_transactions {
         $response    = await $self->redis_client->rpop(ETH_UNPROCESSED_TXN);
         $transaction = decode_json_utf8($response) if $response;
         await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
+        last unless $response;
     }
 }
 
