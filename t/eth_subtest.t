@@ -36,7 +36,6 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
                 auth => undef
             ));
         my $redis_key = 'eth::subscription::unprocessed_transaction';
-        $redis_client->flushall;
 
         my $sample_get_transaction_receipt = {
             'transactionIndex' => '0x0',
@@ -90,7 +89,9 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
 
         # Add the transaction in the redis queue
         if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5) {
-            $redis_client->connected->get;
+            use Data::Dumper;
+            warn Dumper $redis_client;
+            $redis_client->connect->get;
             $redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))->get;
         }
 
