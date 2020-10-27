@@ -36,6 +36,7 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
                 auth => undef
             ));
         my $redis_key = 'eth::subscription::unprocessed_transaction';
+        $redis_client->flushall;
 
         my $sample_get_transaction_receipt = {
             'transactionIndex' => '0x0',
