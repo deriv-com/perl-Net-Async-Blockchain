@@ -29,12 +29,19 @@ $loop->add(my $blockchain_eth = Net::Async::Blockchain::ETH->new());
 
 subtest "Test Case - to check _transform_unprocessed_transactions" => (
     sub {
-
+        my $redis_uri  //= 'redis://localhost';
+        my $redis_auth //= undef;
         $loop->add(
             my $redis_client = Net::Async::Redis->new(
-                uri  => "redis://127.0.0.1:6379",
-                auth => undef
+                # uri => 'redis://localhost:6379',
+                host => '127.0.0.1',
+                port => 6379,
+                auth => $redis_auth,
             ));
+        $loop->add(my $ryu = Ryu::Async->new);
+        $redis_client->connect->get;
+        my $info = $redis_client->info;
+
         my $redis_key = "eth::subscription::unprocessed_transaction";
 
         my $sample_get_transaction_receipt = {
@@ -91,9 +98,9 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
         if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5) {
             use Data::Dumper;
             warn 'Reached this pt 6';
-            my $connect = $redis_client->connect;
-            warn Dumper $connect;
-            $redis_client->connect->get;
+            # my $connect = $redis_client->connect;
+            warn Dumper $info;
+            # $redis_client->connect->get;
             warn 'Reached this pt 5';
             $redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))->get;
             warn 'Reached this pt 4';
