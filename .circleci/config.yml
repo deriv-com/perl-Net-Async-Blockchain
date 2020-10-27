@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: perl:5.26-slim
+      - image: redis
     steps:
       - run:
           name: Install libraries and other packages

@@ -40,7 +40,6 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
             ));
 
         $redis_client->connect->get;
-        my $info = $redis_client->info;
 
         my $redis_key = "eth::subscription::unprocessed_transaction";
 
