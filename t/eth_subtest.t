@@ -29,17 +29,11 @@ $loop->add(my $blockchain_eth = Net::Async::Blockchain::ETH->new());
 
 subtest "Test Case - to check _transform_unprocessed_transactions" => (
     sub {
-        my $redis_uri  //= 'redis://localhost';
-        my $redis_auth //= undef;
         $loop->add(
             my $redis_client = Net::Async::Redis->new(
                 uri => 'redis://localhost:6379',
-                # host => '127.0.0.1',
-                # port => 6379,
-                auth => $redis_auth,
+                auth => undef,
             ));
-
-        $redis_client->connect->get;
 
         my $redis_key = "eth::subscription::unprocessed_transaction";
 
