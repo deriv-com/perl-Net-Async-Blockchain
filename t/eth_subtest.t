@@ -35,7 +35,7 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
                 uri  => "redis://127.0.0.1:6379",
                 auth => undef
             ));
-        my $redis_key = 'eth::subscription::unprocessed_transaction';
+        my $redis_key = "eth::subscription::unprocessed_transaction";
 
         my $sample_get_transaction_receipt = {
             'transactionIndex' => '0x0',
@@ -90,11 +90,16 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
         # Add the transaction in the redis queue
         if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5) {
             use Data::Dumper;
-            warn Dumper $redis_client;
+            warn 'Reached this pt 6';
+            my $connect = $redis_client->connect;
+            warn Dumper $connect;
             $redis_client->connect->get;
+            warn 'Reached this pt 5';
             $redis_client->rpush($redis_key => encode_json_utf8($decoded_transaction))->get;
+            warn 'Reached this pt 4';
         }
 
+        warn 'Reached this pt 3';
         $mock_rpc->mock(
             get_transaction_receipt => async sub {
                 return $sample_get_transaction_receipt;
@@ -124,11 +129,13 @@ subtest "Test Case - to check _transform_unprocessed_transactions" => (
         $blockchain_eth_source->each(
             sub {
                 my $emitted_transaction = shift;
+                warn "Reached this pt 2";
                 is_deeply $emitted_transaction, $expected_transaction, "Correct emitted transaction";
                 $blockchain_eth_source->finish();
             });
 
         $blockchain_eth->_transform_unprocessed_transactions()->get;
+        warn 'Reached this pt 1';
 
         $mock_rpc->unmock_all();
         $mock_eth->unmock_all();
