@@ -60,6 +60,7 @@ Create a new L<Net::Async::Blockchain::Transaction> instance
 =item * C<data> contract instructions
 =item * C<property_id> omnicore property id
 =item * C<timestamp> block timestamp
+=item * C<gas_price> gas price
 
 =back
 

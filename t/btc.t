@@ -401,8 +401,8 @@ subtest "subscribe" => sub {
 
     # ZMQ server
     my $block_hash_bytes = pack('H*', '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834');
-    my @msg = ('hashblock', $block_hash_bytes);
-    my $zmq_server = Test::TCP->new(
+    my @msg              = ('hashblock', $block_hash_bytes);
+    my $zmq_server       = Test::TCP->new(
         code => sub {
             my $port = shift;
             my $ctxt = zmq_init();

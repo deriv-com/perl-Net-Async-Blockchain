@@ -37,6 +37,7 @@ no indirect;
 
 use Future::AsyncAwait;
 use Ryu::Async;
+
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 use Math::BigInt;
 use Math::BigFloat;
@@ -47,6 +48,7 @@ use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
+use Net::Async::Redis;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -57,6 +59,7 @@ use constant {
     DEFAULT_CURRENCY         => 'ETH',
     DEFAULT_DECIMAL_PLACES   => 18,
     UPDATE_ACCOUNTS          => 10,
+    ETH_UNPROCESSED_TXN      => 'eth::subscription::unprocessed_transaction',
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -129,9 +132,34 @@ async sub get_hash_accounts {
 
     $self->{latest_accounts_update} = time;
     my $accounts_response = await $self->rpc_client->accounts();
-    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    my %accounts          = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
     return $self->{accounts};
+}
+
+=head2 redis_client
+
+Create the L<Net::Async::Redis> instance, if it is already defined just return
+the object
+
+=over 4
+
+=back
+
+L<Net::Async::Redis>
+
+=cut
+
+sub redis_client {
+    my ($self) = @_;
+    return $self->{redis_client} //= do {
+        $self->add_child(
+            my $redis_client = Net::Async::Redis->new(
+                uri  => sprintf('redis://%s:%s', $self->redis_host, $self->redis_port),
+                auth => $self->redis_auth
+            ));
+        $redis_client;
+    };
 }
 
 =head2 rpc_client
@@ -227,13 +255,14 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-            )->map(
+        )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-            )->ordered_futures->completed(),
+        )->ordered_futures->completed(),
         $self->recursive_search(),
-        )->on_fail(
+        $self->_transform_unprocessed_transactions(),
+    )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
@@ -325,6 +354,7 @@ once converted it emits all transactions to the client source.
 
 async sub transform_transaction {
     my ($self, $decoded_transaction, $timestamp) = @_;
+    my ($transaction, $gas, $fee);
 
     # Contract creation transactions.
     return undef unless $decoded_transaction->{to};
@@ -335,30 +365,40 @@ async sub transform_transaction {
     my $amount        = Math::BigFloat->from_hex($decoded_transaction->{value})->bdiv(10**DEFAULT_DECIMAL_PLACES);
     my $block         = Math::BigInt->from_hex($decoded_transaction->{blockNumber});
     my $int_timestamp = Math::BigInt->from_hex($timestamp)->numify;
-
-    my $transaction;
+    my $txn_hash      = $decoded_transaction->{hash};
+    my $gas_price     = $decoded_transaction->{gasPrice};
 
     try {
-        my $gas     = $decoded_transaction->{gas};
-        my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
+        my $receipt = await $self->rpc_client->get_transaction_receipt($txn_hash);
 
-        $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
+        unless ($receipt) {
+            my $flag = 1;
+            # add transaction to unprocessed transaction array so that we can process later
+            $decoded_transaction->{timestamp} = $timestamp;
+            $decoded_transaction->{flag}      = $decoded_transaction->{flag} ? $decoded_transaction->{flag} + 1 : $flag;
 
-        # if the gas is empty we don't proceed
-        return 0 unless $gas && $decoded_transaction->{gasPrice};
+            # add the transaction to redis to be processed
+            if ($decoded_transaction->{flag} && $decoded_transaction->{flag} <= 5) {
+                await $self->redis_client->connected;
+                await $self->redis_client->rpush(ETH_UNPROCESSED_TXN => encode_json_utf8($decoded_transaction));
+            }
+            return 0;
+        }
+
+        $gas = $receipt->{gasUsed};
 
         # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
+        $fee = Math::BigFloat->from_hex($gas)->bmul($gas_price) if $gas && $gas_price;
 
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
-            hash         => $decoded_transaction->{hash},
+            hash         => $txn_hash,
             block        => $block,
             from         => $decoded_transaction->{from},
             to           => $decoded_transaction->{to},
             contract     => '',
             amount       => $amount,
-            fee          => $fee,
+            fee          => $fee // undef,
             fee_currency => $self->currency_symbol,
             type         => '',
             data         => $decoded_transaction->{input},
@@ -375,20 +415,39 @@ async sub transform_transaction {
         for my $tx (@transactions) {
             # set the type for each transaction
             # from and to => internal
-            # to => received
-            # from => sent
+            # to => receive
+            # from => send
             my $tx_type_response = await $self->_set_transaction_type($tx);
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
 
-    }
-    catch {
+    } catch {
         my $err = $@;
-        warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
+        warn sprintf("Error processing transaction: %s, error: %s", $txn_hash, $err);
         return 0;
     }
 
     return 1;
+}
+
+=head2 _transform_unprocessed_transactions
+
+To send the unprocessed transaction to transform_transaction sub to process.
+
+=cut
+
+async sub _transform_unprocessed_transactions {
+    my ($self) = @_;
+    my ($response, $transaction);
+
+    while (1) {
+        # get eth::subscription::unprocessed_transaction from redis
+        await $self->redis_client->connected;
+        $response    = await $self->redis_client->rpop(ETH_UNPROCESSED_TXN);
+        $transaction = decode_json_utf8($response) if $response;
+        await $self->transform_transaction($transaction, $transaction->{timestamp}) if $transaction;
+        last unless $response;
+    }
 }
 
 =head2 _set_transaction_type
@@ -399,7 +458,7 @@ the result will be:
 
 if to and from found: internal
 if to found: receive
-if from found: sent
+if from found: send
 
 =over 4
 

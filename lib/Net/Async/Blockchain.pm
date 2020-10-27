@@ -45,6 +45,9 @@ sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
 sub currency_symbol : method          { shift->{currency_symbol} }
 sub base_block_number : method        { shift->{base_block_number} }
+sub redis_host : method               { shift->{redis_host} || '127.0.0.1' }
+sub redis_port : method               { shift->{redis_port} || '6379' }
+sub redis_auth : method               { shift->{redis_auth} }
 
 =head2 configure
 
@@ -62,6 +65,9 @@ must be included and removed here.
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
 =item * C<currency_symbol> Currency symbol
 =item * C<base_block_number> Block number where the subscription must apply the recursive search from
+=item * C<redis_host> Redis host. (optional, default: '127.0.0.1')
+=item * C<redis_port> Redis port. (optional, default: '6379')
+=item * C<redis_auth> Redis password. (optional, default: undef)
 
 =back
 
@@ -70,7 +76,10 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
+    for my $k (
+        qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number redis_host redis_port redis_auth)
+        )
+    {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
