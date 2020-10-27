@@ -382,8 +382,6 @@ async sub transform_transaction {
                 await $self->redis_client->connected;
                 await $self->redis_client->rpush(ETH_UNPROCESSED_TXN => encode_json_utf8($decoded_transaction));
             }
-
-            $self->_transform_unprocessed_transactions();
             return 0;
         }
 
