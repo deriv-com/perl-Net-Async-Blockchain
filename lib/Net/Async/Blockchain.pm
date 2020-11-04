@@ -33,6 +33,7 @@ no indirect;
 
 use Ryu::Async;
 use Net::Async::Blockchain::Block;
+use Future::Queue;
 
 use parent qw(IO::Async::Notifier);
 
@@ -70,7 +71,10 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)) {
+    for my $k (
+        qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)
+        )
+    {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -121,5 +125,14 @@ sub block {
     }
 }
 
-1;
+=head2 new_blocks_queue
 
+Returns C<Future::Queue> object
+
+=cut
+
+sub new_blocks_queue {
+    return shift->{new_blocks_queue} //= Future::Queue->new;
+}
+
+1;

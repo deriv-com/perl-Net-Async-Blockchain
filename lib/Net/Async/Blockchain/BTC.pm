@@ -72,9 +72,12 @@ L<Net::Async::Blockchain::Client::RPC>
 sub rpc_client : method {
     my ($self) = @_;
     return $self->{rpc_client} //= do {
-        $self->add_child(my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(endpoint => $self->rpc_url,
-                                            rpc_user      => $self->rpc_user,
-                                            rpc_password  => $self->rpc_password));
+        $self->add_child(
+            my $http_client = Net::Async::Blockchain::Client::RPC::BTC->new(
+                endpoint     => $self->rpc_url,
+                rpc_user     => $self->rpc_user,
+                rpc_password => $self->rpc_password
+            ));
         $http_client;
     };
 }
@@ -96,7 +99,7 @@ sub zmq_client : method {
     my ($self) = @_;
     return $self->{zmq_client} //= do {
         $self->new_zmq_client();
-        }
+    }
 }
 
 =head2 new_zmq_client
@@ -157,8 +160,15 @@ sub subscribe {
         zmq_close($self->zmq_client->socket_client());
     };
 
-    Future->needs_all($zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
-        $self->recursive_search())->on_fail($error_handler)->retain;
+    # start subscribe for the new blocks and add them to the new blocks queue
+    $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed->on_fail($error_handler)->retain;
+
+    # process the old blocks first
+    # then start processing the blocks in the queue
+    $self->recursive_search()->then(
+        async sub {
+            while (1) { await $self->hashblock(await $self->new_blocks_queue->shift); }
+        })->on_fail($error_handler)->retain;
 
     return $self->source;
 }
@@ -253,7 +263,7 @@ async sub transform_transaction {
     # transaction not found, just ignore.
     return undef unless $received_transaction;
 
-    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
+    my $fee   = Math::BigFloat->new($received_transaction->{fee} // 0);
     my $block = Math::BigInt->new($decoded_raw_transaction->{block});
     my @transactions;
     my %addresses;
@@ -275,7 +285,7 @@ async sub transform_transaction {
             $categories{$detail->{category}} = 1;
         }
 
-        my @categories = keys %categories;
+        my @categories       = keys %categories;
         my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
 
         my $transaction = Net::Async::Blockchain::Transaction->new(
