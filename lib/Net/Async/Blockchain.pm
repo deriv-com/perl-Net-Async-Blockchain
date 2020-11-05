@@ -32,7 +32,6 @@ This module contains methods that are shared by the subscription clients.
 no indirect;
 
 use Ryu::Async;
-use Net::Async::Blockchain::Block;
 use Future::Queue;
 
 use parent qw(IO::Async::Notifier);
@@ -100,29 +99,6 @@ sub source : method {
         $self->add_child(my $ryu = Ryu::Async->new);
         $ryu->source;
     };
-}
-
-=head2 block
-
-create a block object to store the base block number value
-
-=over 4
-
-=back
-
-Returns L<Net::Async::Blockchain::Block>
-
-=cut
-
-sub block {
-    my ($self) = @_;
-
-    return $self->{block} //= do {
-        Net::Async::Blockchain::Block->new(
-            number   => $self->base_block_number,
-            currency => $self->currency_symbol
-        );
-    }
 }
 
 =head2 new_blocks_queue
