@@ -298,17 +298,15 @@ async sub newHeads {
     my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
-    unless ($block_response) {
-        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr);
-        return undef;
-    }
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
+        unless $block_response;
 
     my @transactions = $block_response->{transactions}->@*;
     for my $transaction (@transactions) {
         await $self->transform_transaction($transaction, $block_response->{timestamp});
     }
 
-    return 1;
+    return Math::BigInt->from_hex($block->{number})->bstr;
 }
 
 =head2 transform_transaction
