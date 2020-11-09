@@ -227,15 +227,11 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-        )->map(
-            async sub {
-                await $self->$subscription(shift);
-            }
-        )->ordered_futures->completed(),
-        $self->recursive_search(),
+        )->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
+        $self->recursive_search()->then($self->process_the_new_blocks())
     )->on_fail(
         sub {
-            $self->source->fail(@_);
+            $self->source->fail(@_) unless $self->source->completed->is_ready;
         })->retain;
 
     return $self->source;
@@ -272,6 +268,20 @@ async sub recursive_search {
     }
     # set block number as undef to inform the recursive search has ended.
     $self->source->emit($self->block->empty());
+}
+
+=head2 process_the_new_blocks
+
+Process all the blocks in the new blocks queue.
+
+=cut
+
+async sub process_the_new_blocks {
+    my $self = shift;
+    while (1) {
+        my $block_number = await $self->newHeads(await $self->new_blocks_queue->shift);
+        $self->emit_block($block_number);
+    }
 }
 
 =head2 newHeads
