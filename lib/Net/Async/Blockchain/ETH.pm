@@ -43,7 +43,6 @@ use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
 
-use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
@@ -253,21 +252,21 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->block->number;
+    return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
     # the node will return empty for the block number when it's not synced
     die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
-    while (1) {
-        last unless $current_block->bgt($self->block->number);
-        $self->source->emit($self->block);
-        await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->block->number)}}});
-        $self->block->up();
+    my $block_number_counter = $self->base_block_number;
+    while ($current_block->bge($block_number_counter)) {
+        my $block_number = await $self->newHeads({params => {result => {number => sprintf("0x%X", $block_number_counter)}}});
+        $self->emit_block($block_number);
+        $block_number_counter++;
     }
-    # set block number as undef to inform the recursive search has ended.
-    $self->source->emit($self->block->empty());
+
+    return undef;
 }
 
 =head2 process_the_new_blocks
