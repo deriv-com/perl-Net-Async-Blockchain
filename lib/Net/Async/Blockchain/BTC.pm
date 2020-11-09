@@ -43,7 +43,6 @@ use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
 
-use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;
@@ -160,22 +159,15 @@ sub subscribe {
         zmq_close($self->zmq_client->socket_client());
     };
 
-    # start subscribe for the new blocks and add them to the new blocks queue
-    $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed->on_fail($error_handler)->retain;
-
-    # process the old blocks first
-    # then start processing the blocks in the queue
-    $self->recursive_search()->then(
-        async sub {
-            while (1) {
-                my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
-                my $block_object = Net::Async::Blockchain::Block->new(
-                    number   => $block_number,
-                    currency => $self->currency_symbol
-                );
-                $self->source->emit($block_object);
-            }
-        })->on_fail($error_handler)->retain;
+    Future->needs_all(
+        $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
+        $self->recursive_search()->then(
+            async sub {
+                while (1) {
+                    my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
+                    $self->emit_block($block_number);
+                }
+            }))->on_fail($error_handler)->retain;
 
     return $self->source;
 }
@@ -207,11 +199,7 @@ async sub recursive_search {
         die "Failed to get the block hash for block number: $block_number_counter" unless $block_hash;
 
         my $block_number = await $self->hashblock($block_hash);
-        my $block_object = Net::Async::Blockchain::Block->new(
-            number   => $block_number,
-            currency => $self->currency_symbol
-        );
-        $self->source->emit($block_object);
+        $self->emit_block($block_number);
         $block_number_counter++;
     }
 

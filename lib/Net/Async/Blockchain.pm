@@ -34,6 +34,8 @@ no indirect;
 use Ryu::Async;
 use Future::Queue;
 
+use Net::Async::Blockchain::Block;
+
 use parent qw(IO::Async::Notifier);
 
 sub rpc_url : method                  { shift->{rpc_url} }
@@ -109,6 +111,28 @@ Returns C<Future::Queue> object
 
 sub new_blocks_queue {
     return shift->{new_blocks_queue} //= Future::Queue->new;
+}
+
+=head2 emit_block
+
+Creates an object of <Net::Async::Blockchain::Block> then emit it.
+
+=over 4
+
+=item * C<block_number> - Number of the proceeded block.
+
+=back
+
+=cut
+
+sub emit_block {
+    my ($self, $block_number) = @_;
+    my $block_object = Net::Async::Blockchain::Block->new(
+        number   => $block_number,
+        currency => $self->currency_symbol
+    );
+    $self->source->emit($block_object);
+    return undef;
 }
 
 1;
