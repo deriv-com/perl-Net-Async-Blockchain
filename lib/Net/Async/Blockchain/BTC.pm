@@ -159,24 +159,17 @@ sub subscribe {
         zmq_close($self->zmq_client->socket_client());
     };
 
-    Future->needs_all($zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
-        $self->recursive_search()->then($self->process_the_new_blocks()))->on_fail($error_handler)->retain;
+    Future->needs_all(
+        $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
+        $self->recursive_search()->then(
+            async sub {
+                while (1) {
+                    my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
+                    $self->emit_block($block_number);
+                }
+            }))->on_fail($error_handler)->retain;
 
     return $self->source;
-}
-
-=head2 process_the_new_blocks
-
-Process all the blocks in the new blocks queue.
-
-=cut
-
-async sub process_the_new_blocks {
-    my $self = shift;
-    while (1) {
-        my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
-        $self->emit_block($block_number);
-    }
 }
 
 =head2 recursive_search
