@@ -42,6 +42,7 @@ use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
+use Future::Utils qw( fmap_void );
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
@@ -301,10 +302,8 @@ async sub newHeads {
     die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
         unless $block_response;
 
-    my @transactions = $block_response->{transactions}->@*;
-    for my $transaction (@transactions) {
-        await $self->transform_transaction($transaction, $block_response->{timestamp});
-    }
+    await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions},
+        concurrent                                                                                => 3;
 
     return Math::BigInt->from_hex($block->{number})->bstr;
 }

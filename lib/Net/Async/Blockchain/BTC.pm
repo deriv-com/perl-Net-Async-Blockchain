@@ -42,6 +42,7 @@ use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
+use Future::Utils qw( fmap_void );
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
@@ -229,9 +230,9 @@ async sub hashblock {
     die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
-    for my $transaction (@transactions) {
-        await $self->transform_transaction($transaction);
-    }
+
+    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions,
+        concurrent                                                  => 3;
 
     return $block_response->{height};
 }
