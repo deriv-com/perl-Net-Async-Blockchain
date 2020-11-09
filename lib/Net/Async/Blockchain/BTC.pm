@@ -231,8 +231,7 @@ async sub hashblock {
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
 
-    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions,
-        concurrent                                                  => 3;
+    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions;
 
     return $block_response->{height};
 }
