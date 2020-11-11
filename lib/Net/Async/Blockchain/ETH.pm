@@ -366,7 +366,7 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-        $amount = $amount->numify;
+        $amount = $amount->bstr();
         push @transactions, $transaction if $amount > 0;
 
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
