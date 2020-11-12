@@ -103,9 +103,10 @@ subtest "Omni Send " => sub {
                         txids   => [$hash],
                         address => $from
                     }];
-            }
 
-            else { $result = []; }
+            } else {
+                $result = [];
+            }
 
             return Future->done($result);
         },
@@ -230,9 +231,10 @@ subtest "Omni Send ALL" => sub {
                         txids   => [$hash],
                         address => $to
                     }];
-            }
 
-            else { $result = []; }
+            } else {
+                $result = [];
+            }
 
             return Future->done($result);
         },
@@ -328,9 +330,10 @@ subtest "Transaction Type Internal" => sub {
                         txids   => [$hash],
                         address => $to
                     }];
-            }
 
-            else { $result = []; }
+            } else {
+                $result = [];
+            }
 
             return Future->done($result);
         });

@@ -17,7 +17,7 @@ BEGIN {
 }
 
 subtest 'receive msg' => sub {
-    my @msg = (7261777478, "{hash => Test_Transaction}", 92870000);
+    my @msg    = (7261777478, "{hash => Test_Transaction}", 92870000);
     my $server = Test::TCP->new(
         code => sub {
             my $port = shift;

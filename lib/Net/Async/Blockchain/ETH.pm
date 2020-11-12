@@ -129,7 +129,7 @@ async sub get_hash_accounts {
 
     $self->{latest_accounts_update} = time;
     my $accounts_response = await $self->rpc_client->accounts();
-    my %accounts = map { lc($_) => 1 } $accounts_response->@*;
+    my %accounts          = map { lc($_) => 1 } $accounts_response->@*;
     $self->{accounts} = \%accounts;
     return $self->{accounts};
 }
@@ -227,13 +227,13 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-            )->map(
+        )->map(
             async sub {
                 await $self->$subscription(shift);
             }
-            )->ordered_futures->completed(),
+        )->ordered_futures->completed(),
         $self->recursive_search(),
-        )->on_fail(
+    )->on_fail(
         sub {
             $self->source->fail(@_);
         })->retain;
@@ -366,7 +366,9 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-        push @transactions, $transaction if $amount->bgt(0);
+        if (if $amount->bgt(0)) {
+            push @transactions, $transaction;
+        }
 
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
@@ -381,8 +383,7 @@ async sub transform_transaction {
             $self->source->emit($tx_type_response) if $tx_type_response;
         }
 
-    }
-    catch {
+    } catch {
         my $err = $@;
         warn sprintf("Error processing transaction: %s, error: %s", $decoded_transaction->{hash}, $err);
         return 0;
