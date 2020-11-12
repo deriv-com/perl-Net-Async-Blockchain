@@ -366,7 +366,7 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-        if (if $amount->bgt(0)) {
+        if ($amount->bgt(0)) {
             push @transactions, $transaction;
         }
 
