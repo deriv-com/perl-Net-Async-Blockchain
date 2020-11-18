@@ -35,8 +35,8 @@ use parent qw(IO::Async::Notifier);
 # default value for the Net::Async::HTTP stall_timeout configuration.
 use constant DEFAULT_TIMEOUT => 100;
 
-sub endpoint : method { shift->{endpoint} }
-sub rpc_user : method { shift->{rpc_user} || undef }
+sub endpoint : method     { shift->{endpoint} }
+sub rpc_user : method     { shift->{rpc_user} || undef }
 sub rpc_password : method { shift->{rpc_password} || undef }
 
 # this value will be set on the _init method, if not set will use the
@@ -126,7 +126,7 @@ async sub _request {
     };
     my @post_params = ($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
     # for ETH based, we don't require user+password. Check to send user+password if exists.
-    push @post_params, (user => $self->rpc_user) if $self->rpc_user;
+    push @post_params, (user => $self->rpc_user)     if $self->rpc_user;
     push @post_params, (pass => $self->rpc_password) if $self->rpc_password;
 
     my $response = await $self->http_client->POST(@post_params);

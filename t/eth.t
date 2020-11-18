@@ -108,8 +108,8 @@ $mock_rpc->mock(
 
 my @received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 1, "correct total transactions found";
-is $received_transactions[0]->{currency}, 'USB', 'correct contract symbol';
-is $received_transactions[0]->{to}, '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
+is $received_transactions[0]->{currency}, 'USB',                                        'correct contract symbol';
+is $received_transactions[0]->{to},       '0x2ae6d1401af58f9fbe2eda032b8494d519af5813', 'correct address `to`';
 is $received_transactions[0]->{amount}->bstr(), Math::BigFloat->new(1000)->bstr, 'correct amount';
 is $received_transactions[0]->{contract}, '0xdac17f958d2ee523a2206206994597c13d831ec7', 'correct contract address';
 
@@ -176,18 +176,18 @@ $mock_rpc->mock(
 @received_transactions = $subscription_client->_check_contract_transaction($transaction, $receipt->{result})->get;
 is scalar @received_transactions, 3, "correct total transactions found";
 
-is $received_transactions[0]->{currency}, 'EUR-T', 'correct contract symbol';
-is $received_transactions[0]->{to}, '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
+is $received_transactions[0]->{currency}, 'EUR-T',                                      'correct contract symbol';
+is $received_transactions[0]->{to},       '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
 is $received_transactions[0]->{amount}->bstr(), Math::BigFloat->new(690)->bstr, 'correct amount';
 is $received_transactions[0]->{contract}, '0x61646f3bede9e1a24d387feb661888b4cc1587d8', 'correct contract address';
 
-is $received_transactions[1]->{currency}, 'NEU', 'correct contract symbol';
-is $received_transactions[1]->{to}, '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
+is $received_transactions[1]->{currency}, 'NEU',                                        'correct contract symbol';
+is $received_transactions[1]->{to},       '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
 is $received_transactions[1]->{amount}->bstr(), Math::BigFloat->new("4268.920964490649222481")->bstr, 'correct amount';
 is $received_transactions[1]->{contract}, '0xa823e6722006afe99e91c30ff5295052fe6b8e32', 'correct contract address';
 
-is $received_transactions[2]->{currency}, 'GRP', 'correct contract symbol';
-is $received_transactions[2]->{to}, '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
+is $received_transactions[2]->{currency}, 'GRP',                                        'correct contract symbol';
+is $received_transactions[2]->{to},       '0x73e44092b5a886a37bea74bfc90911d0c98f6a15', 'correct address `to`';
 is $received_transactions[2]->{amount}->bstr(), Math::BigFloat->new(4262)->bstr, 'correct amount';
 is $received_transactions[2]->{contract}, '0x535bfaeb50580f674bd2e076d6073adf28a46fa8', 'correct contract address';
 
