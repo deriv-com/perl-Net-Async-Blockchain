@@ -363,7 +363,7 @@ async sub transform_transaction {
         );
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
-        push @transactions, $transaction;
+        push @transactions, $transaction if ($amount->bgt(0));
 
         if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
             await $self->get_hash_accounts();
