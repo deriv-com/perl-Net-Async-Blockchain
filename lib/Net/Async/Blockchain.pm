@@ -119,7 +119,7 @@ Creates an object of <Net::Async::Blockchain::Block> then emit it.
 
 =over 4
 
-=item * C<block_number> - Number of the proceeded block.
+=item * C<block_number> - Number of the processed block.
 
 =back
 
