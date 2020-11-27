@@ -42,8 +42,8 @@ use Math::BigInt;
 use Math::BigFloat;
 use Digest::Keccak qw(keccak_256_hex);
 use Syntax::Keyword::Try;
+use Future::Utils qw( fmap_void );
 
-use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::ETH;
 use Net::Async::Blockchain::Client::Websocket;
@@ -227,15 +227,17 @@ sub subscribe {
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
             }
-        )->map(
+        )->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
+        $self->recursive_search()->then(
             async sub {
-                await $self->$subscription(shift);
-            }
-        )->ordered_futures->completed(),
-        $self->recursive_search(),
+                while (1) {
+                    my $block_number = await $self->newHeads(await $self->new_blocks_queue->shift);
+                    $self->emit_block($block_number);
+                }
+            })
     )->on_fail(
         sub {
-            $self->source->fail(@_);
+            $self->source->fail(@_) unless $self->source->completed->is_ready;
         })->retain;
 
     return $self->source;
@@ -257,21 +259,21 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->block->number;
+    return undef unless $self->base_block_number;
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
     # the node will return empty for the block number when it's not synced
     die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
-    while (1) {
-        last unless $current_block->bgt($self->block->number);
-        $self->source->emit($self->block);
-        await $self->newHeads({params => {result => {number => sprintf("0x%X", $self->block->number)}}});
-        $self->block->up();
+    my $block_number_counter = $self->base_block_number;
+    while ($current_block->bge($block_number_counter)) {
+        my $block_number = await $self->newHeads({params => {result => {number => sprintf("0x%X", $block_number_counter)}}});
+        $self->emit_block($block_number);
+        $block_number_counter++;
     }
-    # set block number as undef to inform the recursive search has ended.
-    $self->source->emit($self->block->empty());
+
+    return undef;
 }
 
 =head2 newHeads
@@ -297,17 +299,12 @@ async sub newHeads {
     my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
-    unless ($block_response) {
-        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr);
-        return undef;
-    }
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
+        unless $block_response;
 
-    my @transactions = $block_response->{transactions}->@*;
-    for my $transaction (@transactions) {
-        await $self->transform_transaction($transaction, $block_response->{timestamp});
-    }
+    await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions};
 
-    return 1;
+    return Math::BigInt->from_hex($block->{number})->bstr;
 }
 
 =head2 transform_transaction

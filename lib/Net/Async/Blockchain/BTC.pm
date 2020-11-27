@@ -42,8 +42,8 @@ use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
+use Future::Utils qw( fmap_void );
 
-use Net::Async::Blockchain::Block;
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;
@@ -160,8 +160,15 @@ sub subscribe {
         zmq_close($self->zmq_client->socket_client());
     };
 
-    Future->needs_all($zmq_client_source->map(async sub { await $self->$subscription(shift) })->ordered_futures->completed(),
-        $self->recursive_search())->on_fail($error_handler)->retain;
+    Future->needs_all(
+        $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
+        $self->recursive_search()->then(
+            async sub {
+                while (1) {
+                    my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
+                    $self->emit_block($block_number);
+                }
+            }))->on_fail($error_handler)->retain;
 
     return $self->source;
 }
@@ -182,21 +189,22 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->block->number;
+    return undef unless $self->base_block_number;
 
     my $current_block = await $self->rpc_client->get_last_block();
+    die 'unable to get the last block from the node.' unless $current_block;
 
-    return undef unless $current_block;
+    my $block_number_counter = $self->base_block_number;
+    while ($current_block >= $block_number_counter) {
+        my $block_hash = await $self->rpc_client->get_block_hash($block_number_counter);
+        die "Failed to get the block hash for block number: $block_number_counter" unless $block_hash;
 
-    while (1) {
-        last unless $current_block > $self->block->number;
-        $self->source->emit($self->block);
-        my $block_hash = await $self->rpc_client->get_block_hash($self->block->number + 0);
-        await $self->hashblock($block_hash) if $block_hash;
-        $self->block->up();
+        my $block_number = await $self->hashblock($block_hash);
+        $self->emit_block($block_number);
+        $block_number_counter++;
     }
-    # set block number as undef to inform the recursive search has ended.
-    $self->source->emit($self->block->empty());
+
+    return undef;
 }
 
 =head2 hashblock
@@ -219,17 +227,13 @@ async sub hashblock {
 
     # 2 here means the full verbosity since we want to get the raw transactions
     my $block_response = await $self->rpc_client->get_block($block_hash, 2);
-
-    # block not found or some issue in the RPC call
-    unless ($block_response) {
-        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash);
-        return undef;
-    }
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
-    for my $transaction (@transactions) {
-        await $self->transform_transaction($transaction);
-    }
+
+    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions;
+
+    return $block_response->{height};
 }
 
 =head2 transform_transaction

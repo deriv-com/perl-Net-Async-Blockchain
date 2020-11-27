@@ -15,6 +15,7 @@ use ZMQ::Constants qw(:all);
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::BTC;
+use Net::Async::Blockchain::Block;
 
 my $mock_rpc = Test::MockModule->new("Net::Async::Blockchain::Client::RPC::BTC");
 my $mock_btc = Test::MockModule->new("Net::Async::Blockchain::BTC");
@@ -344,19 +345,6 @@ subtest "recursive_search _ base block number is undefined" => sub {
     is $blockchain_btc->{base_block_number}, undef, "base block number is not passed";
 };
 
-subtest "recursive_search _ last block number is undefined" => sub {
-
-    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 499));
-    $mock_rpc->mock(
-        get_last_block => async sub {
-            return undef;
-        });
-    my $value = $blockchain_btc->recursive_search->get;
-    is $value, undef, "Correct response";
-    is $blockchain_btc->{base_block_number}, 499, "base block number has not increased";
-    $mock_rpc->unmock_all();
-};
-
 subtest "recursive_search _ break the while loop" => sub {
 
     $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 500));
@@ -371,10 +359,15 @@ subtest "recursive_search _ break the while loop" => sub {
 
 subtest "recursive_search" => sub {
 
-    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(base_block_number => 499));
+    my $block_number = 500;
+    $loop->add(
+        my $blockchain_btc = Net::Async::Blockchain::BTC->new(
+            currency_symbol   => 'BTC',
+            base_block_number => $block_number
+        ));
     $mock_rpc->mock(
         get_last_block => async sub {
-            return 500;
+            return $block_number;
         },
         get_block_hash => async sub {
             return '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834';
@@ -382,11 +375,25 @@ subtest "recursive_search" => sub {
 
     $mock_btc->mock(
         hashblock => async sub {
-            return undef;
+            return $block_number;
+        });
+
+    my $expected_data = Net::Async::Blockchain::Block->new(
+        number   => $block_number,
+        currency => $blockchain_btc->currency_symbol
+    );
+
+    my $source = $blockchain_btc->source->each(
+        sub {
+            my $emitted_data = shift;
+            is_deeply $emitted_data, $expected_data, "Correct emitted data";
+            $blockchain_btc->source->finish();
         });
 
     $blockchain_btc->recursive_search->get;
-    is $blockchain_btc->block->number, undef, "empty block number";
+
+    $source->get;
+
     $mock_rpc->unmock_all();
     $mock_btc->unmock_all();
 };
