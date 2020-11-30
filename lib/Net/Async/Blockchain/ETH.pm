@@ -302,7 +302,8 @@ async sub newHeads {
     die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
         unless $block_response;
 
-    await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions};
+    await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions},
+        concurrent                                                                                => 5;
 
     return Math::BigInt->from_hex($block->{number})->bstr;
 }
