@@ -231,7 +231,12 @@ sub subscribe {
         $self->recursive_search()->then(
             async sub {
                 while (1) {
-                    my $block_number = await $self->newHeads(await $self->new_blocks_queue->shift);
+                    # Skip the old chekced blocks
+                    # This could happen when restarting the node
+                    my $next_block = await $self->new_blocks_queue->shift;
+                    next if $self->base_block_number and $next_block->{params}->{result}->{number} < $self->base_block_number;
+
+                    my $block_number = await $self->newHeads($next_block);
                     $self->emit_block($block_number);
                 }
             })
