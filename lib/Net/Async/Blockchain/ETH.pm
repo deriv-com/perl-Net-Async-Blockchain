@@ -233,8 +233,9 @@ sub subscribe {
                 while (1) {
                     # Skip the old chekced blocks
                     # This could happen when restarting the node
-                    my $next_block = await $self->new_blocks_queue->shift;
-                    next if $self->base_block_number and $next_block->{params}->{result}->{number} < $self->base_block_number;
+                    my $next_block        = await $self->new_blocks_queue->shift;
+                    my $next_block_number = Math::BigInt->from_hex($next_block->{params}->{result}->{number});
+                    next if $self->base_block_number and $next_block_number->blt($self->base_block_number);
 
                     my $block_number = await $self->newHeads($next_block);
                     $self->emit_block($block_number);
