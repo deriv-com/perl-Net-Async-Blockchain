@@ -148,7 +148,9 @@ L<Future>
 =cut
 
 sub get_balance {
-    my ($self, $address) = @_;
+    my ($self, $address, $block_number) = @_;
+
+    return $self->_request('eth_getBalance', $address, $block_number) if $block_number;
     return $self->_request('eth_getBalance', $address, 'latest');
 }
 
