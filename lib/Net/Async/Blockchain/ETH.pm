@@ -264,7 +264,10 @@ you received.
 async sub recursive_search {
     my ($self) = @_;
 
-    return undef unless $self->base_block_number;
+    unless ($self->base_block_number) {
+        warn ("base_block_number is empty");
+        return undef;
+    }
 
     my $current_block = Math::BigInt->from_hex(await $self->rpc_client->get_last_block());
 
@@ -349,6 +352,10 @@ async sub transform_transaction {
 
         # if the gas is empty we don't proceed
         return 0 unless $gas && $decoded_transaction->{gasPrice};
+        unless ($gas && $decoded_transaction->{gasPrice}) {
+            warn sprintf("Failed to get Receipt & GasPrice for transaction: %s", $decoded_transaction->{hash});
+            return 0;
+        }
 
         # fee = gas * gasPrice
         my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
