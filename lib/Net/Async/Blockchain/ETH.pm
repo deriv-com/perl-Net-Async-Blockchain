@@ -215,7 +215,7 @@ sub subscribe {
             ->skip_until(
             sub {
                 my $response = shift;
-                return 1 unless $response->{result};
+                return 1                                       unless $response->{result};
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })
@@ -265,7 +265,7 @@ async sub recursive_search {
     my ($self) = @_;
 
     unless ($self->base_block_number) {
-        warn ("base_block_number is empty");
+        warn("base_block_number is empty");
         return undef;
     }
 
@@ -349,17 +349,7 @@ async sub transform_transaction {
         my $receipt = await $self->rpc_client->get_transaction_receipt($decoded_transaction->{hash});
 
         $gas = $receipt->{gasUsed} if $receipt && $receipt->{gasUsed};
-
-        # if the gas is empty we don't proceed
-        return 0 unless $gas && $decoded_transaction->{gasPrice};
-        unless ($gas && $decoded_transaction->{gasPrice}) {
-            warn sprintf("Failed to get Receipt & GasPrice for transaction: %s", $decoded_transaction->{hash});
-            return 0;
-        }
-
-        # fee = gas * gasPrice
-        my $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
-
+        my $fee = 0;
         $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
             hash         => $decoded_transaction->{hash},
@@ -374,6 +364,18 @@ async sub transform_transaction {
             data         => $decoded_transaction->{input},
             timestamp    => $int_timestamp,
         );
+
+        # if the gas is empty we don't proceed
+        unless ($gas && $decoded_transaction->{gasPrice}) {
+            my $our_transaction = await $self->_set_transaction_type($transaction);
+            warn sprintf("%s: Failed to get Receipt & GasPrice for transaction: %s", $self->currency_symbol, $decoded_transaction->{hash})
+                if $our_transaction;
+            return 0;
+        }
+
+        # fee = gas * gasPrice
+        $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
+        $transaction->{fee} = $fee;
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push @transactions, $transaction if ($amount->bgt(0));
