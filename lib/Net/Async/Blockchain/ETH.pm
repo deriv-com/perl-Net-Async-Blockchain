@@ -365,6 +365,10 @@ async sub transform_transaction {
             timestamp    => $int_timestamp,
         );
 
+        if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
+            await $self->get_hash_accounts();
+        }
+
         # if the gas is empty we don't proceed
         unless ($gas && $decoded_transaction->{gasPrice}) {
             my $our_transaction = await $self->_set_transaction_type($transaction);
@@ -379,10 +383,6 @@ async sub transform_transaction {
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
         push @transactions, $transaction if ($amount->bgt(0));
-
-        if (!$self->accounts() || ($self->latest_accounts_update + UPDATE_ACCOUNTS <= time)) {
-            await $self->get_hash_accounts();
-        }
 
         for my $tx (@transactions) {
             # set the type for each transaction
