@@ -378,7 +378,7 @@ async sub transform_transaction {
         }
 
         # fee = gas * gasPrice
-        $fee = Math::BigFloat->from_hex($gas)->bmul($decoded_transaction->{gasPrice});
+        $fee = Math::BigFloat->from_hex($gas)->copy()->bmul($decoded_transaction->{gasPrice});
         $transaction->{fee} = $fee;
 
         my @transactions = await $self->_check_contract_transaction($transaction, $receipt);
