@@ -85,7 +85,7 @@ $transaction = Net::Async::Blockchain::Transaction->new(
     fee          => Math::BigFloat->new(0.00023465),
     fee_currency => 'ETH',
     type         => '',
-    data =>
+    data         =>
         '0xa9059cbb0000000000000000000000002ae6d1401af58f9fbe2eda032b8494d519af5813000000000000000000000000000000000000000000000000000000003b9aca00',
 );
 
@@ -233,7 +233,7 @@ my $decoded_transaction = {
     'blockHash' => '0x50d00d90de21af946d7f22ed8709650835a33fdc4ad7bd13301e828a63959fc1',
     'gas'       => '0x8fd0',
     'to'        => '0xb0399c2fb7958d8d0fde93ec58c4efa1ba501375',
-    'input' =>
+    'input'     =>
         '0xa9059cbb0000000000000000000000000e0b9d8c9930e7cff062dd4a2b26bce95a0defeeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
     'transactionIndex' => '0xd5',
     'r'                => '0xe78ad76ab429385d008aec23c56c3939cd375177a8e978e5484ac85a4d14af8e',

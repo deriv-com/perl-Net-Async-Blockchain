@@ -215,7 +215,7 @@ sub subscribe {
             ->skip_until(
             sub {
                 my $response = shift;
-                return 1 unless $response->{result};
+                return 1                                       unless $response->{result};
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })

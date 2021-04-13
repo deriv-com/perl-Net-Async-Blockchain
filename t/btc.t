@@ -24,6 +24,7 @@ my $loop = IO::Async::Loop->new();
 
 my $transaction_hash = 'e7cc12f01de0860e867043ea877744f989e6f6d769c4cb5004c5a2475cc7c393';
 my $address          = '2NCJunLYyxigRUQqVYMSdAfKh5zMmvZ9CYW';
+my $change_address   = '3HZvmpjCH3JXLdnHoQnMKk7oAEjBfc7gvU';
 
 my $get_block_value = {
     'confirmations'     => 2,
@@ -42,7 +43,7 @@ my $get_block_value = {
             'weight' => 572,
             'hash'   => 'a2494b617bbae185645f9678a5bffd77b011f35aa66aff0c9fa7bfb6763fd378',
             'size'   => 170,
-            'hex' =>
+            'hex'    =>
                 '010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff0403b06c19ffffffff02e40b54020000000017a914c61461766896a2becc3a2bbd82369c46b7ef4b24870000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000',
             'version'  => 1,
             'vsize'    => 143,
@@ -91,7 +92,7 @@ my $get_transaction_value = {
     'blockhash'    => '000000000038c85a491a62fff3257f02a57c571d10fbe6740d0fe4a6921461fc',
     'txid'         => $transaction_hash,
     'timereceived' => 1582001792,
-    'hex' =>
+    'hex'          =>
         '02000000000101e20ef9d1d70903c8b2512461c2ece0db3c35378321988361d2e815e8f058420a0000000017160014aa14a6d3604846f2b6aeb887050fb1f7554dd947f ffffff02640610000000000017a914d11cdb2d8a8e43ca376dc81147896d6fd548706f8723b31a2c0000000017a914d1a74745adc1aed7d82ac430f2792124ad74665387024730440220300c9093b73157dc27d050c00c44dfa77be3279fff7f8de063b56f573fee41db02201723c112c07a8cfa37d23ae8fde8934540885213aff3f687db57530eb16dbb2b0121022bba14e339da55000e1d616a4d3ac6561543deca956621b0d89a7e015ace845e586c1900'
 };
 
@@ -312,6 +313,100 @@ subtest "Transaction with category send" => sub {
                     'amount'   => '-0.01',
                     'label'    => 'dummy',
                     'vout'     => 0,
+                    'fee'      => '-2.56e-06'
+                }];
+            $get_transaction_value_cp->{details} = $new_details;
+            $get_transaction_value_cp->{fee}     = '-2.56e-06';
+            return $get_transaction_value_cp;
+        });
+
+    my $blockchain_btc_source = $blockchain_btc->source;
+    $blockchain_btc_source->each(
+        sub {
+            my $emitted_transaction     = shift;
+            my $expected_transaction_cp = $expected_transaction;
+            $expected_transaction_cp->{amount} = Math::BigFloat->new('-0.01');
+            $expected_transaction_cp->{type}   = 'send';
+            $expected_transaction_cp->{fee}    = Math::BigFloat->new('-2.56e-06');
+            is_deeply $emitted_transaction, $expected_transaction_cp, "Correct emitted trasnaction";
+            $blockchain_btc_source->finish();
+        });
+
+    $blockchain_btc->hashblock('00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834')->get;
+    $blockchain_btc_source->get;
+
+    $mock_rpc->unmock_all();
+};
+
+subtest "Transaction with category send having change output" => sub {
+
+    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
+
+    $mock_rpc->mock(
+        get_block => async sub {
+
+            my $get_block_value_cp = $get_block_value;
+            my $new_vout           = [{
+                    'scriptPubKey' => {
+                        'addresses' => [$address],
+                        'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
+                        'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
+                        'reqSigs'   => 1,
+                        'type'      => 'scripthash'
+                    },
+                    'n'     => 0,
+                    'value' => '-0.01'
+                },
+                {
+                    'scriptPubKey' => {
+                        'addresses' => [$change_address],
+                        'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
+                        'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
+                        'reqSigs'   => 1,
+                        'type'      => 'scripthash'
+                    },
+                    'n'     => 1,
+                    'value' => '0.01'
+                },
+                {
+                    'scriptPubKey' => {
+                        'addresses' => [$change_address],
+                        'hex'       => 'a914c61461766896a2becc3a2bbd82369c46b7ef4b2487',
+                        'asm'       => 'OP_HASH160 c61461766896a2becc3a2bbd82369c46b7ef4b24 OP_EQUAL',
+                        'reqSigs'   => 1,
+                        'type'      => 'scripthash'
+                    },
+                    'n'     => 1,
+                    'value' => '-0.01'
+                }];
+
+            $get_block_value_cp->{tx}->[0]->{vout} = $new_vout;
+            return $get_block_value_cp;
+        },
+        get_transaction => async sub {
+
+            my $get_transaction_value_cp = $get_transaction_value;
+            my $new_details              = [{
+                    'category' => 'send',
+                    'address'  => $address,
+                    'amount'   => '-0.01',
+                    'label'    => 'dummy',
+                    'vout'     => 0,
+                    'fee'      => '-2.56e-06'
+                },
+                {
+                    'category' => 'receive',
+                    'address'  => $change_address,
+                    'amount'   => '0.01',
+                    'label'    => 'dummy',
+                    'vout'     => 1
+                },
+                {
+                    'category' => 'send',
+                    'address'  => $change_address,
+                    'amount'   => '-0.01',
+                    'label'    => 'dummy',
+                    'vout'     => 1,
                     'fee'      => '-2.56e-06'
                 }];
             $get_transaction_value_cp->{details} = $new_details;
