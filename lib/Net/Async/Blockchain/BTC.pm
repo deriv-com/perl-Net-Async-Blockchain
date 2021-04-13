@@ -282,6 +282,8 @@ async sub transform_transaction {
             $amount->badd($detail->{amount});
             $categories{$detail->{category}} = 1;
         }
+        # ignore the change output
+        next if($amount->is_zero && $transaction_type eq 'internal' && $tx->{vout} >= 1);
 
         my @categories       = keys %categories;
         my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
