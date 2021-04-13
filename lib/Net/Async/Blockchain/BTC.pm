@@ -286,7 +286,7 @@ async sub transform_transaction {
         my @categories       = keys %categories;
         my $transaction_type = scalar @categories > 1 ? 'internal' : $categories[0];
         # ignore the change output
-        # next if ($amount->is_zero && $transaction_type eq 'internal' && $tx->{vout} >= 1);
+        next if ($amount->is_zero && $transaction_type eq 'internal' && $tx->{vout} >= 1);
 
         my $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
