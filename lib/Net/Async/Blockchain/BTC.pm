@@ -166,7 +166,9 @@ sub subscribe {
             async sub {
                 while (1) {
                     my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
-                    $self->emit_block($block_number);
+                    $self->emit_block($block_number) if $block_number;
+
+                    await $self->transform_transaction(await $self->redo_transaction_queue->shift);
                 }
             }))->on_fail($error_handler)->retain;
 
@@ -200,7 +202,7 @@ async sub recursive_search {
         die "Failed to get the block hash for block number: $block_number_counter" unless $block_hash;
 
         my $block_number = await $self->hashblock($block_hash);
-        $self->emit_block($block_number);
+        $self->emit_block($block_number) if $block_number;
         $block_number_counter++;
     }
 
@@ -226,13 +228,30 @@ async sub hashblock {
     my ($self, $block_hash) = @_;
 
     # 2 here means the full verbosity since we want to get the raw transactions
-    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
-    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
+    my $response = await $self->rpc_client->get_block($block_hash, 2);
+    unless ($response->{status}) {
+        warn $response->{error};
+        # try to reprocess later
+        $self->new_blocks_queue->push($block_hash);
+        return undef;
+    }
+
+    my $block_response = $response->{response};
+
+    unless ($block_response) {
+        warn sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
+        return undef;
+    }
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
 
-    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions,
-        concurrent                                                  => 3;
+    for my $transaction (@transactions) {
+        my $transaction_response = await $self->transform_transaction($transaction);
+        if ($transaction_response->{error}) {
+            $self->redo_transaction_queue->push($block_hash);
+            last;
+        }
+    }
 
     return $block_response->{height};
 }
@@ -247,7 +266,7 @@ Receive a decoded raw transaction and convert it to a L<Net::Async::Blockchain::
 
 =back
 
-L<Net::Async::Blockchain::Transaction>
+1 for valid execution, 0 for error
 
 =cut
 
@@ -256,10 +275,17 @@ async sub transform_transaction {
 
     # this will guarantee that the transaction is from our node
     # txindex must to be 0
-    my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+    my $response = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+    # error in the RPC call
+    unless ($response->{status}) {
+        warn $response->{error};
+        return 0;
+    }
 
     # transaction not found, just ignore.
-    return undef unless $received_transaction;
+    return 1 unless $response->{response};
+
+    my $received_transaction = $response->{response};
 
     my $fee   = Math::BigFloat->new($received_transaction->{fee} // 0);
     my $block = Math::BigInt->new($decoded_raw_transaction->{block});

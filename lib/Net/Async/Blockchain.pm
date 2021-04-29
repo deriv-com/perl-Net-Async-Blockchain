@@ -113,6 +113,23 @@ sub new_blocks_queue {
     return shift->{new_blocks_queue} //= Future::Queue->new;
 }
 
+=head2 redo_transaction_queue
+
+Holds the transactions that needs to be reprocessed due to
+RPC errors
+
+=over 4
+
+=back
+
+Returns C<Future::Queue> object
+
+=cut
+
+sub redo_transaction_queue {
+    return shift->{redo_transaction_queue} //= Future::Queue->new;
+}
+
 =head2 emit_block
 
 Creates an object of <Net::Async::Blockchain::Block> then emit it.
