@@ -29,6 +29,7 @@ use Future::AsyncAwait;
 use Net::Async::HTTP;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use IO::Async::Notifier;
+use Syntax::Keyword::Try;
 
 use parent qw(IO::Async::Notifier);
 
