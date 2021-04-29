@@ -248,7 +248,7 @@ async sub hashblock {
     for my $transaction (@transactions) {
         my $transaction_response = await $self->transform_transaction($transaction);
         if ($transaction_response->{error}) {
-            $self->redo_transaction_queue->push($block_hash);
+            $self->redo_transaction_queue->push($transaction);
             last;
         }
     }
