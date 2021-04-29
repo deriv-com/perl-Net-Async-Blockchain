@@ -193,12 +193,12 @@ async sub recursive_search {
 
     return undef unless $self->base_block_number;
 
-    my $current_block = await $self->rpc_client->get_last_block();
+    my $current_block = (await $self->rpc_client->get_last_block())->{response};
     die 'unable to get the last block from the node.' unless $current_block;
 
     my $block_number_counter = $self->base_block_number;
     while ($current_block >= $block_number_counter) {
-        my $block_hash = await $self->rpc_client->get_block_hash($block_number_counter);
+        my $block_hash = (await $self->rpc_client->get_block_hash($block_number_counter))->{response};
         die "Failed to get the block hash for block number: $block_number_counter" unless $block_hash;
 
         my $block_number = await $self->hashblock($block_hash);
@@ -247,7 +247,7 @@ async sub hashblock {
 
     for my $transaction (@transactions) {
         my $transaction_response = await $self->transform_transaction($transaction);
-        if ($transaction_response->{error}) {
+        unless ($transaction_response) {
             $self->redo_transaction_queue->push($transaction);
             last;
         }
