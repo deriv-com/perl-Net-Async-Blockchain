@@ -228,7 +228,7 @@ async sub hashblock {
     # 2 here means the full verbosity since we want to get the raw transactions
     my $block_response = await $self->rpc_client->get_block($block_hash, 2);
 
-    unless($block_response->{status}){
+    unless ($block_response->{status}) {
         push(@redo_blocks, $block_hash);
         warn $block_response->{error};
         return undef;
@@ -263,7 +263,7 @@ async sub transform_transaction {
     # txindex must to be 0
     my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
 
-    unless($received_transaction->{status} == 0){
+    unless ($received_transaction->{status} == 0) {
         push(@redo_transactions, $decoded_raw_transaction);
         warn $received_transaction->{error};
         return undef;

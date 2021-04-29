@@ -36,7 +36,7 @@ use parent qw(IO::Async::Notifier);
 use constant DEFAULT_TIMEOUT => 100;
 
 sub endpoint : method     { shift->{endpoint} }
-sub rpc_user : method     { shift->{rpc_user} || undef }
+sub rpc_user : method     { shift->{rpc_user}     || undef }
 sub rpc_password : method { shift->{rpc_password} || undef }
 
 # this value will be set on the _init method, if not set will use the
@@ -131,16 +131,16 @@ async sub _request {
 
     my $response = {
         response => undef,
-        error => 0,
-        status => undef
+        error    => 0,
+        status   => undef
     };
 
     # avoid the connection closed error while doing RPC requests
-    try{
+    try {
         my $request = await $self->http_client->POST(@post_params);
         $response->{response} = decode_json_utf8($request->decoded_content)->{result};
-        $response->{status} = 1;
-    }catch($e){
+        $response->{status}   = 1;
+    } catch ($e) {
         $response->{error} = sprintf("RPC call %s params %s failed at: %s", $method, join(',', @params), $e);
     }
 

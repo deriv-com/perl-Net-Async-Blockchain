@@ -41,7 +41,7 @@ use parent qw(IO::Async::Notifier);
 
 sub rpc_url : method                  { shift->{rpc_url} }
 sub rpc_timeout : method              { shift->{rpc_timeout} }
-sub rpc_user : method                 { shift->{rpc_user} || undef }
+sub rpc_user : method                 { shift->{rpc_user}     || undef }
 sub rpc_password : method             { shift->{rpc_password} || undef }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
@@ -138,17 +138,30 @@ sub emit_block {
 
 sub redo_transaction {
     my ($self, $transaction) = @_;
-    $self->add_child(IO::Async::Timer::Periodic->new(interval => 60, on_tick => sub{
-            $self->transform_transaction($transaction);
-        })->start);
+    $self->add_child(
+        IO::Async::Timer::Periodic->new(
+            interval => 60,
+            on_tick  => sub {
+                $self->transform_transaction($transaction);
+            }
+        )->start
+    );
 }
 
 sub redo_block {
     my ($self, $block) = @_;
-    if(looks_like_number($block)){
+    if (looks_like_number($block)) {
 
-    }else{
-
+    } else {
+        $self->add_child(
+            IO::Async::Timer::Periodic->new(
+                interval => 60,
+                on_tick  => sub {
+                    my $method = $self->subscription_dictionary("transactions");
+                    $self->$method($block);
+                }
+            )->start
+        );
     }
 }
 
