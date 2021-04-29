@@ -227,12 +227,7 @@ async sub hashblock {
 
     # 2 here means the full verbosity since we want to get the raw transactions
     my $block_response = await $self->rpc_client->get_block($block_hash, 2);
-
-    unless ($block_response->{status}) {
-        push(@redo_blocks, $block_hash);
-        warn $block_response->{error};
-        return undef;
-    }
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
 
     my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
 
@@ -262,12 +257,6 @@ async sub transform_transaction {
     # this will guarantee that the transaction is from our node
     # txindex must to be 0
     my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
-
-    unless ($received_transaction->{status} == 0) {
-        push(@redo_transactions, $decoded_raw_transaction);
-        warn $received_transaction->{error};
-        return undef;
-    }
 
     # transaction not found, just ignore.
     return undef unless $received_transaction;

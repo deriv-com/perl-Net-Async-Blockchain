@@ -59,15 +59,9 @@ use constant {
     UPDATE_ACCOUNTS          => 10,
 };
 
-sub currency_symbol { shift->{currency_symbol} // DEFAULT_CURRENCY }
+my %subscription_dictionary = ('transactions' => 'newHeads');
 
-sub subscription_dictionary {
-    return $self->{subscription_dictionary} //= do {
-        my %subscription_dictionary = ('transactions' => 'newHeads');
-        $self->{subscription_dictionary} = %subscription_dictionary;
-        $self->{subscription_dictionary};
-    };
-}
+sub currency_symbol { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
 =head2 subscription_id
 
@@ -221,7 +215,7 @@ sub subscribe {
             ->skip_until(
             sub {
                 my $response = shift;
-                return 1                                       unless $response->{result};
+                return 1 unless $response->{result};
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })
