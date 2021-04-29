@@ -33,6 +33,7 @@ no indirect;
 
 use Ryu::Async;
 use Future::Queue;
+use Scalar::Util qw(looks_like_number);
 
 use Net::Async::Blockchain::Block;
 
@@ -133,6 +134,22 @@ sub emit_block {
     );
     $self->source->emit($block_object);
     return undef;
+}
+
+sub redo_transaction {
+    my ($self, $transaction) = @_;
+    $self->add_child(IO::Async::Timer::Periodic->new(interval => 60, on_tick => sub{
+            $self->transform_transaction($transaction);
+        })->start);
+}
+
+sub redo_block {
+    my ($self, $block) = @_;
+    if(looks_like_number($block)){
+
+    }else{
+
+    }
 }
 
 1;

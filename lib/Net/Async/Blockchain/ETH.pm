@@ -59,9 +59,15 @@ use constant {
     UPDATE_ACCOUNTS          => 10,
 };
 
-my %subscription_dictionary = ('transactions' => 'newHeads');
-
 sub currency_symbol { shift->{currency_symbol} // DEFAULT_CURRENCY }
+
+sub subscription_dictionary{
+    return $self->{subscription_dictionary} //= do {
+        my %subscription_dictionary = ('transactions' => 'newHeads');
+        $self->{subscription_dictionary} = %subscription_dictionary;
+        $self->{subscription_dictionary};
+    };
+}
 
 =head2 subscription_id
 

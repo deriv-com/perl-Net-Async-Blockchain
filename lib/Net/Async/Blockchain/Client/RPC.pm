@@ -129,8 +129,22 @@ async sub _request {
     push @post_params, (user => $self->rpc_user)     if $self->rpc_user;
     push @post_params, (pass => $self->rpc_password) if $self->rpc_password;
 
-    my $response = await $self->http_client->POST(@post_params);
-    return decode_json_utf8($response->decoded_content)->{result};
+    my $response = {
+        response => undef,
+        error => 0,
+        status => undef
+    };
+
+    # avoid the connection closed error while doing RPC requests
+    try{
+        my $request = await $self->http_client->POST(@post_params);
+        $response->{response} = decode_json_utf8($request->decoded_content)->{result};
+        $response->{status} = 1;
+    }catch($e){
+        $response->{error} = sprintf("RPC call %s params %s failed at: %s", $method, join(',', @params), $e);
+    }
+
+    return $response;
 }
 
 1;
