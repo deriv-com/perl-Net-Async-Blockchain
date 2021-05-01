@@ -52,7 +52,7 @@ use parent qw(Net::Async::Blockchain);
 
 use constant DEFAULT_CURRENCY => 'BTC';
 
-my %subscription_dictionary = ('transactions' => 'hashblock');
+my %subscription_dictionary = ('transactions' => 'rawtx');
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
@@ -150,91 +150,7 @@ sub subscribe {
 
     # rename the subscription to the correct blockchain node subscription
     $subscription = $subscription_dictionary{$subscription};
-
-    die "Invalid or not implemented subscription" unless $subscription && $self->can($subscription);
-    my $zmq_client_source = $self->new_zmq_client->subscribe($subscription);
-
-    my $error_handler = sub {
-        my $error = shift;
-        $self->source->fail($error) unless $self->source->completed->is_ready;
-        zmq_close($self->zmq_client->socket_client());
-    };
-
-    Future->needs_all(
-        $zmq_client_source->each(sub { my $block_hash = shift; $self->new_blocks_queue->push($block_hash); })->completed,
-        $self->recursive_search()->then(
-            async sub {
-                while (1) {
-                    my $block_number = await $self->hashblock(await $self->new_blocks_queue->shift);
-                    $self->emit_block($block_number);
-                }
-            }))->on_fail($error_handler)->retain;
-
-    return $self->source;
-}
-
-=head2 recursive_search
-
-go into each block starting from the C<base_block_number> searching
-for transactions from the node, this is usually needed when you stop
-the subscription and need to check the blocks since the last one that
-you received.
-
-=over 4
-
-=back
-
-=cut
-
-async sub recursive_search {
-    my ($self) = @_;
-
-    return undef unless $self->base_block_number;
-
-    my $current_block = await $self->rpc_client->get_last_block();
-    die 'unable to get the last block from the node.' unless $current_block;
-
-    my $block_number_counter = $self->base_block_number;
-    while ($current_block >= $block_number_counter) {
-        my $block_hash = await $self->rpc_client->get_block_hash($block_number_counter);
-        die "Failed to get the block hash for block number: $block_number_counter" unless $block_hash;
-
-        my $block_number = await $self->hashblock($block_hash);
-        $self->emit_block($block_number);
-        $block_number_counter++;
-    }
-
-    return undef;
-}
-
-=head2 hashblock
-
-hashblock subscription
-
-Convert and emit a L<Net::Async::Blockchain::Transaction> for the client source every new raw transaction received that
-is owned by the node.
-
-=over 4
-
-=item * C<raw_transaction> bitcoin raw transaction
-
-=back
-
-=cut
-
-async sub hashblock {
-    my ($self, $block_hash) = @_;
-
-    # 2 here means the full verbosity since we want to get the raw transactions
-    my $block_response = await $self->rpc_client->get_block($block_hash, 2);
-    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, $block_hash) unless $block_response;
-
-    my @transactions = map { $_->{block} = $block_response->{height}; $_ } $block_response->{tx}->@*;
-
-    await fmap_void { $self->transform_transaction(shift) } foreach => \@transactions,
-        concurrent                                                  => 3;
-
-    return $block_response->{height};
+    return $self->new_zmq_client->subscribe($subscription)->map(async sub { return await $self->$subscription(shift) })->ordered_futures;
 }
 
 =head2 transform_transaction
@@ -251,9 +167,10 @@ L<Net::Async::Blockchain::Transaction>
 
 =cut
 
-async sub transform_transaction {
-    my ($self, $decoded_raw_transaction) = @_;
+async sub rawtx {
+    my ($self, $raw_transaction) = @_;
 
+    my $decoded_raw_transaction = await $self->rpc_client->_request('decoderawtransaction', $raw_transaction);
     # this will guarantee that the transaction is from our node
     # txindex must to be 0
     my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
@@ -302,11 +219,7 @@ async sub transform_transaction {
         push(@transactions, $transaction);
     }
 
-    for my $transaction (@transactions) {
-        $self->source->emit($transaction);
-    }
-
-    return 1;
+    return @transactions;
 }
 
 1;
