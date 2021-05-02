@@ -42,7 +42,6 @@ use Future::AsyncAwait;
 use IO::Async::Loop;
 use Math::BigFloat;
 use ZMQ::LibZMQ3;
-use Future::Utils qw( fmap_void );
 
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
