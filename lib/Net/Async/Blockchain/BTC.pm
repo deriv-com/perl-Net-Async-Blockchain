@@ -198,6 +198,7 @@ async sub recursive_search {
         return $block_number_counter unless $block_response;
 
         push($self->{pending_transactions}->@*, $block_response->{tx}->@*);
+        $self->emit_block($block_number_counter);
         $block_number_counter++;
     }
 
