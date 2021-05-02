@@ -39,13 +39,16 @@ subtest 'timeout' => sub {
             timeout  => 0.1,
         ));
 
-    like(exception { $rpc->accounts->get() }, qr(Timed out), 'Timeout');
+    my (undef, $error) = $rpc->accounts->get();
+
+    like( $error , qr(Timed out), 'Timeout');
 };
 
 subtest 'no endpoint' => sub {
     $loop->add(my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new());
+    my (undef, $error) = $rpc->accounts->get();
 
-    like(exception { $rpc->accounts->get() }, qr(Require either 'uri' or 'request'), 'No endpoint');
+    like( $error , qr(Require either 'uri' or 'request'), 'No endpoint');
 };
 
 done_testing;
