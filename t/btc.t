@@ -113,9 +113,6 @@ subtest "Transaction with category receive _ one output" => sub {
     $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
 
     $mock_rpc->mock(
-        get_block => async sub {
-            return $get_block_value;
-        },
         get_transaction => async sub {
             return $get_transaction_value;
         });
@@ -128,7 +125,7 @@ subtest "Transaction with category receive _ one output" => sub {
             $blockchain_btc_source->finish();
         });
 
-    $blockchain_btc->hashblock('00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834')->get;
+    $blockchain_btc->transform_raw_transaction($get_transaction_value->{hex})->get;
     $blockchain_btc_source->get;
 
     $mock_rpc->unmock_all();
@@ -407,8 +404,8 @@ subtest "subscribe _ wrong subscription type" => sub {
 subtest "subscribe" => sub {
 
     # ZMQ server
-    my $block_hash_bytes = pack('H*', '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834');
-    my @msg              = ('hashblock', $block_hash_bytes);
+    my $tx_hash_bytes = pack('H*', $get_transaction_value->{hex});
+    my @msg              = ('rawtx', $tx_hash_bytes);
     my $zmq_server       = Test::TCP->new(
         code => sub {
             my $port = shift;
@@ -436,9 +433,6 @@ subtest "subscribe" => sub {
         });
 
     $mock_rpc->mock(
-        get_block => async sub {
-            return $get_block_value;
-        },
         get_transaction => async sub {
             return $get_transaction_value;
         });
