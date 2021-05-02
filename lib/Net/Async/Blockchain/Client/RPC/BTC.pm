@@ -69,6 +69,23 @@ sub get_raw_transaction {
     return $self->_request('getrawtransaction', @params);
 }
 
+=head2 decode_raw_transaction
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/rawtransactions/decoderawtransaction/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub decode_raw_transaction {
+    my ($self, @params) = @_;
+    return $self->_request('decoderawtransaction', @params);
+}
+
 =head2 get_block
 
 https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/getblock/

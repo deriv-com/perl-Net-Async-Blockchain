@@ -29,6 +29,7 @@ use Future::AsyncAwait;
 use Net::Async::HTTP;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use IO::Async::Notifier;
+use Syntax::Keyword::Try;
 
 use parent qw(IO::Async::Notifier);
 
@@ -36,7 +37,7 @@ use parent qw(IO::Async::Notifier);
 use constant DEFAULT_TIMEOUT => 100;
 
 sub endpoint : method     { shift->{endpoint} }
-sub rpc_user : method     { shift->{rpc_user} || undef }
+sub rpc_user : method     { shift->{rpc_user}     || undef }
 sub rpc_password : method { shift->{rpc_password} || undef }
 
 # this value will be set on the _init method, if not set will use the
@@ -129,8 +130,12 @@ async sub _request {
     push @post_params, (user => $self->rpc_user)     if $self->rpc_user;
     push @post_params, (pass => $self->rpc_password) if $self->rpc_password;
 
-    my $response = await $self->http_client->POST(@post_params);
-    return decode_json_utf8($response->decoded_content)->{result};
+    try {
+        my $response = await $self->http_client->POST(@post_params);
+        return decode_json_utf8($response->decoded_content)->{result};
+    } catch ($e) {
+        return (undef, $e);
+    }
 }
 
 1;

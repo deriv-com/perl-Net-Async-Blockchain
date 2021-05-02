@@ -275,6 +275,8 @@ run the configured shutdown action if any
 sub shutdown {    ## no critic
     my ($self, $error) = @_;
 
+    warn $error;
+
     if (my $code = $self->{on_shutdown} || $self->can("on_shutdown")) {
         return $code->($error);
     }

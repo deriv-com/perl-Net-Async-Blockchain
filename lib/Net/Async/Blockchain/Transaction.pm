@@ -25,6 +25,14 @@ Transaction abstraction
 
 no indirect;
 
+use Data::Dumper;
+use Data::Buffer;
+
+use constant {
+    ADVANCED_TRANSACTION_MARKER => 0x00,
+    ADVANCED_TRANSACTION_FLAG   => 0x01
+};
+
 sub message_type : method { shift->{message_type} }
 sub currency : method     { shift->{currency} }
 sub hash : method         { shift->{hash} }

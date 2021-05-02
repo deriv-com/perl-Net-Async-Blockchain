@@ -47,12 +47,17 @@ use Future::Utils qw( fmap_void );
 use Net::Async::Blockchain::Transaction;
 use Net::Async::Blockchain::Client::RPC::BTC;
 use Net::Async::Blockchain::Client::ZMQ;
+use IO::Async::Timer::Periodic;
 
 use parent qw(Net::Async::Blockchain);
 
 use constant DEFAULT_CURRENCY => 'BTC';
 
 my %subscription_dictionary = ('transactions' => 'rawtx');
+
+sub pending_transactions {
+    return shift->{pending_transactions} // [];
+}
 
 sub currency_symbol : method { shift->{currency_symbol} // DEFAULT_CURRENCY }
 
@@ -95,39 +100,17 @@ L<Net::Async::Blockchain::Client::ZMQ>
 
 =cut
 
-sub zmq_client : method {
+sub zmq_client {
     my ($self) = @_;
     return $self->{zmq_client} //= do {
-        $self->new_zmq_client();
+        $self->add_child(
+            $self->{zmq_client} = Net::Async::Blockchain::Client::ZMQ->new(
+                endpoint    => $self->subscription_url,
+                timeout     => $self->subscription_timeout,
+                msg_timeout => $self->subscription_msg_timeout,
+            ));
+        $self->{zmq_client};
     }
-}
-
-=head2 new_zmq_client
-
-Create a new L<Net::Async::Blockchain::Client::ZMQ> instance.
-
-=over 4
-
-=back
-
-L<Net::Async::Blockchain::Client::ZMQ>
-
-=cut
-
-sub new_zmq_client {
-    my ($self) = @_;
-    $self->add_child(
-        $self->{zmq_client} = Net::Async::Blockchain::Client::ZMQ->new(
-            endpoint    => $self->subscription_url,
-            timeout     => $self->subscription_timeout,
-            msg_timeout => $self->subscription_msg_timeout,
-            on_shutdown => sub {
-                my ($error) = @_;
-                warn $error;
-                # finishes the final client source
-                $self->source->finish();
-            }));
-    return $self->{zmq_client};
 }
 
 =head2 subscribe
@@ -150,7 +133,107 @@ sub subscribe {
 
     # rename the subscription to the correct blockchain node subscription
     $subscription = $subscription_dictionary{$subscription};
-    return $self->new_zmq_client->subscribe($subscription)->map(async sub { return await $self->$subscription(shift) })->ordered_futures;
+
+    # every minute try to reprocess the pending transactions
+    my $pending_transaction_timer = IO::Async::Timer::Periodic->new(
+        first_interval => 10,
+        interval       => 60,
+        on_tick        => sub {
+            # we could be using Future::Queue here instead but
+            # since we don't want to lock the execution at this
+            # point is better to just use an array
+            my $counter = 0;
+            while (my $pending_transaction = shift $self->{pending_transactions}->@*) {
+                # process only this amount per time to not delay the new transactions
+                last if $counter > 100;
+                $self->zmq_client->source->emit($pending_transaction);
+                $counter++;
+            }
+        });
+
+    $self->add_child($pending_transaction_timer);
+    $pending_transaction_timer->start;
+
+    return $self->zmq_client->subscribe($subscription)->map(
+        async sub {
+            my $transaction = shift;
+            # raw transaction
+            return await $self->transform_raw_transaction($transaction) if length($transaction) > 64;
+            # transaction hash
+            return await $self->transform_transaction($transaction);
+        })->ordered_futures->filter(sub { $_ });
+
+}
+
+=head2 recursive_search
+
+go into each block starting from the C<base_block_number> searching
+for transactions from the node, this is usually needed when you stop
+the subscription and need to check the blocks since the last one that
+you received.
+
+=over 4
+
+=back
+
+=cut
+
+async sub recursive_search {
+    my ($self, $block_number) = @_;
+
+    # that is nothing to do
+    return undef unless $block_number;
+
+    my $current_block = await $self->rpc_client->get_last_block();
+    # no matter if it is an error or not we can't proceed without the last block
+    return $block_number unless $current_block;
+
+    my $block_number_counter = $block_number;
+    while ($current_block >= $block_number_counter) {
+        my $block_hash = await $self->rpc_client->get_block_hash($block_number_counter);
+        return $block_number_counter unless $block_hash;
+
+        # 2 here means the full verbosity since we want to get the raw transactions
+        my $block_response = await $self->rpc_client->get_block($block_hash, 2);
+        return $block_number_counter unless $block_response;
+
+        push($self->{pending_transactions}->@*, $block_response->{tx}->@*);
+        $block_number_counter++;
+    }
+
+    return undef;
+}
+
+=head2 transform_raw_transaction
+
+Same as transform_transaction but deserialize the raw transaction first
+
+=over 4
+
+=item * C<raw_transaction> encoded raw transaction
+
+=back
+
+L<Net::Async::Blockchain::Transaction>
+
+=cut
+
+async sub transform_raw_transaction {
+    my ($self, $raw_transaction) = @_;
+
+    # TODO: remove the node request to decode the transaction adding a proper perl conversion for it
+    # this will return null if the txindex is equals 0 and the transaction is not from the local node
+    my ($decoded_raw_transaction, $error) = await $self->rpc_client->decode_raw_transaction($raw_transaction);
+
+    if ($error) {
+        push($self->{pending_transactions}->@*, $raw_transaction);
+        return undef;
+    }
+
+    # transaction not found, because it is not related to the local node
+    return undef unless $decoded_raw_transaction;
+
+    return await $self->transform_transaction($decoded_raw_transaction);
 }
 
 =head2 transform_transaction
@@ -167,19 +250,21 @@ L<Net::Async::Blockchain::Transaction>
 
 =cut
 
-async sub rawtx {
-    my ($self, $raw_transaction) = @_;
+async sub transform_transaction {
+    my ($self, $decoded_raw_transaction) = @_;
 
-    my $decoded_raw_transaction = await $self->rpc_client->_request('decoderawtransaction', $raw_transaction);
-    # this will guarantee that the transaction is from our node
-    # txindex must to be 0
-    my $received_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+    # this returns only the details related to the local node in case of txindex equals 0
+    my ($received_transaction, $error) = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
 
-    # transaction not found, just ignore.
+    if ($error) {
+        push($self->{pending_transactions}->@*, $decoded_raw_transaction->{txid});
+        return undef;
+    }
+
+    # transaction not found, because it is not related to the local node
     return undef unless $received_transaction;
 
-    my $fee   = Math::BigFloat->new($received_transaction->{fee} // 0);
-    my $block = Math::BigInt->new($decoded_raw_transaction->{block});
+    my $fee = Math::BigFloat->new($received_transaction->{fee} // 0);
     my @transactions;
     my %addresses;
 
@@ -206,7 +291,7 @@ async sub rawtx {
         my $transaction = Net::Async::Blockchain::Transaction->new(
             currency     => $self->currency_symbol,
             hash         => $decoded_raw_transaction->{txid},
-            block        => $block,
+            block        => $received_transaction->{blockhash},
             from         => '',
             to           => $address,
             amount       => $amount,
