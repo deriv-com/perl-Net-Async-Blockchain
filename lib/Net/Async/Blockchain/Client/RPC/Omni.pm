@@ -33,7 +33,7 @@ no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC::BTC);
 
-=head2 get_transaction
+=head2 omni_get_transaction
 
 https://github.com/OmniLayer/omnicore/blob/master/src/omnicore/doc/rpc-api.md#omni_gettransaction
 
@@ -45,31 +45,20 @@ L<Future>
 
 =cut
 
-sub get_transaction {
+sub omni_get_transaction {
     my ($self, @params) = @_;
     return $self->_request('omni_gettransaction', @params);
 }
 
-=head2 get_detailed_transaction
+=head2 omni_get_balance
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/gettransaction/
+https://github.com/OmniLayer/omnicore/blob/master/src/omnicore/doc/rpc-api.md#omni_getbalance
 
 =cut
 
-sub get_detailed_transaction {
+sub omni_get_balance {
     my ($self, @params) = @_;
-    return $self->_request('gettransaction', @params);
-}
-
-=head2 list_by_addresses
-
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/listreceivedbyaddress/
-
-=cut
-
-sub list_by_addresses {
-    my ($self, $address) = @_;
-    return $self->_request("listreceivedbyaddress", 1, \0, \0, $address);
+    return $self->_request('omni_getbalance');
 }
 
 1;

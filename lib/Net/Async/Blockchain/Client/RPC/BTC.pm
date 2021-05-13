@@ -137,5 +137,56 @@ sub get_block_hash {
     return $self->_request('getblockhash', @params);
 }
 
+=head2 get_balance
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getbalance/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_balance {
+    my ($self, @params) = @_;
+    return $self->_request('getbalance', @params);
+}
+
+=head2 get_balances
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getbalances/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub get_balances {
+    my ($self, @params) = @_;
+    return $self->_request('getbalances', @params);
+}
+
+=head2 list_receive_by_address
+
+https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/listreceivedbyaddress/
+
+=over 4
+
+=back
+
+L<Future>
+
+=cut
+
+sub list_received_by_address {
+    my ($self, @params) = @_;
+    return $self->_request('listreceivebyaddress', @params);
+}
+
 1;
 

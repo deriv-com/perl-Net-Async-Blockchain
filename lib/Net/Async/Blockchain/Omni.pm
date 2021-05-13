@@ -146,13 +146,18 @@ async sub _process_transaction {
     my $count = 0;
     my ($to_response, $from_response);
 
-    $from_response = await $self->rpc_client->list_by_addresses($from->{address});
+    # parameters as the following sequence for listing the received by address
+    # minimum confirmation 1
+    # include empty false
+    # include watch only  true
+
+    $from_response = await $self->rpc_client->list_received_by_address(1, \0, \1, $from->{address});
     if ($from_response && @$from_response) {
         $transaction_type = 'send';
         $count++;
     }
 
-    $to_response = await $self->rpc_client->list_by_addresses($to->{address});
+    $to_response = await $self->rpc_client->list_received_by_address(1, \0, \1, $to->{address});
     if ($to_response && @$to_response) {
         $transaction_type = 'receive';
         $count++;
