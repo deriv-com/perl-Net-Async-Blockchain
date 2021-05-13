@@ -102,7 +102,7 @@ async sub transform_transaction {
     my $omni_transaction;
 
     try {
-        $omni_transaction = await $self->rpc_client->get_transaction($decoded_raw_transaction->{txid});
+        $omni_transaction = await $self->rpc_client->omni_get_transaction($decoded_raw_transaction->{txid});
     } catch {
         # transaction not found
         return undef;

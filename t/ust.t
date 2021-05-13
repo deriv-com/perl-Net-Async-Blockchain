@@ -95,8 +95,8 @@ subtest "Omni Send " => sub {
             };
             return Future->done($getblock);
         },
-        list_by_addresses => sub {
-            my ($self, $address) = @_;
+        list_received_by_address => sub {
+            my ($self, undef, undef, undef, $address) = @_;
             my $result;
             if ($address eq $from) {
                 $result = [{
@@ -223,8 +223,8 @@ subtest "Omni Send ALL" => sub {
 
             return Future->done($getblock);
         },
-        list_by_addresses => sub {
-            my ($self, $address) = @_;
+        list_received_by_address => sub {
+            my ($self, undef, undef, undef, $address) = @_;
             my $result;
             if ($address eq $to) {
                 $result = [{
@@ -318,8 +318,8 @@ subtest "Transaction Type Internal" => sub {
         });
 
     $mocked_rpc_omni->mock(
-        list_by_addresses => sub {
-            my ($self, $address) = @_;
+        list_received_by_address => sub {
+            my ($self, undef, undef, undef, $address) = @_;
             my $result;
             if ($address eq $from || $address eq $to) {
                 $result = [{
