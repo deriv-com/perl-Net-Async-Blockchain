@@ -58,7 +58,7 @@ https://github.com/OmniLayer/omnicore/blob/master/src/omnicore/doc/rpc-api.md#om
 
 sub omni_get_balance {
     my ($self, @params) = @_;
-    return $self->_request('omni_getbalance');
+    return $self->_request('omni_getbalance', @params);
 }
 
 1;
