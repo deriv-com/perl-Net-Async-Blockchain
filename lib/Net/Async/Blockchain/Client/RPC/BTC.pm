@@ -185,7 +185,7 @@ L<Future>
 
 sub list_received_by_address {
     my ($self, @params) = @_;
-    return $self->_request('listreceivebyaddress', @params);
+    return $self->_request('listreceivedbyaddress', @params);
 }
 
 1;
