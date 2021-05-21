@@ -171,7 +171,7 @@ sub get_balances {
     return $self->_request('getbalances', @params);
 }
 
-=head2 list_receive_by_address
+=head2 list_received_by_address
 
 https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/listreceivedbyaddress/
 
