@@ -57,6 +57,7 @@ use constant {
     DEFAULT_CURRENCY         => 'ETH',
     DEFAULT_DECIMAL_PLACES   => 18,
     UPDATE_ACCOUNTS          => 10,
+    MAX_SAFE_BLOCK_COUNT     => 6,
 };
 
 my %subscription_dictionary = ('transactions' => 'newHeads');
@@ -301,16 +302,18 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
+    # to avoid chain re-organization check/emit last 6th block instead of highest block
+    my $safe_block_number = Math::BigInt->from_hex($block->{number})->bsub(MAX_SAFE_BLOCK_COUNT)->as_hex();
+    my $block_response = await $self->rpc_client->get_block_by_number($safe_block_number, \1);
 
     # block not found or some issue in the RPC call
-    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($safe_block_number)->bstr)
         unless $block_response;
 
     await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions},
         concurrent                                                                                => 5;
 
-    return Math::BigInt->from_hex($block->{number})->bstr;
+    return Math::BigInt->from_hex($safe_block_number)->bstr;
 }
 
 =head2 transform_transaction
