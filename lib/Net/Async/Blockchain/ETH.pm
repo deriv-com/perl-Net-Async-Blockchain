@@ -237,7 +237,7 @@ sub subscribe {
                     my $next_block_number = Math::BigInt->from_hex($next_block->{params}->{result}->{number});
                     # to avoid chain re-organization check/emit last 6th block instead of highest block
                     my $safe_block_number =
-                        ($self->base_block_number) ? Math::BigInt->from_hex($self->base_block_number)->bsub(MAX_SAFE_BLOCK_COUNT) : 0;
+                        ($self->base_block_number) ? Math::BigInt->new($self->base_block_number)->bsub(MAX_SAFE_BLOCK_COUNT) : 0;
                     next if ($next_block_number->blt($safe_block_number));
 
                     my $block_number = await $self->newHeads($next_block);
