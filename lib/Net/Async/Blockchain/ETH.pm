@@ -216,7 +216,7 @@ sub subscribe {
             ->skip_until(
             sub {
                 my $response = shift;
-                return 1 unless $response->{result};
+                return 1                                       unless $response->{result};
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
             })
@@ -235,7 +235,10 @@ sub subscribe {
                     # Skip old checked blocks (e.g. when restarting the node)
                     my $next_block        = await $self->new_blocks_queue->shift;
                     my $next_block_number = Math::BigInt->from_hex($next_block->{params}->{result}->{number});
-                    next if $self->base_block_number and $next_block_number->blt($self->base_block_number);
+                    # to avoid chain re-organization check/emit last 6th block instead of highest block
+                    my $safe_block_number =
+                        ($self->base_block_number) ? Math::BigInt->from_hex($self->base_block_number)->bsub(MAX_SAFE_BLOCK_COUNT) : 0;
+                    next if ($next_block_number->blt($safe_block_number));
 
                     my $block_number = await $self->newHeads($next_block);
                     $self->emit_block($block_number);
@@ -302,18 +305,16 @@ async sub newHeads {
 
     my $block = $response->{params}->{result};
 
-    # to avoid chain re-organization check/emit last 6th block instead of highest block
-    my $safe_block_number = Math::BigInt->from_hex($block->{number})->bsub(MAX_SAFE_BLOCK_COUNT)->as_hex();
-    my $block_response = await $self->rpc_client->get_block_by_number($safe_block_number, \1);
+    my $block_response = await $self->rpc_client->get_block_by_number($block->{number}, \1);
 
     # block not found or some issue in the RPC call
-    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($safe_block_number)->bstr)
+    die sprintf("%s: Can't reach response for block %s", $self->currency_symbol, Math::BigInt->from_hex($block->{number})->bstr)
         unless $block_response;
 
     await fmap_void { $self->transform_transaction(shift, $block_response->{timestamp}) } foreach => $block_response->{transactions},
         concurrent                                                                                => 5;
 
-    return Math::BigInt->from_hex($safe_block_number)->bstr;
+    return Math::BigInt->from_hex($block->{number})->bstr;
 }
 
 =head2 transform_transaction
