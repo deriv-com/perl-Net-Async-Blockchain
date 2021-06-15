@@ -35,7 +35,7 @@ use parent qw(Net::Async::Blockchain::Client::RPC);
 
 =head2 get_transaction
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/gettransaction/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/wallet/gettransaction/
 
 =over 4
 
@@ -54,7 +54,7 @@ use parent qw(Net::Async::Blockchain::Client::RPC);
 
 =head2 get_raw_transaction
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/rawtransactions/getrawtransaction/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/rawtransactions/getrawtransaction/
 
 =over 4
 
@@ -71,7 +71,7 @@ sub get_raw_transaction {
 
 =head2 get_block
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/getblock/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/wallet/getblock/
 
 =over 4
 
@@ -88,7 +88,7 @@ sub get_block {
 
 =head2 validate_address
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/util/validateaddress/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/util/validateaddress/
 
 =over 4
 
@@ -105,7 +105,7 @@ sub validate_address {
 
 =head2 get_last_block
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getblockcount/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/blockchain/getblockcount/
 
 =over 4
 
@@ -122,7 +122,7 @@ sub get_last_block {
 
 =head2 get_block_hash
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getblockhash/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/blockchain/getblockhash/
 
 =over 4
 
@@ -139,7 +139,7 @@ sub get_block_hash {
 
 =head2 get_balance
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getbalance/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/wallet/getbalance/
 
 =over 4
 
@@ -156,7 +156,7 @@ sub get_balance {
 
 =head2 get_balances
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/getbalances/
+https://bitcoincore.org/en/doc/0.21.0/rpc/wallet/getbalances/
 
 =over 4
 
@@ -173,7 +173,7 @@ sub get_balances {
 
 =head2 list_received_by_address
 
-https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/blockchain/listreceivedbyaddress/
+https://bitcoin-rpc.github.io/en/doc/0.21.0/rpc/wallet/listreceivedbyaddress/
 
 =over 4
 
