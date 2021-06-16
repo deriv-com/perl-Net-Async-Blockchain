@@ -235,9 +235,18 @@ sub subscribe {
                     # Skip old checked blocks (e.g. when restarting the node)
                     my $next_block        = await $self->new_blocks_queue->shift;
                     my $next_block_number = Math::BigInt->from_hex($next_block->{params}->{result}->{number});
-                    # Upon Chain re-organization older blocks (that we processed already) are emitted so there is chance of those blocks skipped 
-                    # if we check Current `base_block_number` so to avoid this situation we should check `base_block_number - 6` 
+
+                    # Chain Re-organization : Chain reorganisations happen when a node on the Ethereum network
+                    # (one which could belong to you, me, an exchange, a miner, whoever) realises that what it thought
+                    # was the canonical chain turned out not to be.
+                    # Reference: https://blog.ethereum.org/2015/08/08/chain-reorganisation-depth-expectations/
+
+                    # Upon Chain re-organization older blocks (that we processed already) are received so there is chance of those blocks skipped
+                    # if we check Current `base_block_number` so to avoid this situation we should check `base_block_number - 6`
                     # so that no block is skipped
+                    # Its seen that maximum Chain Re-organization depth could be 6 as its almost impossible to revert transaction
+                    # if 6 blocks are mined after that transaction was mined.
+
                     next if $self->base_block_number and $next_block_number->blt($self->base_block_number - MAX_SAFE_BLOCK_COUNT);
 
                     my $block_number = await $self->newHeads($next_block);
