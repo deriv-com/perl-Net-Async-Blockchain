@@ -235,7 +235,9 @@ sub subscribe {
                     # Skip old checked blocks (e.g. when restarting the node)
                     my $next_block        = await $self->new_blocks_queue->shift;
                     my $next_block_number = Math::BigInt->from_hex($next_block->{params}->{result}->{number});
-                    # to avoid chain re-organization check/emit last 6th block instead of highest block
+                    # Upon Chain re-organization older blocks (that we processed already) are emitted so there is chance of those blocks skipped 
+                    # if we check Current `base_block_number` so to avoid this situation we should check `base_block_number - 6` 
+                    # so that no block is skipped
                     next if $self->base_block_number and $next_block_number->blt($self->base_block_number - MAX_SAFE_BLOCK_COUNT);
 
                     my $block_number = await $self->newHeads($next_block);
