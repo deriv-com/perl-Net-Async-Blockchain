@@ -279,7 +279,7 @@ async sub recursive_search {
     # the node will return empty for the block number when it's not synced
     die "Node is not synced" unless $current_block && $current_block->bgt(0);
 
-    my $block_number_counter = $self->base_block_number;
+    my $block_number_counter = $self->base_block_number - MAX_SAFE_BLOCK_COUNT;
     while ($current_block->bge($block_number_counter)) {
         my $block_number = await $self->newHeads({params => {result => {number => sprintf("0x%X", $block_number_counter)}}});
         $self->emit_block($block_number);
