@@ -109,7 +109,7 @@ async sub transform_transaction {
     }
 
     # transaction not found, just ignore.
-    return undef unless $omni_transaction && $omni_transaction->{ismine};
+    return undef unless $omni_transaction && $omni_transaction->{ismine} && $omni_transaction->{valid};
 
     my @transaction = await $self->_process_transaction($omni_transaction);
 
