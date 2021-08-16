@@ -370,4 +370,42 @@ subtest "Transaction Type Internal" => sub {
 
 };
 
+subtest "Invalid Transaction" => sub {
+    $loop->add(my $subscription_client = Net::Async::Blockchain::Omni->new(currency_symbol => $currency_code));
+
+    my $hash                    = '8a49875b3698cb3571339ba3eaa3f56244590a3fd097ba9716f860282bfe632f';
+    my $decoded_raw_transaction = {txid => $hash};
+
+    my $omni_transaction = {
+        'block'            => 1666357,
+        'valid'            => 0,
+        'txid'             => $hash,
+        'referenceaddress' => '2MxsmWRcCEq75RShGZAN3y9344yKuhrmLrJ',
+        'sendingaddress'   => 'mgVxUb5mYJkfoo4w2JBVBcWaP5bqtLroTr',
+        'ismine'           => 1,
+        'type'             => 'Simple Send',
+        'blocktime'        => 1582255733,
+        'version'          => 0,
+        'divisible'        => 1,
+        'positioninblock'  => 393,
+        'confirmations'    => 2,
+        'blockhash'        => '00000000000576932a3548713e7aee959beed84e5bb91b38bf603b94d8777b38',
+        'propertyid'       => 2147484941,
+        'amount'           => '14.00000000',
+        'fee'              => '0.00000401',
+        'type_int'         => 0
+    };
+
+    $mocked_rpc_omni->mock(
+        get_transaction => sub {
+            return $omni_transaction;
+        });
+
+    my $result = $subscription_client->transform_transaction($decoded_raw_transaction)->get;
+
+    is $result, undef, "The invalid transaction will not be processed and return undef value.";
+
+    $mocked_rpc_omni->unmock_all();
+};
+
 done_testing();
