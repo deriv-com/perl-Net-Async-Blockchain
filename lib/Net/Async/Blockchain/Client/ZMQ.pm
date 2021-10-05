@@ -36,9 +36,8 @@ no indirect;
 
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT ZMQ_RCVTIMEO);
-use IO::Async::Notifier;
 use IO::Async::Handle;
-use Socket;
+use curry;
 
 use parent qw(IO::Async::Notifier);
 
@@ -219,16 +218,26 @@ sub subscribe {
     $self->add_child(
         my $handle = IO::Async::Handle->new(
             read_handle => $io,
-            on_closed   => sub {
-                close($io);
-                $self->shutdown("Connection closed by peer");
-            },
-            on_read_ready => sub {
-                while (my @msg = $self->_recv_multipart($socket)) {
-                    my $hex = unpack('H*', zmq_msg_data($msg[1]));
-                    $self->source->emit($hex);
+            on_closed   => $self->$curry::weak(
+                sub {
+                    my $self = shift;
+                    close($io);
+                    my $error = "Connection closed by peer";
+                    $self->source->fail($error) unless $self->source->completed->is_ready;
+                    $self->shutdown($error);
                 }
-            }));
+            ),
+            on_read_ready => $self->$curry::weak(
+                sub {
+                    my $self = shift;
+                    while (my @msg = $self->_recv_multipart($socket)) {
+                        my $hex = unpack('H*', zmq_msg_data($msg[1]));
+                        $self->source->emit($hex);
+                    }
+                }
+            ),
+        )
+    );
 
     return $self->source;
 }
