@@ -8,7 +8,6 @@ use Test::Fatal;
 use Test::TCP;
 use IO::Async::Test;
 use IO::Async::Loop;
-use Ryu::Async;
 
 BEGIN {
     use_ok "ZMQ::LibZMQ3";
@@ -42,12 +41,12 @@ subtest 'receive msg' => sub {
     my $loop = IO::Async::Loop->new();
     testing_loop($loop);
 
-    $loop->add(my $zmq_source = Ryu::Async->new);
     $loop->add(
         my $zmq_client = Net::Async::Blockchain::Client::ZMQ->new(
             endpoint => "tcp://127.0.0.1:$port",
         ));
-    my ($zmq_client_source, $zmq_client_socket) = $zmq_client->subscribe('');
+
+    my $zmq_client_source = $zmq_client->subscribe('');
 
     $zmq_client_source->take(10)->each(
         sub {
