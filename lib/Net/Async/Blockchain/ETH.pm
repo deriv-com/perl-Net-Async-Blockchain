@@ -81,8 +81,7 @@ sub websocket_client {
                     my ($error) = @_;
                     warn $error;
                 },
-            )
-        );
+            ));
         $websocket_client;
     }
 }
@@ -117,20 +116,16 @@ async sub subscribe {
                 return 1                                       unless $response->{result};
                 $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
                 return 0;
-            }
-        )
-    )
-    # we use the subscription id received as the first response to filter
-    # all incoming subscription responses.
-    ->filter(
+            }))
+        # we use the subscription id received as the first response to filter
+        # all incoming subscription responses.
+        ->filter(
         $self->$curry::weak(
             sub {
                 my ($self, $response) = @_;
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
-            }
-        )
-    );
+            }));
 }
 
 1;

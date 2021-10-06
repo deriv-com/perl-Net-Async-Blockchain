@@ -237,8 +237,7 @@ sub subscribe {
                     }
                 }
             ),
-        )
-    );
+        ));
 
     return $self->source;
 }

@@ -116,7 +116,7 @@ sub websocket_client : method {
                 ),
                 on_closed => $self->$curry::weak(
                     sub {
-                        my $self = shift;
+                        my $self  = shift;
                         my $error = "Connection closed by peer";
                         $self->source->fail($error) unless $self->source->completed->is_ready;
                         $self->shutdown($error);

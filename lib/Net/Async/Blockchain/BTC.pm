@@ -71,8 +71,7 @@ sub zmq_client {
                     my ($error) = @_;
                     warn $error;
                 },
-            )
-        );
+            ));
         $zmq_client;
     }
 }
