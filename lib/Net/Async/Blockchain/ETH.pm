@@ -105,7 +105,7 @@ sub subscribe {
     my ($self, $subscription) = @_;
 
     $subscription = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
-    return $self->new_websocket_client()->eth_subscribe($subscription)
+    return $self->websocket_client()->eth_subscribe($subscription)
         # the first response from the node is the subscription id
         # once we received it we can start to listening the subscription.
         ->skip_until(
