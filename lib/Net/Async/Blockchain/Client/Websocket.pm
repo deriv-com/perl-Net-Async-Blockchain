@@ -39,6 +39,7 @@ use URI;
 use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
 use Ryu::Async;
+use curry;
 
 use Net::Async::WebSocket::Client;
 
@@ -106,15 +107,20 @@ sub websocket_client : method {
     return $self->{websocket_client} //= do {
         $self->add_child(
             my $client = Net::Async::WebSocket::Client->new(
-                on_text_frame => sub {
-                    my (undef, $frame) = @_;
-                    $self->source->emit(decode_json_utf8($frame));
-                },
-                on_closed => sub {
-                    my $error = "Connection closed by peer";
-                    warn $error;
-                    $self->source->fail($error);
-                },
+                on_text_frame => $self->$curry::weak(
+                    sub {
+                        my ($self, undef, $frame) = @_;
+                        $self->source->emit(decode_json_utf8($frame));
+                    }
+                ),
+                on_closed => $self->$curry::weak(
+                    sub {
+                        my $self = shift;
+                        my $error = "Connection closed by peer";
+                        $self->source->fail($error) unless $self->source->completed->is_ready;
+                        $self->shutdown($error);
+                    }
+                ),
                 close_on_read_eof => 1,
             ));
 
