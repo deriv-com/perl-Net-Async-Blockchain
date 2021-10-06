@@ -38,6 +38,7 @@ Bitcoin subscription using ZMQ from the bitcoin based blockchain nodes
 no indirect;
 
 use Net::Async::Blockchain::Client::ZMQ;
+use Future::AsyncAwait;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -90,7 +91,7 @@ L<Ryu::Source>
 
 =cut
 
-sub subscribe {
+async sub subscribe {
     my ($self, $subscription) = @_;
     $subscription = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
     return $self->zmq_client->subscribe($subscription);

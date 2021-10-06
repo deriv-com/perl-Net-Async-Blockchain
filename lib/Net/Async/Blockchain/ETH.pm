@@ -37,6 +37,7 @@ no indirect;
 
 use Net::Async::Blockchain::Client::Websocket;
 use curry;
+use Future::AsyncAwait;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -101,34 +102,35 @@ L<Ryu::Source>
 
 =cut
 
-sub subscribe {
+async sub subscribe {
     my ($self, $subscription) = @_;
 
     $subscription = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
-    return $self->websocket_client()->eth_subscribe($subscription)
-        # the first response from the node is the subscription id
-        # once we received it we can start to listening the subscription.
-        ->skip_until(
-            $self->$curry::weak(
-                sub {
-                    my ($self, $response) = @_;
-                    return 1                                       unless $response->{result};
-                    $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
-                    return 0;
-                }
-            )
+    my $source = await $self->websocket_client()->eth_subscribe($subscription);
+
+    # the first response from the node is the subscription id
+    # once we received it we can start to listening the subscription.
+    return $source->skip_until(
+        $self->$curry::weak(
+            sub {
+                my ($self, $response) = @_;
+                return 1                                       unless $response->{result};
+                $self->{subscription_id} = $response->{result} unless $self->{subscription_id};
+                return 0;
+            }
         )
-        # we use the subscription id received as the first response to filter
-        # all incoming subscription responses.
-        ->filter(
-            $self->$curry::weak(
-                sub {
-                    my ($self, $response) = @_;
-                    return undef unless $response->{params} && $response->{params}->{subscription};
-                    return $response->{params}->{subscription} eq $self->subscription_id;
-                }
-            )
-        );
+    )
+    # we use the subscription id received as the first response to filter
+    # all incoming subscription responses.
+    ->filter(
+        $self->$curry::weak(
+            sub {
+                my ($self, $response) = @_;
+                return undef unless $response->{params} && $response->{params}->{subscription};
+                return $response->{params}->{subscription} eq $self->subscription_id;
+            }
+        )
+    );
 }
 
 1;

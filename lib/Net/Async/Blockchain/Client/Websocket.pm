@@ -40,6 +40,7 @@ use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
 use Protocol::WebSocket::Request;
 use Ryu::Async;
 use curry;
+use Future::AsyncAwait;
 
 use Net::Async::WebSocket::Client;
 
@@ -168,7 +169,7 @@ L<Ryu::Source>
 
 =cut
 
-sub _request {
+async sub _request {
     my ($self, $method, @params) = @_;
 
     my $url = URI->new($self->endpoint);
@@ -177,19 +178,15 @@ sub _request {
     my $request_call = {
         id     => 1,
         method => $method,
-        params => [@params]};
+        params => [@params],
+    };
 
-    $self->websocket_client->connect(
+    await $self->websocket_client->connect(
         url => $self->endpoint,
         req => Protocol::WebSocket::Request->new(origin => $url->host),
-    )->then(
-        sub {
-            return $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
-        }
-    )->on_fail(
-        sub {
-            $self->shutdown("Can't connect to node websocket");
-        })->retain();
+    );
+
+    await $self->websocket_client->send_text_frame(encode_json_utf8($request_call));
 
     return $self->source;
 }
