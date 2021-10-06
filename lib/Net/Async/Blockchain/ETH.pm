@@ -11,17 +11,15 @@ Net::Async::Blockchain::ETH - Ethereum based subscription.
 
 =head1 SYNOPSIS
 
-    my $eth_args = { subscription_url => "ws://127.0.0.1:8546", rpc_url => "http://127.0.0.1:8545" };
-
     my $loop = IO::Async::Loop->new;
 
     $loop->add(
         my $eth_client = Net::Async::Blockchain::ETH->new(
-            config => $eth_args
+            subscription_url => "ws://127.0.0.1:8546",
         )
     );
 
-    $eth_client->subscribe("transactions")->each(sub { print shift->{hash} })->get;
+    $eth_client->subscribe("blocks")->each(sub { print shift->{hash} })->get;
 
 =head1 DESCRIPTION
 
