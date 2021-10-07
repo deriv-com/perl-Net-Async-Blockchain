@@ -37,6 +37,7 @@ no indirect;
 use ZMQ::LibZMQ3;
 use ZMQ::Constants qw(ZMQ_RCVMORE ZMQ_SUB ZMQ_SUBSCRIBE ZMQ_RCVHWM ZMQ_FD ZMQ_DONTWAIT ZMQ_RCVTIMEO);
 use IO::Async::Handle;
+use Socket;
 use curry;
 use Ryu::Async;
 
