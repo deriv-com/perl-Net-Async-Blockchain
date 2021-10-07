@@ -78,7 +78,7 @@ Formate the subscription response message
 
 =over 4
 
-=item * C<$subscription_type> - A string of the subscption type (e.g: blocks)
+=item * C<$subscription_type> - A string of the subscription type (e.g: blocks)
 
 =item * C<$messgae>           - The recevied subscription message from the blockchain node
 
@@ -88,11 +88,11 @@ Returns a hash reference of:
 
 =over 4
 
-=item * C<blockchain_code> - A string of the blockchain code (eg: bitcoin, litecoin, ....)
+=item * C<blockchain_code>   - A string of the blockchain code (eg: bitcoin, litecoin, ....)
 
-=item * C<subscption_type> - A string of the subscption type (e.g: blocks)
+=item * C<subscription_type> - A string of the subscription type (e.g: blocks)
 
-=item * C<message>         - The recevied subscription message from the blockchain node
+=item * C<message>           - The recevied subscription message from the blockchain node
 
 =back
 
@@ -101,9 +101,9 @@ Returns a hash reference of:
 sub subscription_response {
     my ($self, $subscription_type, $messgae) = @_;
     return {
-        blockchain_code => $self->blockchain_code,
-        subscption_type => $subscription_type,
-        message         => $messgae,
+        blockchain_code   => $self->blockchain_code,
+        subscription_type => $subscription_type,
+        message           => $messgae,
     };
 }
 

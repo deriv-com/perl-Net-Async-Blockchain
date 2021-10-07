@@ -6,11 +6,9 @@ no warnings 'redefine';
 
 use Test::More;
 use Test::Fatal;
-use Test::MockModule;
+
 use IO::Async::Test;
 use IO::Async::Loop;
-use JSON::MaybeUTF8 qw(encode_json_utf8 decode_json_utf8);
-use HTTP::Request;
 
 BEGIN {
     use_ok "Net::Async::HTTP";

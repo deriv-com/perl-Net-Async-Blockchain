@@ -19,6 +19,7 @@ $loop->add(
         # Timeout time for received messages, this is applied when we have a bigger
         # duration interval between the messages (seconds).
         subscription_msg_timeout => 3600,
+        blockchain_code          => 'Bitcoin',
     ));
 
 $btc_client->subscribe("blocks")->each(sub { print Dumper shift->{hash} })->get;

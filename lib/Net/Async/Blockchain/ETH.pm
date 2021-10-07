@@ -16,6 +16,7 @@ Net::Async::Blockchain::ETH - Ethereum based subscription.
     $loop->add(
         my $eth_client = Net::Async::Blockchain::ETH->new(
             subscription_url => "ws://127.0.0.1:8546",
+            blockchain_code  => 'Ethereum',
         )
     );
 
@@ -128,7 +129,7 @@ async sub subscribe {
         $self->$curry::weak(
             sub {
                 my ($self, $response) = @_;
-                return $self->subscription_response($subscription, $message);
+                return $self->subscription_response($subscription, $response);
             }));
 }
 

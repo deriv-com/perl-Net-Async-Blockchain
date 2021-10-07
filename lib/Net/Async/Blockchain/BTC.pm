@@ -16,6 +16,7 @@ Net::Async::Blockchain::BTC - Bitcoin based subscription.
     $loop->add(
         my $btc_client = Net::Async::Blockchain::BTC->new(
             subscription_url => "tcp://127.0.0.1:28332",
+            blockchain_code  => 'Bitcoin',
         )
     );
 

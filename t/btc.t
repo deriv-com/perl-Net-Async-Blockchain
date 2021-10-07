@@ -26,7 +26,7 @@ subtest "subscribe _ wrong subscription type" => sub {
 subtest "subscribe" => sub {
 
     # ZMQ server
-    my $block_hash = '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834';
+    my $block_hash       = '00000000a4bceeac7fd4a65e71447724e5e67e9d8d0d5a7e6906776eaa35e834';
     my $block_hash_bytes = pack('H*', $block_hash);
     my @msg              = ('hashblock', $block_hash_bytes);
     my $zmq_server       = Test::TCP->new(
@@ -44,22 +44,27 @@ subtest "subscribe" => sub {
             exit 0;
         });
 
-    my $port = $zmq_server->port;
-    my $ctxt = zmq_init();
-    my $sock = zmq_socket($ctxt, ZMQ_SUB);
-    my $blockchain_code = 'Bitcoin';
+    my $port              = $zmq_server->port;
+    my $ctxt              = zmq_init();
+    my $sock              = zmq_socket($ctxt, ZMQ_SUB);
+    my $blockchain_code   = 'Bitcoin';
     my $subscription_type = 'blocks';
 
-    $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new(subscription_url => "tcp://127.0.0.1:$port", blockchain_code => $blockchain_code));
+    $loop->add(
+        my $blockchain_btc = Net::Async::Blockchain::BTC->new(
+            subscription_url => "tcp://127.0.0.1:$port",
+            blockchain_code  => $blockchain_code
+        ));
 
     my $btc_subscribe = $blockchain_btc->subscribe($subscription_type)->get;
     is ref $btc_subscribe, 'Ryu::Source', 'correct reference for Ryu Source';
 
     my $expected_message = {
-        blockchain_code => $blockchain_code,
-        subscption_type => $subscription_type,
-        message => $block_hash,
+        blockchain_code   => $blockchain_code,
+        subscription_type => $subscription_type,
+        message           => $block_hash,
     };
+
     $btc_subscribe->take(1)->each(
         sub {
             my $emitted_message = shift;
