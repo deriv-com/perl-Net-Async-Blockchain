@@ -102,8 +102,8 @@ L<Ryu::Source>
 async sub subscribe {
     my ($self, $subscription) = @_;
 
-    $subscription = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
-    my $source = await $self->websocket_client()->eth_subscribe($subscription);
+    my $subscription_event = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
+    my $source             = await $self->websocket_client()->eth_subscribe($subscription_event);
 
     # the first response from the node is the subscription id
     # once we received it we can start to listening the subscription.
@@ -123,6 +123,12 @@ async sub subscribe {
                 my ($self, $response) = @_;
                 return undef unless $response->{params} && $response->{params}->{subscription};
                 return $response->{params}->{subscription} eq $self->subscription_id;
+            })
+    )->map(
+        $self->$curry::weak(
+            sub {
+                my ($self, $response) = @_;
+                return $self->subscription_response($subscription, $message);
             }));
 }
 

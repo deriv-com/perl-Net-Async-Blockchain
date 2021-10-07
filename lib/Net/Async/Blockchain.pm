@@ -40,6 +40,7 @@ sub rpc_password : method             { shift->{rpc_password} || undef }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
+sub blockchain_code                   { shift->{blockchain_code} }
 
 =head2 configure
 
@@ -55,6 +56,7 @@ must be included and removed here.
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
+=item * C<blockchain_code> The blockchain code (eg: bitcoin, litecoin, ....)
 
 =back
 
@@ -63,11 +65,46 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout)) {
+    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout blockchain_code)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
     $self->SUPER::configure(%params);
+}
+
+=head2 subscription_response
+
+Formate the subscription response message
+
+=over 4
+
+=item * C<$subscription_type> - A string of the subscption type (e.g: blocks)
+
+=item * C<$messgae>           - The recevied subscription message from the blockchain node
+
+=back
+
+Returns a hash reference of:
+
+=over 4
+
+=item * C<blockchain_code> - A string of the blockchain code (eg: bitcoin, litecoin, ....)
+
+=item * C<subscption_type> - A string of the subscption type (e.g: blocks)
+
+=item * C<message>         - The recevied subscription message from the blockchain node
+
+=back
+
+=cut
+
+sub subscription_response {
+    my ($self, $subscription_type, $messgae) = @_;
+    return {
+        blockchain_code => $self->blockchain_code,
+        subscption_type => $subscription_type,
+        message         => $messgae,
+    };
 }
 
 1;

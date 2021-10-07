@@ -35,6 +35,7 @@ no indirect;
 
 use Net::Async::Blockchain::Client::ZMQ;
 use Future::AsyncAwait;
+use curry;
 
 use parent qw(Net::Async::Blockchain);
 
@@ -88,8 +89,13 @@ L<Ryu::Source>
 
 async sub subscribe {
     my ($self, $subscription) = @_;
-    $subscription = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
-    return $self->zmq_client->subscribe($subscription);
+    my $subscription_event = $subscription_dictionary{$subscription} or die "Invalid or not implemented subscription";
+    return $self->zmq_client->subscribe($subscription_event)->map(
+        $self->$curry::weak(
+            sub {
+                my ($self, $message) = @_;
+                return $self->subscription_response($subscription, $message);
+            }));
 }
 
 1;
