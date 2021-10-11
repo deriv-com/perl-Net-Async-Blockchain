@@ -115,7 +115,7 @@ sub websocket_client : method {
                 ),
                 on_ping_frame => $self->$curry::weak(
                     sub {
-                        my ($self, undef, $frame) = @_;
+                        my ($self) = @_;
                         $self->websocket_client->send_pong_frame->on_fail(
                             sub {
                                 my $error = shift;
