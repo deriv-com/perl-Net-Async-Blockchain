@@ -12,7 +12,7 @@ use Net::Async::WebSocket::Server;
 use JSON::MaybeUTF8 qw(decode_json_utf8);
 use Future::AsyncAwait;
 
-plan skip_all => "Ignoring test: The test is failing intermittently on master";
+plan skip_all => "Ignoring test: The test is failing intermittently on master" unless $ENV{TRAVIS};
 
 my $loop = IO::Async::Loop->new;
 
