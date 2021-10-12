@@ -114,6 +114,17 @@ sub websocket_client : method {
                         $self->source->emit(decode_json_utf8($frame));
                     }
                 ),
+                on_ping_frame => $self->$curry::weak(
+                    sub {
+                        my ($self) = @_;
+                        $self->websocket_client->send_pong_frame->on_fail(
+                            sub {
+                                my $error = shift;
+                                warn "Fail to send the pong frame, error: $error";
+                            }
+                        )->retain();
+                    }
+                ),
                 on_closed => $self->$curry::weak(
                     sub {
                         my $self  = shift;
