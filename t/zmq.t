@@ -11,6 +11,9 @@ use IO::Async::Loop;
 use Ryu::Async;
 
 BEGIN {
+    if ($ENV{NO_SERVICE}){
+        plan skip_all => 'No node service for test'
+    }
     use_ok "ZMQ::LibZMQ3";
     use_ok "ZMQ::Constants", ":v3.1.1", ":all";
     use_ok "Net::Async::Blockchain::Client::ZMQ";
