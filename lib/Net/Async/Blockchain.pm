@@ -33,10 +33,6 @@ no indirect;
 
 use parent qw(IO::Async::Notifier);
 
-sub rpc_url : method                  { shift->{rpc_url} }
-sub rpc_timeout : method              { shift->{rpc_timeout} }
-sub rpc_user : method                 { shift->{rpc_user}     || undef }
-sub rpc_password : method             { shift->{rpc_password} || undef }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
@@ -49,10 +45,6 @@ must be included and removed here.
 
 =over 4
 
-=item * C<rpc_url> RPC complete URL
-=item * C<rpc_timeout> RPC timeout
-=item * C<rpc_user> RPC user. (optional, default: undef)
-=item * C<rpc_password> RPC password. (optional, default: undef)
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
@@ -65,7 +57,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout blockchain_code)) {
+    for my $k (qw(subscription_url subscription_timeout subscription_msg_timeout blockchain_code)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
