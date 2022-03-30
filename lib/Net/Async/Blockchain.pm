@@ -31,22 +31,12 @@ This module contains methods that are shared by the subscription clients.
 
 no indirect;
 
-use Ryu::Async;
-use Future::Queue;
-
-use Net::Async::Blockchain::Block;
-
 use parent qw(IO::Async::Notifier);
 
-sub rpc_url : method                  { shift->{rpc_url} }
-sub rpc_timeout : method              { shift->{rpc_timeout} }
-sub rpc_user : method                 { shift->{rpc_user}     || undef }
-sub rpc_password : method             { shift->{rpc_password} || undef }
 sub subscription_url : method         { shift->{subscription_url} }
 sub subscription_timeout : method     { shift->{subscription_timeout} }
 sub subscription_msg_timeout : method { shift->{subscription_msg_timeout} }
-sub currency_symbol : method          { shift->{currency_symbol} }
-sub base_block_number : method        { shift->{base_block_number} }
+sub blockchain_code                   { shift->{blockchain_code} }
 
 =head2 configure
 
@@ -55,15 +45,10 @@ must be included and removed here.
 
 =over 4
 
-=item * C<rpc_url> RPC complete URL
-=item * C<rpc_timeout> RPC timeout
-=item * C<rpc_user> RPC user. (optional, default: undef)
-=item * C<rpc_password> RPC password. (optional, default: undef)
 =item * C<subscription_url> Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
 =item * C<subscription_timeout> Subscription connection timeout
 =item * C<subscription_msg_timeout> Subscription interval between messages timeout
-=item * C<currency_symbol> Currency symbol
-=item * C<base_block_number> Block number where the subscription must apply the recursive search from
+=item * C<blockchain_code> The blockchain code (eg: bitcoin, litecoin, ....)
 
 =back
 
@@ -72,67 +57,46 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (
-        qw(rpc_url rpc_timeout rpc_user rpc_password subscription_url subscription_timeout subscription_msg_timeout currency_symbol base_block_number)
-        )
-    {
+    for my $k (qw(subscription_url subscription_timeout subscription_msg_timeout blockchain_code)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
     $self->SUPER::configure(%params);
 }
 
-=head2 source
+=head2 subscription_response
 
-Create an L<Ryu::Source> instance, if it is already defined just return
-the object
+Formate the subscription response message
 
 =over 4
 
+=item * C<$subscription_type> - A string of the subscription type (e.g: blocks)
+
+=item * C<$messgae>           - The recevied subscription message from the blockchain node
+
 =back
 
-L<Ryu::Source>
+Returns a hash reference of:
+
+=over 4
+
+=item * C<blockchain_code>   - A string of the blockchain code (eg: bitcoin, litecoin, ....)
+
+=item * C<subscription_type> - A string of the subscription type (e.g: blocks)
+
+=item * C<message>           - The recevied subscription message from the blockchain node
+
+=back
 
 =cut
 
-sub source : method {
-    my ($self) = @_;
-    return $self->{source} //= do {
-        $self->add_child(my $ryu = Ryu::Async->new);
-        $ryu->source;
+sub subscription_response {
+    my ($self, $subscription_type, $messgae) = @_;
+    return {
+        blockchain_code   => $self->blockchain_code,
+        subscription_type => $subscription_type,
+        message           => $messgae,
     };
-}
-
-=head2 new_blocks_queue
-
-Returns C<Future::Queue> object
-
-=cut
-
-sub new_blocks_queue {
-    return shift->{new_blocks_queue} //= Future::Queue->new;
-}
-
-=head2 emit_block
-
-Creates an object of <Net::Async::Blockchain::Block> then emit it.
-
-=over 4
-
-=item * C<block_number> - Number of the processed block.
-
-=back
-
-=cut
-
-sub emit_block {
-    my ($self, $block_number) = @_;
-    my $block_object = Net::Async::Blockchain::Block->new(
-        number   => $block_number,
-        currency => $self->currency_symbol
-    );
-    $self->source->emit($block_object);
-    return undef;
 }
 
 1;

@@ -54,7 +54,7 @@ $server->listen(
 
 wait_for { $ws_client };
 
-$ws_client->eth_subscribe('newHeads');
+$ws_client->eth_subscribe('newHeads')->get;
 
 wait_for { @serverframes };
 
