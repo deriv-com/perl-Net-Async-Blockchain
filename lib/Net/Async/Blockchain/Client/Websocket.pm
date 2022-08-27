@@ -121,8 +121,7 @@ sub websocket_client : method {
                             sub {
                                 my $error = shift;
                                 warn "Fail to send the pong frame, error: $error";
-                            }
-                        )->retain();
+                            })->retain();
                     }
                 ),
                 on_closed => $self->$curry::weak(

@@ -17,12 +17,13 @@ BEGIN {
     use_ok "Net::Async::Blockchain::Client::RPC::BTC";
 }
 
-my $peersock;
+my @peersocks;
 local *IO::Async::Handle::connect = sub {
     my $self = shift;
 
-    (my $selfsock, $peersock) = IO::Async::OS->socketpair() or die "Cannot create socket pair - $!";
+    my ($selfsock, $peersock) = IO::Async::OS->socketpair() or die "Cannot create socket pair - $!";
     $self->set_handle($selfsock);
+    push @peersocks, $peersock;
 
     return Future->new->done($self);
 };
@@ -44,6 +45,23 @@ subtest 'no endpoint' => sub {
     $loop->add(my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new());
 
     like(exception { $rpc->accounts->get() }, qr(Require either 'uri' or 'request'), 'No endpoint');
+};
+
+subtest 'max connections per host' => sub {
+    my $max = 5;
+
+    $loop->add(
+        my $rpc = Net::Async::Blockchain::Client::RPC::ETH->new(
+            endpoint        => 'http://node.example',
+            max_connections => $max
+        ));
+
+    my @done;
+    for (0 .. 10) {
+        $rpc->accounts();
+    }
+
+    is(scalar @peersocks - 1, $max, "Expected number of connections for max=$max");
 };
 
 done_testing;

@@ -10,8 +10,8 @@ use IO::Async::Test;
 use IO::Async::Loop;
 
 BEGIN {
-    if ($ENV{NO_SERVICE}){
-        plan skip_all => 'No node service for test'
+    if ($ENV{NO_SERVICE}) {
+        plan skip_all => 'No node service for test';
     }
     use_ok "ZMQ::LibZMQ3";
     use_ok "ZMQ::Constants", ":v3.1.1", ":all";
