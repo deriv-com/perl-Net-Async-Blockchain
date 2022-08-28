@@ -38,10 +38,23 @@ use constant {
     DEFAULT_MAX_CONNECTIONS => 6
 };
 
-sub endpoint        { shift->{endpoint} }
-sub rpc_user        { shift->{rpc_user} }
-sub rpc_password    { shift->{rpc_password} }
-sub timeout         { shift->{timeout}         // DEFAULT_TIMEOUT }
+sub endpoint     { shift->{endpoint} }
+sub rpc_user     { shift->{rpc_user} }
+sub rpc_password { shift->{rpc_password} }
+sub timeout      { shift->{timeout} // DEFAULT_TIMEOUT }
+
+=head2 max_connections
+
+L<https://metacpan.org/pod/Net::Async::HTTP#max_connections_per_host-=%3E-INT>
+
+=over 4
+
+=back
+
+returns the configured max_connections value or DEFAULT_MAX_CONNECTIONS
+
+=cut
+
 sub max_connections { shift->{max_connections} // DEFAULT_MAX_CONNECTIONS }
 
 =head2 http_client
