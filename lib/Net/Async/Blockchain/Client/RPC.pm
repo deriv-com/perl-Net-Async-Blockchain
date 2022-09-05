@@ -77,7 +77,6 @@ sub http_client {
         $self->add_child(
             my $http_client = Net::Async::HTTP->new(
                 decode_content           => 1,
-                fail_on_error            => 1,
                 stall_timeout            => $self->timeout,
                 timeout                  => $self->timeout,
                 max_connections_per_host => $self->max_connections,
