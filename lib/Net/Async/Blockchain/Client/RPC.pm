@@ -32,16 +32,30 @@ use IO::Async::Notifier;
 
 use parent qw(IO::Async::Notifier);
 
-# default value for the Net::Async::HTTP stall_timeout configuration.
-use constant DEFAULT_TIMEOUT => 100;
+use constant {
+    # default value for the Net::Async::HTTP stall_timeout configuration.
+    DEFAULT_TIMEOUT         => 100,
+    DEFAULT_MAX_CONNECTIONS => 6
+};
 
-sub endpoint : method     { shift->{endpoint} }
-sub rpc_user : method     { shift->{rpc_user}     || undef }
-sub rpc_password : method { shift->{rpc_password} || undef }
+sub endpoint     { shift->{endpoint} }
+sub rpc_user     { shift->{rpc_user} }
+sub rpc_password { shift->{rpc_password} }
+sub timeout      { shift->{timeout} // DEFAULT_TIMEOUT }
 
-# this value will be set on the _init method, if not set will use the
-# DEFAULT_TIMEOUT constant.
-sub timeout : method { shift->{timeout} // DEFAULT_TIMEOUT }
+=head2 max_connections
+
+L<https://metacpan.org/pod/Net::Async::HTTP#max_connections_per_host-=%3E-INT>
+
+=over 4
+
+=back
+
+returns the configured max_connections value or DEFAULT_MAX_CONNECTIONS
+
+=cut
+
+sub max_connections { shift->{max_connections} // DEFAULT_MAX_CONNECTIONS }
 
 =head2 http_client
 
@@ -56,15 +70,16 @@ L<Net::Async::HTTP>
 
 =cut
 
-sub http_client : method {
+sub http_client {
     my ($self) = @_;
 
     return $self->{http_client} //= do {
         $self->add_child(
             my $http_client = Net::Async::HTTP->new(
-                decode_content => 1,
-                stall_timeout  => $self->timeout,
-                timeout        => $self->timeout,
+                decode_content           => 1,
+                stall_timeout            => $self->timeout,
+                timeout                  => $self->timeout,
+                max_connections_per_host => $self->max_connections,
             ));
 
         $http_client;
@@ -93,7 +108,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint rpc_user rpc_password timeout)) {
+    for my $k (qw(endpoint rpc_user rpc_password timeout max_connections)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
