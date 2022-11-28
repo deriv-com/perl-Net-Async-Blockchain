@@ -1,53 +1,40 @@
+# NAME
 
-# perl-Net-Async-Blockchain
+Net::Async::Blockchain - base for blockchain subscription clients.
 
-Support for subscriptions and API interaction with blockchains such as BTC or ETH
+# SYNOPSIS
 
-## SYNOPSIS
+Objects of this type would not normally be constructed directly.
 
-```perl
-my $loop = IO::Async::Loop->new;
+For blockchain clients see:
+\- Net::Async::Blockchain::BTC
+\- Net::Async::BLockchain::ETH
 
-$loop->add(
-	my $btc_client = Net::Async::Blockchain::BTC->new(
-		blockchain_code 		 => 'Bitcoin',
-		subscription_url         => 'tcp://127.0.0.1:28332',
-		subscription_timeout     => 100,
-		subscription_msg_timeout => 3600000,
-));
+Which will use this class as base.
 
-$btc_client->subscribe("blocks")->each(sub { print shift->{hash})->get;
-```
+# DESCRIPTION
 
-## Supported cryptocurrencies:
+This module contains methods that are shared by the subscription clients.
 
-- BTC (also LTC and BCH)
-- Omnicore (Tether, ...)
-- ETH (also ERC20 contracts)
+## configure
 
-## Supported subscriptions:
+Any additional configuration that is not described on [IO::Async::Notifier](https://metacpan.org/pod/IO%3A%3AAsync%3A%3ANotifier)
+must be included and removed here.
 
-### Blocks:
-- Call: `->subscribe('blocks');`
-- BTC, LTC, BCH, Omnicore
-	- `hashblock`
-- ETH, ERC20
-	- `newHeads`
+- `subscription_url` Subscription URL it can be TCP for ZMQ and WS for the Websocket subscription
+=item \* `subscription_timeout` Subscription connection timeout
+=item \* `subscription_msg_timeout` Subscription interval between messages timeout
+=item \* `blockchain_code` The blockchain code (eg: bitcoin, litecoin, ....)
 
-## CAVEATS
+## subscription\_response
 
-This software is in an early state.
+Formate the subscription response message
 
-REQUIREMENTS
+- `$subscription_type` - A string of the subscription type (e.g: blocks)
+- `$messgae`           - The recevied subscription message from the blockchain node
 
--   perl 5
+Returns a hash reference of:
 
-## See also
-- [perl-Ethereum-RPC-Client](https://github.com/binary-com/perl-Ethereum-RPC-Client)
-
-## Author
-Binary.com
-
-## LICENSE
-
-This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+- `blockchain_code`   - A string of the blockchain code (eg: bitcoin, litecoin, ....)
+- `subscription_type` - A string of the subscription type (e.g: blocks)
+- `message`           - The recevied subscription message from the blockchain node
