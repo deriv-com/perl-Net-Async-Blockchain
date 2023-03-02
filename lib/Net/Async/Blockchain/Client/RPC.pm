@@ -41,7 +41,6 @@ use constant {
 sub endpoint     { shift->{endpoint} }
 sub rpc_user     { shift->{rpc_user} }
 sub rpc_password { shift->{rpc_password} }
-sub jsonrpc      { shift->{jsonrpc} }
 sub timeout      { shift->{timeout} // DEFAULT_TIMEOUT }
 
 =head2 max_connections
@@ -109,7 +108,7 @@ must be included and removed here.
 sub configure {
     my ($self, %params) = @_;
 
-    for my $k (qw(endpoint rpc_user rpc_password timeout max_connections jsonrpc)) {
+    for my $k (qw(endpoint rpc_user rpc_password timeout max_connections)) {
         $self->{$k} = delete $params{$k} if exists $params{$k};
     }
 
@@ -141,7 +140,7 @@ async sub _request {
         params => [@params],
     };
     # for Geth JSON-RPC spec requires the version field to be exactly "jsonrpc": "2.0"
-    $obj->{jsonrpc} = '2.0' if $self->jsonrpc;
+    $obj->{jsonrpc} = $self->jsonrpc if $self->jsonrpc;
     my @post_params = ($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
     # for ETH based, we don't require user+password. Check to send user+password if exists.
     push @post_params, (user => $self->rpc_user)     if $self->rpc_user;
