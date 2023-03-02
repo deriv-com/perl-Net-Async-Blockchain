@@ -33,6 +33,8 @@ no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC);
 
+sub jsonrpc     { '2.0' }
+
 =head2 call
 
 https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_call
