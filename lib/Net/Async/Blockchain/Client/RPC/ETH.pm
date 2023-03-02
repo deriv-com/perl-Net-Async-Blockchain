@@ -14,7 +14,7 @@ Net::Async::Blockchain::Client::RPC::ETH - Async ETH RPC Client.
     my $loop = IO::Async::Loop->new();
 
     $loop->add(
-        my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => 'http://127.0.0.1:8545', timeout => 100)
+        my $http_client = Net::Async::Blockchain::Client::RPC::ETH->new(endpoint => 'http://127.0.0.1:8545', timeout => 100, jsonrpc => '2.0')
     );
 
     my $response = $http_client->accounts()->get;
