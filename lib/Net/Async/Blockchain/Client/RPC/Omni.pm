@@ -33,6 +33,8 @@ no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC::BTC);
 
+sub jsonrpc     { return undef }
+
 =head2 get_transaction
 
 https://github.com/OmniLayer/omnicore/blob/master/src/omnicore/doc/rpc-api.md#omni_gettransaction
