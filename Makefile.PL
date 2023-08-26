@@ -9,6 +9,7 @@ use ExtUtils::MakeMaker 7.64;
 my %WriteMakefileArgs = (
   "ABSTRACT" => "base for blockchain subscription clients.",
   "AUTHOR" => "DERIV <DERIV\@cpan.org>",
+  "VERSION_FROM" => "Net::Async::Blockchain",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "7.64"
   },
@@ -22,10 +23,7 @@ my %WriteMakefileArgs = (
     "IO::Async::Handle" => 0,
     "IO::Async::Notifier" => 0,
     "IO::Async::SSL" => 0,
-    "IO::Async::Timer::Periodic" => "0.72",
     "JSON::MaybeUTF8" => "1.002",
-    "JSON::MaybeXS" => 0,
-    "Math::BigFloat" => "1.999814",
     "Math::BigInt" => "1.999814",
     "Net::Async::HTTP" => "0.43",
     "Net::Async::WebSocket" => "0.13",
@@ -60,12 +58,10 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.98",
     "Test::TCP" => 0
   },
-  "VERSION" => "0.002",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
-
 
 my %FallbackPrereqs = (
   "Digest::Keccak" => 0,
@@ -77,12 +73,9 @@ my %FallbackPrereqs = (
   "IO::Async::Notifier" => 0,
   "IO::Async::SSL" => 0,
   "IO::Async::Test" => 0,
-  "IO::Async::Timer::Periodic" => "0.72",
   "IO::Handle" => 0,
   "IPC::Open3" => 0,
   "JSON::MaybeUTF8" => "1.002",
-  "JSON::MaybeXS" => 0,
-  "Math::BigFloat" => "1.999814",
   "Math::BigInt" => "1.999814",
   "Net::Async::HTTP" => "0.43",
   "Net::Async::WebSocket" => "0.13",
@@ -95,7 +88,6 @@ my %FallbackPrereqs = (
   "Test::CheckDeps" => "0.010",
   "Test::Exception" => 0,
   "Test::Fatal" => 0,
-  "Test::MemoryGrowth" => 0,
   "Test::MockModule" => 0,
   "Test::More" => "0.98",
   "Test::TCP" => 0,
@@ -109,7 +101,6 @@ my %FallbackPrereqs = (
   "strict" => 0,
   "warnings" => 0
 );
-
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
   delete $WriteMakefileArgs{TEST_REQUIRES};
