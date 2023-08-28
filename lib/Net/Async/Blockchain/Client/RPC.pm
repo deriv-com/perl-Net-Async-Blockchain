@@ -141,7 +141,7 @@ async sub _request {
     };
 
     # for Geth JSON-RPC spec requires the version field to be exactly "jsonrpc": "2.0"
-    $obj->{jsonrpc} = $self->jsonrpc if $self->jsonrpc;
+    $obj->{jsonrpc} = $self->jsonrpc if $self->can('jsonrpc');
 
     my @post_params = ($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
 
