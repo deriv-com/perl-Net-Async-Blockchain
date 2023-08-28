@@ -153,29 +153,4 @@ async sub _request {
     return decode_json_utf8($response->decoded_content)->{result};
 }
 
-=head2 AUTOLOAD
-
-Any request other than the already implemented RPC calls
-will fallback to this and send/return as same as the node
-
-=over 4
-
-=back
-
-L<Future> - same as _request
-
-=cut
-
-sub AUTOLOAD {
-    my $self = shift;
-
-    my $method = $Net::Async::Blockchain::Client::RPC::AUTOLOAD;
-
-    $method =~ s/.*:://;
-
-    return if $method eq 'DESTROY';
-
-    return $self->_request($method, @_);
-}
-
 1;
