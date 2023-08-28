@@ -33,7 +33,7 @@ no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC);
 
-sub jsonrpc     { return '2.0' }
+sub jsonrpc { return '2.0' }
 
 =head2 call
 

@@ -186,10 +186,10 @@ async sub _request {
 
     # this is the client request
     my $request_call = {
-        id     => 1,
-        method => $method,
+        id      => 1,
+        method  => $method,
         jsonrpc => '2.0',
-        params => [@params],
+        params  => [@params],
     };
 
     await $self->websocket_client->connect(

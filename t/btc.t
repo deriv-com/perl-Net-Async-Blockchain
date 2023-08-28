@@ -20,11 +20,11 @@ testing_loop($loop);
 subtest "subscribe _ wrong subscription type" => sub {
 
     $loop->add(my $blockchain_btc = Net::Async::Blockchain::BTC->new());
-    like (
-        exception {$blockchain_btc->subscribe('dummy')->get},
+    like(
+        exception { $blockchain_btc->subscribe('dummy')->get },
         qr/Invalid or not implemented subscription/,
         'expecting to die due to wrong subscription type'
-    )
+    );
 };
 
 subtest "subscribe" => sub {
