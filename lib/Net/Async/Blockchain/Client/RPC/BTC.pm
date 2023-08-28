@@ -33,8 +33,6 @@ no indirect;
 
 use parent qw(Net::Async::Blockchain::Client::RPC);
 
-sub jsonrpc     { return undef }
-
 =head2 get_transaction
 
 https://bitcoincore.org/en/doc/24.0.0/rpc/wallet/gettransaction/

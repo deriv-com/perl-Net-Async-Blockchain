@@ -127,7 +127,7 @@ Use any argument as the method parameter for the client RPC call
 
 =back
 
-L<Future>
+L<Future> - node response as decoded json
 
 =cut
 
@@ -139,15 +139,43 @@ async sub _request {
         method => $method,
         params => [@params],
     };
+
     # for Geth JSON-RPC spec requires the version field to be exactly "jsonrpc": "2.0"
     $obj->{jsonrpc} = $self->jsonrpc if $self->jsonrpc;
+
     my @post_params = ($self->endpoint, encode_json_utf8($obj), content_type => 'application/json');
+
     # for ETH based, we don't require user+password. Check to send user+password if exists.
     push @post_params, (user => $self->rpc_user)     if $self->rpc_user;
     push @post_params, (pass => $self->rpc_password) if $self->rpc_password;
 
     my $response = await $self->http_client->POST(@post_params);
     return decode_json_utf8($response->decoded_content)->{result};
+}
+
+=head2 AUTOLOAD
+
+Any request other than the already implemented RPC calls
+will fallback to this and send/return as same as the node
+
+=over 4
+
+=back
+
+L<Future> - same as _request
+
+=cut
+
+sub AUTOLOAD {
+    my $self = shift;
+
+    my $method = $Net::Async::Blockchain::Client::RPC::AUTOLOAD;
+
+    $method =~ s/.*:://;
+
+    return if $method eq 'DESTROY';
+
+    return $self->_request($method, @_);
 }
 
 1;
