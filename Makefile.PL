@@ -56,12 +56,11 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.98",
     "Test::TCP" => 0
   },
-  "VERSION" => "0.004",
+  "VERSION" => "0.003",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
-
 
 my %FallbackPrereqs = (
   "Digest::Keccak" => 0,
@@ -101,7 +100,6 @@ my %FallbackPrereqs = (
   "strict" => 0,
   "warnings" => 0
 );
-
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
   delete $WriteMakefileArgs{TEST_REQUIRES};
