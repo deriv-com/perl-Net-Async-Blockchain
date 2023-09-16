@@ -38,7 +38,7 @@ jobs:
     - name: Run Tests
       run: dzil smoke --release --author && dzil cover -test -report codecov && dzil xtest
   release:
-    # if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master'
     needs: test
     runs-on: ubuntu-latest
     container:
