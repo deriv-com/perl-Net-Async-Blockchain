@@ -1,18 +1,80 @@
 name: Build workflow
 run-name: Build workflow
-on: [push]
+on:
+  push:
+    branches:
+    - master
+  pull_request:
 jobs:
-  Explore-GitHub-Actions:
+  test:
     runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:${{ matrix.perl-version }}
+    strategy:
+      matrix:
+        perl-version:
+        - '5.24'
+        - '5.26'
+        - '5.28'
+        - '5.30'
+        - '5.32'
+        - '5.34'
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+    - uses: actions/checkout@v4.0.0
+    - name: Install libraries and other packages
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libssl-dev libzmq3-dev zlib1g-dev
+    - name: Install Dzil
+      run: cpm install -g --no-test Dist::Zilla Dist::Zilla::App::Command::cover ExtUtils::MakeMaker
+    - name: Install dzil author dependencies
+      run: |
+        cpm install --no-test -g \
+        -w 2 \
+        --mirror=http://cpan.cpantesters.org/ $(dzil authordeps --missing)
+    - name: Install dist deps
+      run: "# see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use \n# dzil listdeps --missing directly here\ncpanm -n --installdeps .\ndzil listdeps --author --missing --cpanm-versions | xargs cpanm -n"
+    - name: Run Tests
+      run: dzil smoke --release --author && dzil cover -test -report codecov && dzil xtest
+  release:
+    # if: github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:5.34
+    steps:
+    - uses: actions/checkout@v4.0.0
+    - name: Install libraries and other packages
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libssl-dev libzmq3-dev zlib1g-dev
+    - name: Install Dzil
+      run: cpm install -g --no-test Dist::Zilla Dist::Zilla::App::Command::cover ExtUtils::MakeMaker
+    - name: Install dzil author dependencies
+      run: |
+        cpm install --no-test -g \
+        -w 2 \
+        --mirror=http://cpan.cpantesters.org/ $(dzil authordeps --missing)
+    - name: Install dist deps
+      run: "# see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use \n# dzil listdeps --missing directly here\ncpanm -n --installdeps .\ndzil listdeps --author --missing --cpanm-versions | xargs cpanm -n"
+    - name: setup PAUSE account
+      run: echo -e "user ${{ secrets.PAUSE_USER }}\npassword ${{ secrets.PAUSE_PASSWORD }}\n" >> ~/.pause
+    - name: setup git
+      run: |
+        git config --global user.email "circleci@binary.com"
+        git config --global user.name "circleci"
+        # set remote github because dzil will push to github
+        # https://metacpan.org/release/DERIV/Dist-Zilla-PluginBundle-Author-DERIV-0.003/source/lib/Dist/Zilla/PluginBundle/Author/DERIV.pm#L122
+        git remote add github $(git remote get-url origin)
+    - name: Release to PAUSE
+      run: |
+        if grep -Pzq '\{\{\$NEXT\}\}\n\s*\n' Changes
+        then
+            echo "No changes, no need release"
+            exit 0
+        fi
+        # use git push to test permission
+        git push github master
+        echo "y\n" | DZIL_CONFIRMRELEASE_DEFAULT=y dzil release
