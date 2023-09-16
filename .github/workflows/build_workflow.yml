@@ -34,11 +34,15 @@ jobs:
         -w 2 \
         --mirror=http://cpan.cpantesters.org/ $(dzil authordeps --missing)
     - name: Install dist deps
-      run: "# see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use \n# dzil listdeps --missing directly here\ncpanm -n --installdeps .\ndzil listdeps --author --missing --cpanm-versions | xargs cpanm -n"
+      run: |
+        # see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use
+        # dzil listdeps --missing directly here
+        cpanm -n --installdeps .
+        dzil listdeps --author --missing --cpanm-versions | xargs cpanm -n
     - name: Run Tests
       run: dzil smoke --release --author && dzil cover -test -report codecov && dzil xtest
   release:
-    if: github.ref == 'refs/heads/master'
+    # if: github.ref == 'refs/heads/master'
     needs: test
     runs-on: ubuntu-latest
     container:
@@ -58,7 +62,11 @@ jobs:
         -w 2 \
         --mirror=http://cpan.cpantesters.org/ $(dzil authordeps --missing)
     - name: Install dist deps
-      run: "# see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use \n# dzil listdeps --missing directly here\ncpanm -n --installdeps .\ndzil listdeps --author --missing --cpanm-versions | xargs cpanm -n"
+      run: |
+        # see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use
+        # dzil listdeps --missing directly here
+        cpanm -n --installdeps .
+        dzil listdeps --author --missing --cpanm-versions | xargs cpanm -n
     - name: setup PAUSE account
       run: echo -e "user ${{ secrets.PAUSE_USER }}\npassword ${{ secrets.PAUSE_PASSWORD }}\n" >> ~/.pause
     - name: setup git
