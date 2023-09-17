@@ -1,6 +1,7 @@
 name: Build workflow
 run-name: Build workflow
 on:
+  workflow_dispatch:
   push:
     branches:
     - master
