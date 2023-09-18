@@ -48,6 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: perldocker/perl-tester:5.34
+    env:
+      PAUSE_USER: ${{ secrets.PAUSE_USER }}
+      PAUSE_PASSWORD: ${{ secrets.PAUSE_PASSWORD }}
     steps:
     - uses: actions/checkout@v4
     - name: Install libraries and other packages
@@ -69,7 +72,7 @@ jobs:
         cpanm -n --installdeps .
         dzil listdeps --author --missing --cpanm-versions | xargs cpanm -n
     - name: setup PAUSE account
-      run: echo -e "user ${{ secrets.PAUSE_USER }}\npassword ${{ secrets.PAUSE_PASSWORD }}\n" >> ~/.pause
+      run: echo -e "user $PAUSE_USER\npassword $PAUSE_PASSWORD\n" >> ~/.pause
     - name: setup git
       run: |
         git config --global user.email "circleci@binary.com"
