@@ -6,13 +6,13 @@ alias:
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libssl-dev libzmq3-dev zlib1g-dev
       name: Install libraries and other packages
-  - &install_dzil 
+  - &install_dzil
     run:
       command: |
         cpm install -g --no-test Dist::Zilla Dist::Zilla::App::Command::cover ExtUtils::MakeMaker
       name: Install Dzil
   - &install_author_deps
-    run: 
+    run:
       name: Install dzil author dependencies
       command: |
         cpm install --no-test -g \
@@ -22,11 +22,11 @@ alias:
     run:
       name: Install dist deps
       command: |
-        # see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use 
+        # see https://github.com/team-at-cpan/Dist-Zilla-Plugin-PodInherit/issues/1 to check why we not use
         # dzil listdeps --missing directly here
         cpanm -n --installdeps .
         dzil listdeps --author --missing --cpanm-versions | xargs cpanm -n
- 
+
 jobs:
   test:
     parameters:
@@ -92,12 +92,14 @@ workflows:
               - "5.30"
               - "5.32"
               - "5.34"
+              - "5.36"
+              - "5.38"
     - release:
        context: release-deriv
        requires:
          - test
        filters:
          branches:
-           only: 
+           only:
            - master
 version: 2.1
