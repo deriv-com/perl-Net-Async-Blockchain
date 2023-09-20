@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     container:
       image: perldocker/perl-tester:${{ matrix.perl-version }}
     strategy:
@@ -41,7 +43,7 @@ jobs:
         cpanm -n --installdeps .
         dzil listdeps --author --missing --cpanm-versions | xargs cpanm -n
     - name: Run Tests
-      run: dzil smoke --release --author && dzil cover -test -report codecov && dzil xtest
+      run: dzil smoke --release --author && dzil cover -test -report coveralls && dzil xtest
   release:
     if: github.ref == 'refs/heads/master'
     needs: test
