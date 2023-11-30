@@ -77,8 +77,8 @@ jobs:
       run: echo -e "user $PAUSE_USER\npassword $PAUSE_PASSWORD\n" >> ~/.pause
     - name: setup git
       run: |
-        git config --global user.email "circleci@binary.com"
-        git config --global user.name "circleci"
+        git config --global user.email "github-actions@binary.com"
+        git config --global user.name "github-actions"
         # set remote github because dzil will push to github
         # https://metacpan.org/release/DERIV/Dist-Zilla-PluginBundle-Author-DERIV-0.003/source/lib/Dist/Zilla/PluginBundle/Author/DERIV.pm#L122
         git remote add github $(git remote get-url origin)
