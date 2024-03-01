@@ -193,4 +193,21 @@ sub get_balances {
     return $self->_request('getbalances', @params);
 }
 
+=head2 get_balance
+
+https://bitcoincore.org/en/doc/24.0.0/rpc/wallet/getbalance/
+
+=over 4
+
+=back
+
+L<Future> - numeric total amount in the wallet with n number of confirmations
+
+=cut
+
+sub get_balance {
+    my ($self, @params) = @_;
+    return $self->_request('getbalance', @params);
+}
+
 1;
