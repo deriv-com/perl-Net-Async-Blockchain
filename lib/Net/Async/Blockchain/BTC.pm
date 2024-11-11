@@ -95,7 +95,7 @@ async sub subscribe {
         $self->$curry::weak(
             sub {
                 my ($self, $message) = @_;
-                return $self->subscription_response($subscription, $message);
+                return $self->subscription_response($subscription, unpack('H*', $message));
             }));
 }
 
