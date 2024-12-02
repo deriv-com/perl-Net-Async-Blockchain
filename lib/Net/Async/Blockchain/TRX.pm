@@ -1,4 +1,4 @@
-package Net::Async::Blockchain::BTC;
+package Net::Async::Blockchain::TRX;
 
 use strict;
 use warnings;
@@ -7,24 +7,24 @@ our $VERSION = '0.004';
 
 =head1 NAME
 
-Net::Async::Blockchain::BTC - Bitcoin based subscription.
+Net::Async::Blockchain::TRX - Tron based subscription.
 
 =head1 SYNOPSIS
 
     my $loop = IO::Async::Loop->new;
 
     $loop->add(
-        my $btc_client = Net::Async::Blockchain::BTC->new(
-            subscription_url => "tcp://127.0.0.1:28332",
-            blockchain_code  => 'Bitcoin',
+        my $trx_client = Net::Async::Blockchain::TRX->new(
+            subscription_url => "tcp://127.0.0.1:5555",
+            blockchain_code  => 'Tron',
         )
     );
 
-    $btc_client->subscribe("blocks")->each(sub { print shift->{hash} })->get;
+    $trx_client->subscribe("blocks")->each(sub { print shift->{hash} })->get;
 
 =head1 DESCRIPTION
 
-Bitcoin subscription using ZMQ from the bitcoin based blockchain nodes
+Tron subscription using ZMQ from the tron based blockchain nodes
 
 =over 4
 
@@ -41,7 +41,7 @@ use curry;
 use parent qw(Net::Async::Blockchain);
 
 my %subscription_dictionary = (
-    'blocks' => 'hashblock',
+    'blocks' => 'block',
 );
 
 =head2 zmq_client
@@ -76,7 +76,7 @@ sub zmq_client {
 
 =head2 subscribe
 
-Connect to the ZMQ port and subscribe to the implemented subscription: https://github.com/bitcoin/bitcoin/blob/master/doc/zmq.md#usage
+Connect to the ZMQ port and subscribe to the implemented subscription: https://tronprotocol.github.io/documentation-en/architecture/event/#using-java-trons-built-in-message-queue-for-event-subscription
 
 =over 4
 
@@ -95,7 +95,7 @@ async sub subscribe {
         $self->$curry::weak(
             sub {
                 my ($self, $message) = @_;
-                return $self->subscription_response($subscription, unpack('H*', $message));
+                return $self->subscription_response($subscription, $message);
             }));
 }
 
