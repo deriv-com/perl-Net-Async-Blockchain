@@ -3,7 +3,7 @@ package Net::Async::Blockchain;
 use strict;
 use warnings;
 
-our $VERSION = '0.004';
+our $VERSION = '0.006';
 
 =head1 NAME
 
